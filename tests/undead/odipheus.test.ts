@@ -1,0 +1,47 @@
+import { describe, expect, it } from "vitest";
+import { applyAction } from "../../src/game/engine/gameEngine";
+import { mainState, putCard } from "../helpers";
+
+describe("不朽的惩戒魔龙 奥迪菲斯", () => {
+  it("战吼消灭敌方所有可被效果直接消灭的手下，庇护者保留", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    const source = putCard(state, "P1", "UNDEAD_012", "HAND", "battlecry");
+    const destroyed = putCard(state, "P2", "UNDEAD_001", "MINION", "destroyed");
+    const sanctuary = putCard(state, "P2", "DRAGON_006", "MINION", "sanctuary");
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: source.instanceId }).state;
+    expect(state.players.P2.graveyard.some((card) => card.instanceId === destroyed.instanceId)).toBe(true);
+    expect(state.players.P2.minions.some((card) => card.instanceId === sanctuary.instanceId)).toBe(true);
+  });
+
+  it("交战时先给予对手玩家3伤，再进行战斗伤害结算", () => {
+    let state = mainState();
+    const source = putCard(state, "P1", "UNDEAD_012", "MINION", "combat-aura");
+    const enemy = putCard(state, "P2", "DRAGON_012", "MINION", "enemy");
+    state = applyAction(state, {
+      type: "ATTACK",
+      playerId: "P1",
+      attackerId: source.instanceId,
+      target: { type: "MINION", instanceId: enemy.instanceId },
+    }).state;
+    expect(state.players.P2.heroHp).toBe(27);
+    const auraIndex = state.log.findIndex((entry) => entry.message === "P2 玩家受到 3 点效果伤害");
+    const combatIndex = state.log.findIndex((entry) => entry.message.includes("交战"));
+    expect(auraIndex).toBeLessThan(combatIndex);
+  });
+
+  it("杀意在完整战斗后由玩家选择召唤一种黑暗之书", () => {
+    let state = mainState();
+    const source = putCard(state, "P1", "UNDEAD_012", "MINION", "on-kill");
+    const enemy = putCard(state, "P2", "UNDEAD_001", "MINION", "victim");
+    state = applyAction(state, {
+      type: "ATTACK",
+      playerId: "P1",
+      attackerId: source.instanceId,
+      target: { type: "MINION", instanceId: enemy.instanceId },
+    }).state;
+    expect(state.pendingChoice).toMatchObject({ type: "EFFECT_OPTION" });
+    state = applyAction(state, { type: "SELECT_EFFECT_OPTION", playerId: "P1", optionId: "TOKEN_UNDEAD_BOOK_IMMORTAL" }).state;
+    expect(state.players.P1.fields.map((card) => card.definitionId)).toContain("TOKEN_UNDEAD_BOOK_IMMORTAL");
+  });
+});
