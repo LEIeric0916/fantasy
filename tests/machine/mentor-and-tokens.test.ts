@@ -5,8 +5,8 @@ import { getCardDefinition } from "../../src/game/cards/cardRegistry";
 import { destroyCardOnField } from "../../src/game/engine/zoneEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("机械大导师与机械衍生物", () => {
-  it("考尔战吼加1充能并召唤立方体，立方体入场召唤士兵", () => {
+describe("機械大導師與機械衍生物", () => {
+  it("考爾戰吼加1充能並召喚立方體，立方體入場召喚士兵", () => {
     let state = mainState();
     state.players.P1.faction = "MACHINE";
     const mentor = putCard(state, "P1", "MACHINE_006", "HAND", "mentor");
@@ -16,7 +16,7 @@ describe("机械大导师与机械衍生物", () => {
     expect(state.players.P1.minions.some((card) => card.definitionId === "TOKEN_MACHINE_EMPIRE_SOLDIER")).toBe(true);
   });
 
-  it("考尔回合结束指定机械军队获得嘲讽", () => {
+  it("考爾回合結束指定機械軍隊獲得嘲諷", () => {
     let state = mainState();
     putCard(state, "P1", "MACHINE_006", "MINION", "mentor-end");
     const soldier = putCard(state, "P1", "TOKEN_MACHINE_EMPIRE_SOLDIER", "MINION", "soldier");
@@ -26,7 +26,7 @@ describe("机械大导师与机械衍生物", () => {
     expect(state.players.P1.minions.find((card) => card.instanceId === soldier.instanceId)?.keywords).toContain("TAUNT");
   });
 
-  it("立方体谢幕召唤收割者；齿轮成长增加充能", () => {
+  it("立方體謝幕召喚收割者；齒輪成長增加充能", () => {
     const state = mainState();
     const cube = putCard(state, "P1", "TOKEN_MACHINE_CUBE", "FIELD", "cube");
     destroyCardOnField(state, cube, "TEST");

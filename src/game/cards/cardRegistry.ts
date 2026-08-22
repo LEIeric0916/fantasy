@@ -137,7 +137,7 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
     },
   ],
   ALLIANCE_006: [{ type: "GRANT_NEXT_MINION_TEMPORARY_COST_REDUCTION", value: 4 }],
-  ALLIANCE_007: [{ type: "DISCOVER_TOP", reveal: 3, count: 1, cardType: "MINION", temporaryCostReduction: 2 }],
+  ALLIANCE_007: [{ type: "DISCOVER_TOP", count: 1, cardType: "MINION", temporaryCostReduction: 2 }],
   ALLIANCE_008: [
     {
       type: "CONDITIONAL",
@@ -186,10 +186,10 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
   ],
   TOKEN_ALLIANCE_AIRSTRIKE: [{
     type: "CHOOSE_ONE",
-    prompt: "选择空袭效果",
+    prompt: "選擇空襲效果",
     options: [
-      { id: "MINIONS", label: "给予对手所有手下2点伤害", effects: [{ type: "DAMAGE_ALL_ENEMY_MINIONS", value: 2 }] },
-      { id: "HERO", label: "给予对手玩家2点伤害", effects: [{ type: "DAMAGE_ENEMY_HERO", value: 2 }] },
+      { id: "MINIONS", label: "給予對手所有手下2點傷害", effects: [{ type: "DAMAGE_ALL_ENEMY_MINIONS", value: 2 }] },
+      { id: "HERO", label: "給予對手玩家2點傷害", effects: [{ type: "DAMAGE_ENEMY_HERO", value: 2 }] },
     ],
   }],
   TOKEN_MACHINE_CUBE: [{ type: "SUMMON", definitionId: "TOKEN_MACHINE_EMPIRE_SOLDIER", count: 1 }],
@@ -231,7 +231,7 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
     },
   ],
   DRAGON_002: [
-    { type: "RETURN_FRIENDLY_MINION_DRAW_BY_COST", subtype: "DRAGON", threshold: 7, low: 1, high: 2 },
+    { type: "RETURN_HAND_MINION_TO_DECK_SHUFFLE_DRAW_BY_COST", subtype: "DRAGON", threshold: 7, low: 1, high: 2 },
     { type: "SEGMENT_BREAK" },
     { type: "INCREASE_MAX_MANA", value: 1 },
   ],
@@ -242,7 +242,7 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
     { type: "SEGMENT_BREAK" },
     {
       type: "CONDITIONAL",
-      condition: { type: "MAX_MANA_EQUALS", value: 8 },
+      condition: { type: "MAX_MANA_AT_LEAST", value: 8 },
       effects: [{ type: "MODIFY_SELF_STATS", attack: 2, health: 2 }],
     },
   ],
@@ -266,14 +266,14 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
     { type: "SEGMENT_BREAK" },
     { type: "DAMAGE_ENEMY_HERO", value: 12 },
   ],
-  DRAGON_014: [{ type: "DISCOVER_TOP", reveal: 4, count: 1, cardType: "MINION", subtype: "DRAGON", temporaryCostReduction: 4 }],
+  DRAGON_014: [{ type: "DISCOVER_TOP", bonusReveal: 1, count: 1, cardType: "MINION", subtype: "DRAGON", temporaryCostReduction: 4 }],
   DRAGON_015: [
-    { type: "DISCOVER_TOP", reveal: 8, count: 1, cardType: "MINION", subtype: "DRAGON" },
+    { type: "DISCOVER_TOP", bonusReveal: 5, count: 1, cardType: "MINION", subtype: "DRAGON" },
     { type: "SEGMENT_BREAK" },
     { type: "RESTORE_MANA" },
   ],
   UNDEAD_001: [
-    { type: "DISCOVER_TOP", reveal: 3, count: 1, cardType: "MINION", subtype: "UNDEAD", fallbackDrawIfNoMatchInDeck: 1 },
+    { type: "DISCOVER_TOP", count: 1, cardType: "MINION", subtype: "UNDEAD" },
     { type: "SEGMENT_BREAK" },
     {
       type: "CONDITIONAL",
@@ -289,7 +289,7 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
     { type: "DISCARD_HAND", count: 1 },
     { type: "DAMAGE_TARGET_ENEMY_MINION", value: 3 },
   ],
-  UNDEAD_004: [{ type: "TRANSFORM_ENEMY_MINIONS", count: 2, definitionId: "TOKEN_UNDEAD_GENERIC", maxHealth: 5 }],
+  UNDEAD_004: [{ type: "TRANSFORM_UP_TO_ENEMY_MINIONS", maxCount: 2, definitionId: "TOKEN_UNDEAD_GENERIC", maxHealth: 5 }],
   UNDEAD_005: [{ type: "REVIVE_FRIENDLY_GRAVE_MINION", maxOriginalCost: 3 }],
   UNDEAD_006: [{
     type: "CHOOSE_GENERATED_FIELD",
@@ -322,7 +322,7 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
   TOKEN_UNDEAD_PREACHER: [{ type: "GAIN_NECROMANCY", value: 3 }],
   UNDEAD_012: [{ type: "DESTROY_ALL_ENEMY_MINIONS" }],
   UNDEAD_013: [
-    { type: "DISCOVER_TOP", reveal: 5, count: 3, cardType: "MINION", discardFromSelected: 1 },
+    { type: "DISCOVER_TOP", bonusReveal: 2, count: 3, cardType: "MINION", discardFromSelected: 1 },
     { type: "SEGMENT_BREAK" },
     {
       type: "CONDITIONAL",
@@ -460,8 +460,20 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
   DRAGON_009: {
     DEATHRATTLE: [{ type: "DRAW", value: 1 }],
   },
+  DRAGON_011: {
+    DEATHRATTLE: [{ type: "GRANT_NEXT_HIGH_COST_DRAGON_REDUCTION", minOriginalCost: 10, value: 5 }],
+  },
   DRAGON_005: {
     END_TURN: [{ type: "SCALED_END_TURN_CHOICE", maxManaThreshold: 10, bonus: 2 }],
+  },
+  TOKEN_DRAGON_BLAZING_EMPEROR: {
+    END_TURN: [{ type: "REPEAT_DAMAGE_ENEMY_MINION_OR_HERO", count: 3, value: 4, heroMaxHits: 1 }],
+  },
+  TOKEN_DRAGON_TIDAL_EMPEROR: {
+    DEATHRATTLE: [{ type: "GRANT_NEXT_LOW_COST_DRAGON_ZERO", maxOriginalCost: 7 }, { type: "HEAL_HERO", value: 2 }],
+  },
+  TOKEN_UNDEAD_CATASTROPHE_KNIGHT: {
+    DEATHRATTLE: [{ type: "DAMAGE_ENEMY_HERO", value: 3 }],
   },
   UNDEAD_003: {
     DEATHRATTLE: [{ type: "SUMMON", definitionId: "TOKEN_UNDEAD_SPIRIT", count: 2 }],
@@ -615,6 +627,10 @@ const selfKeywordWhileOtherFriendlySubtypes: Record<string, CardDefinition["self
   ALLIANCE_009: { subtypes: ["HUMAN", "ARMY"], keyword: "DETERRENCE" },
 };
 
+const fieldWinConditions: Record<string, CardDefinition["fieldWinCondition"]> = {
+  TOKEN_UNDEAD_DOOMSDAY_BOOK: { count: 4, loseReason: "DOOMSDAY_BOOK" },
+};
+
 const rawFiles = [dragonData, undeadData, machineData, allianceData, tokenData] as unknown as CardFile[];
 
 export const cardDefinitions: CardDefinition[] = rawFiles.flatMap((file) =>
@@ -633,6 +649,7 @@ export const cardDefinitions: CardDefinition[] = rawFiles.flatMap((file) =>
     friendlySummonAura: friendlySummonAuras[card.id],
     friendlyEffectDamageImmunityAura: friendlyEffectDamageImmunityAuras[card.id],
     selfKeywordWhileOtherFriendlySubtypes: selfKeywordWhileOtherFriendlySubtypes[card.id],
+    fieldWinCondition: fieldWinConditions[card.id],
     enterFieldEffects: enterFieldEffects[card.id],
     effects: implementedEffects[card.id],
     triggeredEffects: implementedTriggeredEffects[card.id],
@@ -652,7 +669,7 @@ export function getMainDeckDefinitions(faction: Faction): CardDefinition[] {
 }
 
 export interface CardDataIssue {
-  code: "DUPLICATE_ID" | "NULL_REQUIRED_VALUE" | "NOTES_PRESENT" | "DECK_SIZE_MISMATCH";
+  code: "DUPLICATE_ID" | "NULL_REQUIRED_VALUE" | "NOTES_PRESENT" | "DECK_SIZE_MISMATCH" | "MISSING_EFFECT_IMPLEMENTATION";
   cardId?: string;
   message: string;
 }
@@ -661,12 +678,51 @@ export function validateCardData(): CardDataIssue[] {
   const issues: CardDataIssue[] = [];
   const seen = new Set<string>();
   for (const card of cardDefinitions) {
-    if (seen.has(card.id)) issues.push({ code: "DUPLICATE_ID", cardId: card.id, message: `重复 ID：${card.id}` });
+    if (seen.has(card.id)) issues.push({ code: "DUPLICATE_ID", cardId: card.id, message: `重復 ID：${card.id}` });
     seen.add(card.id);
     if (card.originalCost === null || (card.cardType === "MINION" && (card.attack === null || card.health === null))) {
-      issues.push({ code: "NULL_REQUIRED_VALUE", cardId: card.id, message: `${card.id} 含未提供的可玩数值` });
+      issues.push({ code: "NULL_REQUIRED_VALUE", cardId: card.id, message: `${card.id} 含未提供的可玩數值` });
     }
     if (card.notes.trim()) issues.push({ code: "NOTES_PRESENT", cardId: card.id, message: card.notes });
+    const requiredTriggers: Array<[boolean, keyof NonNullable<CardDefinition["triggeredEffects"]>, string]> = [
+      [card.keywords.includes("DEATHRATTLE"), "DEATHRATTLE", "死亡之聲"],
+      [card.keywords.includes("LAST_WORDS"), "LAST_WORDS", "謝幕曲"],
+      [card.keywords.includes("GROWTH"), "GROWTH", "生長效果"],
+      [card.keywords.includes("ON_DISCARD"), "ON_DISCARD", "棄牌觸發效果"],
+      [card.keywords.includes("ON_REVIVE"), "ON_REVIVE", "復活觸發效果"],
+      [card.effectsText.includes("回合結束時"), "END_TURN", "回合結束效果"],
+    ];
+    for (const [required, timing, label] of requiredTriggers) {
+      if (required && !card.triggeredEffects?.[timing]?.length) {
+        issues.push({ code: "MISSING_EFFECT_IMPLEMENTATION", cardId: card.id, message: `${label}只有文字，尚未連接可執行效果` });
+      }
+    }
+    if (card.keywords.includes("BATTLECRY") && !card.effects?.length) {
+      issues.push({ code: "MISSING_EFFECT_IMPLEMENTATION", cardId: card.id, message: "戰吼只有文字，尚未連接可執行效果" });
+    }
+    if (card.keywords.includes("ENTER_FIELD") && !card.effects?.length && !card.enterFieldEffects?.length) {
+      issues.push({ code: "MISSING_EFFECT_IMPLEMENTATION", cardId: card.id, message: "入場曲只有文字，尚未連接可執行效果" });
+    }
+    if (card.keywords.includes("EFFECT_SUMMON") && !card.effectSummon) {
+      issues.push({ code: "MISSING_EFFECT_IMPLEMENTATION", cardId: card.id, message: "效果召喚只有文字，尚未連接發動條件" });
+    }
+    if (card.keywords.includes("COUNTDOWN") && card.initialCounters?.countdown === undefined) {
+      issues.push({ code: "MISSING_EFFECT_IMPLEMENTATION", cardId: card.id, message: "倒數只有文字，尚未設定初始倒數" });
+    }
+    const hasAuraImplementation = Boolean(
+      card.transformAura
+      || card.grantOnFriendlyEnterAura
+      || card.damageCapAura
+      || card.friendlySummonAura
+      || card.friendlyEffectDamageImmunityAura
+      || card.selfKeywordWhileOtherFriendlySubtypes
+      || card.triggeredEffects?.ON_FRIENDLY_COMBAT_KILL?.length
+      || card.triggeredEffects?.ON_SELF_COMBAT_START?.length
+      || card.triggeredEffects?.END_TURN?.length,
+    );
+    if (card.keywords.includes("AURA") && !hasAuraImplementation) {
+      issues.push({ code: "MISSING_EFFECT_IMPLEMENTATION", cardId: card.id, message: "光環只有文字，尚未連接持續或觸發效果" });
+    }
   }
   const expected: Partial<Record<Faction, number>> = { DRAGON: 40, UNDEAD: 40, MACHINE: 40, ALLIANCE: 35 };
   for (const [faction, count] of Object.entries(expected) as [Faction, number][]) {
@@ -680,7 +736,7 @@ export function getRuleUndefinedInventory(): RuleUndefined[] {
   return cardDefinitions.flatMap((card) => {
     const entries: RuleUndefined[] = [];
     if (card.originalCost === null || (card.cardType === "MINION" && (card.attack === null || card.health === null))) {
-      entries.push({ code: "RULE_UNDEFINED", ruleId: "CARD_DATA_NULL", cardId: card.id, message: "资料含 null；来源未提供，禁止转为 0" });
+      entries.push({ code: "RULE_UNDEFINED", ruleId: "CARD_DATA_NULL", cardId: card.id, message: "資料含 null；來源未提供，禁止轉為 0" });
     }
     if (card.notes.trim()) entries.push({ code: "RULE_UNDEFINED", ruleId: "CARD_DATA_NOTE", cardId: card.id, message: card.notes });
     return entries;
@@ -701,10 +757,20 @@ export function isCardImplemented(definition: CardDefinition): boolean {
       || Boolean(definition.triggeredEffects)
       || Boolean(definition.effectSummon)
       || Boolean(definition.selfKeywordWhileOtherFriendlySubtypes)
+      || Boolean(definition.grantOnFriendlyEnterAura)
+      || Boolean(definition.damageCapAura)
+      || Boolean(definition.friendlySummonAura)
+      || Boolean(definition.friendlyEffectDamageImmunityAura)
       || definition.effectsText.trim() === ""
       || structuralOnly;
   }
   return Boolean(definition.effects?.length)
     || Boolean(definition.triggeredEffects && Object.keys(definition.triggeredEffects).length > 0)
-    || Boolean(definition.activatedEffect);
+    || Boolean(definition.activatedEffect)
+    || Boolean(definition.transformAura)
+    || Boolean(definition.grantOnFriendlyEnterAura)
+    || Boolean(definition.damageCapAura)
+    || Boolean(definition.friendlySummonAura)
+    || Boolean(definition.friendlyEffectDamageImmunityAura)
+    || Boolean(definition.fieldWinCondition);
 }

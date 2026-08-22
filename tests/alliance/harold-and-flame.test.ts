@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("哈洛德与焰骑士长", () => {
-  it("哈洛德先召唤第一名革命士兵，再比较人数决定是否召唤第二名", () => {
+describe("哈洛德與焰騎士長", () => {
+  it("哈洛德先召喚第一名革命士兵，再比較人數決定是否召喚第二名", () => {
     let state = mainState();
     state.players.P1.hand = [];
     for (let index = 0; index < 4; index += 1) putCard(state, "P2", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", `enemy-${index}`);
@@ -12,7 +12,7 @@ describe("哈洛德与焰骑士长", () => {
     expect(state.players.P1.minions.filter((card) => card.definitionId === "TOKEN_ALLIANCE_REVOLUTIONARY_SOLDIER")).toHaveLength(2);
   });
 
-  it("协作10时攻击前先对全部敌方手下造成2伤；因此死亡的目标不再进入战斗", () => {
+  it("協作10時攻擊前先對全部敵方手下造成2傷；因此死亡的目標不再進入戰斗", () => {
     let state = mainState();
     state.players.P1.summonedThisGame = 10;
     const harold = putCard(state, "P1", "ALLIANCE_004", "MINION", "attacker");
@@ -22,7 +22,7 @@ describe("哈洛德与焰骑士长", () => {
     expect(state.players.P1.minions.find((card) => card.instanceId === harold.instanceId)?.currentHealth).toBe(2);
   });
 
-  it("未达协作15时指定1名友方获得圣盾并对玩家2伤", () => {
+  it("未達協作15時指定1名友方獲得圣盾並對玩家2傷", () => {
     let state = mainState();
     const captain = putCard(state, "P1", "ALLIANCE_005", "MINION", "normal");
     state = applyAction(state, { type: "END_TURN", playerId: "P1" }).state;
@@ -32,7 +32,7 @@ describe("哈洛德与焰骑士长", () => {
     expect(state.players.P2.heroHp).toBe(28);
   });
 
-  it("协作15时使全部合法友方获得圣盾并对玩家4伤", () => {
+  it("協作15時使全部合法友方獲得圣盾並對玩家4傷", () => {
     let state = mainState();
     state.players.P1.summonedThisGame = 15;
     putCard(state, "P1", "ALLIANCE_005", "MINION", "collaboration");

@@ -3,8 +3,8 @@ import { applyAction } from "../../src/game/engine/gameEngine";
 import { getCardDefinition } from "../../src/game/cards/cardRegistry";
 import { mainState, putCard } from "../helpers";
 
-describe("银翼刻柏斯与革命军刀达斯", () => {
-  it("刻柏斯使本回合下一张实际打出的手下费用-4，使用后清除", () => {
+describe("銀翼刻柏斯與革命軍刀達斯", () => {
+  it("刻柏斯使本回合下一張實際打出的手下費用-4，使用後清除", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const cerberus = putCard(state, "P1", "ALLIANCE_006", "HAND", "cerberus");
@@ -17,7 +17,7 @@ describe("银翼刻柏斯与革命军刀达斯", () => {
     expect(state.players.P1.nextMinionTemporaryCostReduction).toBe(0);
   });
 
-  it("达斯按敌方手下数减费，发现牌组上方手下并使其本回合费用-2", () => {
+  it("達斯按敵方手下數減費，發現牌組上方手下並使其本回合費用-2", () => {
     let state = mainState();
     state.players.P1.hand = [];
     putCard(state, "P2", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", "enemy-1");

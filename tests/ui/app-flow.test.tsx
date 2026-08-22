@@ -5,7 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import App from "../../src/app/App";
 
-describe("浏览器入口流程", () => {
+describe("瀏覽器入口流程", () => {
   let container: HTMLDivElement;
   let root: Root;
 
@@ -24,7 +24,7 @@ describe("浏览器入口流程", () => {
 
   function button(name: string): HTMLButtonElement {
     const result = [...container.querySelectorAll("button")].find((item) => item.textContent === name);
-    if (!result) throw new Error(`找不到按钮：${name}`);
+    if (!result) throw new Error(`找不到按鈕：${name}`);
     return result;
   }
 
@@ -32,9 +32,9 @@ describe("浏览器入口流程", () => {
     act(() => target.dispatchEvent(new MouseEvent("click", { bubbles: true })));
   }
 
-  it("可选择任意已实装阵营并以 0 张换牌进入第一回合", () => {
-    const first = container.querySelector<HTMLSelectElement>('select[aria-label="先攻玩家阵营"]')!;
-    const second = container.querySelector<HTMLSelectElement>('select[aria-label="后攻玩家阵营"]')!;
+  it("可選擇任意已實裝陣營並以 0 張換牌進入第一回合", () => {
+    const first = container.querySelector<HTMLSelectElement>('select[aria-label="先攻玩家陣營"]')!;
+    const second = container.querySelector<HTMLSelectElement>('select[aria-label="後攻玩家陣營"]')!;
 
     act(() => {
       first.value = "MACHINE";
@@ -42,21 +42,21 @@ describe("浏览器入口流程", () => {
       second.value = "ALLIANCE";
       second.dispatchEvent(new Event("change", { bubbles: true }));
     });
-    click(button("建立对局"));
+    click(button("建立對局"));
 
     expect(container.textContent).toContain("MULLIGAN · P1");
-    click(button("确认换牌（0）"));
-    expect(container.textContent).toContain("请交给 P2");
-    click(button("已交接，显示画面"));
+    click(button("確認換牌（0）"));
+    expect(container.textContent).toContain("請交給 P2");
+    click(button("已交接，顯示畫面"));
     expect(container.textContent).toContain("MULLIGAN · P2");
-    click(button("确认换牌（0）"));
-    expect(container.textContent).toContain("请交给 P1");
-    click(button("已交接，显示画面"));
+    click(button("確認換牌（0）"));
+    expect(container.textContent).toContain("請交給 P1");
+    click(button("已交接，顯示畫面"));
 
     expect(container.textContent).toContain("TURN 1 · MAIN");
     expect(container.textContent).toContain("P1 · MACHINE");
     expect(container.textContent).toContain("P2 · ALLIANCE");
-    expect(container.textContent).toContain("手牌 4");
-    expect(container.textContent).toContain("牌库 31");
+    expect(container.textContent).toContain("手牌4");
+    expect(container.textContent).toContain("牌庫31");
   });
 });

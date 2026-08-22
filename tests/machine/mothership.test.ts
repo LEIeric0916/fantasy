@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("机械神教母星舰与机械进攻舰", () => {
-  it("先召唤2艘进攻舰，再按包含新进攻舰的神器数造成范围伤害", () => {
+describe("機械神教母星艦與機械進攻艦", () => {
+  it("先召喚2艘進攻艦，再按包含新進攻艦的神器數造成范圍傷害", () => {
     let state = mainState();
     state.players.P1.faction = "MACHINE";
     putCard(state, "P1", "TOKEN_MACHINE_GEAR", "FIELD", "existing");
@@ -15,7 +15,7 @@ describe("机械神教母星舰与机械进攻舰", () => {
     expect(state.players.P2.minions.find((card) => card.instanceId === enemy.instanceId)?.currentHealth).toBe(4);
   });
 
-  it("进攻舰有敌方手下时由玩家指定造成2伤", () => {
+  it("進攻艦有敵方手下時由玩家指定造成2傷", () => {
     let state = mainState();
     putCard(state, "P1", "TOKEN_MACHINE_ATTACK_SHIP", "FIELD", "ship");
     const enemy = putCard(state, "P2", "TOKEN_MACHINE_DESTROYER", "MINION", "target");
@@ -25,7 +25,7 @@ describe("机械神教母星舰与机械进攻舰", () => {
     expect(state.players.P2.minions[0].currentHealth).toBe(5);
   });
 
-  it("进攻舰没有敌方手下时改为给予对手玩家1伤", () => {
+  it("進攻艦沒有敵方手下時改為給予對手玩家1傷", () => {
     let state = mainState();
     putCard(state, "P1", "TOKEN_MACHINE_ATTACK_SHIP", "FIELD", "ship-hero");
     state = applyAction(state, { type: "END_TURN", playerId: "P1" }).state;

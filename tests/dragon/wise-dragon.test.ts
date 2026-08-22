@@ -3,10 +3,12 @@ import { applyAction } from "../../src/game/engine/gameEngine";
 import { refreshCardCost } from "../../src/game/engine/costEngine";
 import { summonGeneratedMinion } from "../../src/game/engine/summonEngine";
 import { beginTurn } from "../../src/game/engine/turnEngine";
+import { destroyMinion } from "../../src/game/engine/zoneEngine";
+import { resolvePendingEffects } from "../../src/game/engine/effectEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("睿智神龙伊尔多斯", () => {
-  it("本回合召唤龙族手下的原始费用合计达到20时减费10，最低为0", () => {
+describe("睿智神龍伊爾多斯", () => {
+  it("本回合召喚龍族手下的原始費用合計達到20時減費10，最低為0", () => {
     const state = mainState();
     state.players.P1.hand = [];
     for (let index = 0; index < 4; index += 1) summonGeneratedMinion(state, "P1", "TOKEN_DRAGON_HELLFIRE");
@@ -16,7 +18,7 @@ describe("睿智神龙伊尔多斯", () => {
     expect(wise.currentCost).toBe(0);
   });
 
-  it("回合开始重置本回合龙族原始费用合计", () => {
+  it("回合開始重置本回合龍族原始費用合計", () => {
     const state = mainState();
     summonGeneratedMinion(state, "P1", "TOKEN_DRAGON_HELLFIRE");
     state.phase = "END";
@@ -24,7 +26,7 @@ describe("睿智神龙伊尔多斯", () => {
     expect(state.players.P1.summonedDragonOriginalCostThisTurn).toBe(0);
   });
 
-  it("战吼对其他所有手下造成5伤，之后赋予仍在场的合法友方手下圣盾", () => {
+  it("戰吼對其他所有手下造成5傷，之後賦予仍在場的合法友方手下圣盾", () => {
     let state = mainState();
     state.players.P1.hand = [];
     state.players.P1.mana = 20;
@@ -41,5 +43,15 @@ describe("睿智神龙伊尔多斯", () => {
     const disciplineAfter = state.players.P1.minions.find((card) => card.instanceId === disciplined.instanceId)!;
     expect(disciplineAfter.currentHealth).toBe(5);
     expect(disciplineAfter.keywords).not.toContain("DIVINE_SHIELD");
+  });
+
+  it("死亡之聲使下一張原始費用10以上龍族手下費用-5", () => {
+    const state = mainState();
+    const wise = putCard(state, "P1", "DRAGON_011", "MINION", "wise-death");
+    const expensive = putCard(state, "P1", "DRAGON_011", "HAND", "wise-discount-target");
+    destroyMinion(state, wise, "TEST");
+    resolvePendingEffects(state);
+    refreshCardCost(state, "P1", expensive);
+    expect(expensive.currentCost).toBe(5);
   });
 });

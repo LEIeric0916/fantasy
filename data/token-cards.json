@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "description": "全部已提供的衍生牌、额外牌与幸運幣。未提供数值使用null。",
+  "description": "全部已提供的衍生牌、額外牌與幸運幣。未提供數值使用null。",
   "cards": [
     {
       "id": "TOKEN_COIN",
@@ -15,7 +15,7 @@
       "keywords": [],
       "effectsText": "獲得1水晶。",
       "generatedOnly": true,
-      "notes": "只增加当回合可用水晶，不增加水晶最大值；后攻获得。"
+      "notes": "只增加當回合可用水晶，不增加水晶最大值；後攻獲得。"
     },
 
     {
@@ -31,7 +31,7 @@
       "keywords": ["TAUNT"],
       "effectsText": "嘲諷。",
       "generatedOnly": true,
-      "notes": "由炎龍召喚产生。龙族衍生手下不进棄堆。"
+      "notes": "由炎龍召喚產生。龍族衍生手下不進棄堆。"
     },
     {
       "id": "TOKEN_DRAGON_JUDGMENT",
@@ -46,7 +46,7 @@
       "keywords": [],
       "effectsText": "消滅對手場上1手下。若我方場上有原始消耗7或以上的手下，再給予對手場上所有手下5點傷害。",
       "generatedOnly": true,
-      "notes": "由瑪格諾利亞加入手牌。最后修正确认判断原始费用7或以上，包含恰好7。"
+      "notes": "由瑪格諾利亞加入手牌。最後修正確認判斷原始費用7或以上，包含恰好7。"
     },
     {
       "id": "TOKEN_DRAGON_BLAZING_EMPEROR",
@@ -61,7 +61,7 @@
       "keywords": [],
       "effectsText": "回合結束時，連續3次給予對手1手下4點傷害；若沒有手下目標，改為給予對手玩家4點傷害，但玩家因此效果受到傷害的次數最多1次。",
       "generatedOnly": true,
-      "notes": "最后修正确认连续3次均重新指定目标，可重复指定仍存活的同一目标；某次无手下目标时依卡文改为伤害玩家，但整段效果最多伤害玩家1次，之后无目标的剩余次数不执行。龙族衍生手下不进棄堆。"
+      "notes": "最後修正確認連續3次均重新指定目標，可重復指定仍存活的同一目標；某次無手下目標時依卡文改為傷害玩家，但整段效果最多傷害玩家1次，之後無目標的剩余次數不執行。龍族衍生手下不進棄堆。"
     },
     {
       "id": "TOKEN_DRAGON_TIDAL_EMPEROR",
@@ -76,7 +76,7 @@
       "keywords": ["TAUNT", "DEATHRATTLE"],
       "effectsText": "死亡之聲：我方下一張原始費用7或以下的龍族手下費用轉變為0；我方玩家恢復2HP。",
       "generatedOnly": true,
-      "notes": "龙族衍生手下不进棄堆。"
+      "notes": "龍族衍生手下不進棄堆。"
     },
 
     {
@@ -92,7 +92,7 @@
       "keywords": ["COUNTDOWN", "LAST_WORDS"],
       "effectsText": "倒數2。謝幕曲：抽1張牌，回收充能+1。",
       "generatedOnly": true,
-      "notes": "机械衍生牌不进棄堆。"
+      "notes": "機械衍生牌不進棄堆。"
     },
     {
       "id": "TOKEN_MACHINE_PRIEST",
@@ -107,7 +107,7 @@
       "keywords": ["DISCIPLINE"],
       "effectsText": "回合結束時，回收充能+1，我方場上所有機械・軍隊手下獲得聖盾術。",
       "generatedOnly": true,
-      "notes": "最后修正确认费用为2。机械衍生牌不进棄堆。"
+      "notes": "最後修正確認費用為2。機械衍生牌不進棄堆。"
     },
     {
       "id": "TOKEN_MACHINE_CUBE",
@@ -122,7 +122,7 @@
       "keywords": ["ENTER_FIELD", "LAST_WORDS", "COUNTDOWN"],
       "effectsText": "入場曲：召喚1名「機械帝國士兵」。謝幕曲：召喚1名「機械帝國收割者」。倒數2。",
       "generatedOnly": true,
-      "notes": "机械衍生牌不进棄堆。"
+      "notes": "機械衍生牌不進棄堆。"
     },
     {
       "id": "TOKEN_MACHINE_ATTACK_SHIP",
@@ -137,7 +137,7 @@
       "keywords": ["COUNTDOWN"],
       "effectsText": "倒數3。回合結束時給予對手1手下2點傷害；若對手場上沒有手下，則轉變為給予對手玩家1點傷害。",
       "generatedOnly": true,
-      "notes": "最后修正确认费用为2。给予对手1手下伤害属于指定，由玩家选择合法目标；没有手下时改为给予对手玩家1点伤害。"
+      "notes": "最後修正確認費用為2。給予對手1手下傷害屬於指定，由玩家選擇合法目標；沒有手下時改為給予對手玩家1點傷害。"
     },
     {
       "id": "TOKEN_MACHINE_SOLDIER_BAY",
@@ -152,7 +152,7 @@
       "keywords": ["COUNTDOWN", "LAST_WORDS"],
       "effectsText": "倒數2。謝幕曲：召喚1名「機械帝國士兵」。",
       "generatedOnly": true,
-      "notes": "最后修正确认费用为3；倒数结束被消灭后，以谢幕曲召唤1名机械帝国士兵。"
+      "notes": "最後修正確認費用為3；倒數結束被消滅後，以謝幕曲召喚1名機械帝國士兵。"
     },
     {
       "id": "TOKEN_MACHINE_GEAR",
@@ -167,7 +167,7 @@
       "keywords": ["COUNTDOWN", "GROWTH"],
       "effectsText": "倒數3。生長：回收充能+1。",
       "generatedOnly": true,
-      "notes": "最后修正确认费用为1。"
+      "notes": "最後修正確認費用為1。"
     },
     {
       "id": "TOKEN_MACHINE_DESTROYER",
@@ -182,7 +182,7 @@
       "keywords": ["TAUNT", "DEATHRATTLE"],
       "effectsText": "死亡之聲：回收充能+1，我方玩家恢復1HP。",
       "generatedOnly": true,
-      "notes": "采用最后更正：6费4/7、充能+1、回1HP。机械衍生牌不进棄堆。"
+      "notes": "采用最後更正：6費4/7、充能+1、回1HP。機械衍生牌不進棄堆。"
     },
     {
       "id": "TOKEN_MACHINE_EMPIRE_SOLDIER",
@@ -197,7 +197,7 @@
       "keywords": ["RUSH", "DEATHRATTLE"],
       "effectsText": "死亡之聲：回收充能+1。",
       "generatedOnly": true,
-      "notes": "采用最后更正：3费3/3。机械衍生牌不进棄堆。"
+      "notes": "采用最後更正：3費3/3。機械衍生牌不進棄堆。"
     },
     {
       "id": "TOKEN_MACHINE_EMPIRE_REAPER",
@@ -212,7 +212,7 @@
       "keywords": ["RUSH", "ON_KILL", "DEATHRATTLE"],
       "effectsText": "殺意：回收充能+2。死亡之聲：回收充能+1。",
       "generatedOnly": true,
-      "notes": "采用最后更正：4费4/4。机械衍生牌不进棄堆。"
+      "notes": "采用最後更正：4費4/4。機械衍生牌不進棄堆。"
     },
     {
       "id": "TOKEN_MACHINE_DIVINE_DATE_MASAMUNE",
@@ -227,7 +227,7 @@
       "keywords": ["RUSH", "BATTLECRY", "AURA"],
       "effectsText": "戰吼：賦予我方機械・軍隊手下衝鋒。光環：我方機械・軍隊手下擁有衝鋒。",
       "generatedOnly": true,
-      "notes": "最后修正确认所有『疾驰』统一改为『冲锋』。"
+      "notes": "最後修正確認所有『疾馳』統一改為『沖鋒』。"
     },
     {
       "id": "TOKEN_MACHINE_DIVINE_GABRIEL",
@@ -257,7 +257,7 @@
       "keywords": ["DISCIPLINE", "SANCTUARY", "TAUNT", "BATTLECRY", "AURA"],
       "effectsText": "戰吼：消滅對手場上最多4名手下。光環：我方機械・軍隊手下每次受到傷害時，該次實際傷害最多為3點。",
       "generatedOnly": true,
-      "notes": "单次伤害上限已明确。"
+      "notes": "單次傷害上限已明確。"
     },
     {
       "id": "TOKEN_MACHINE_DIVINE_LUCIFER",
@@ -287,7 +287,7 @@
       "keywords": ["DISCIPLINE", "WARD", "TAUNT", "BATTLECRY", "DEATHRATTLE"],
       "effectsText": "戰吼：給予對手1手下5點傷害，重複X次，X為我方場上神器・立場數量。死亡之聲：回收充能+X，X為我方場上神器・立場數量。",
       "generatedOnly": true,
-      "notes": "最后修正确认战吼开始时按当时神器・立场数量计算一次X再重复伤害；每次重新指定，可重复指定仍存活目标，中途无合法手下时停止。死亡之声开始时另按当时仍在场的神器・立场数量计算X。"
+      "notes": "最後修正確認戰吼開始時按當時神器・立場數量計算一次X再重復傷害；每次重新指定，可重復指定仍存活目標，中途無合法手下時停止。死亡之聲開始時另按當時仍在場的神器・立場數量計算X。"
     },
 
     {
@@ -303,7 +303,7 @@
       "keywords": ["CHARGE"],
       "effectsText": "衝鋒。",
       "generatedOnly": true,
-      "notes": "采用最后更正：离场后返回衍生牌库／额外区。"
+      "notes": "采用最後更正：離場後返回衍生牌庫／額外區。"
     },
     {
       "id": "TOKEN_UNDEAD_DOOM_KNIGHT",
@@ -348,7 +348,7 @@
       "keywords": ["RUSH"],
       "effectsText": "衝刺。",
       "generatedOnly": true,
-      "notes": "显示名加「（衍生）」仅为数据消歧；卡面名称原文同为「不朽者」。災厄洪流与转变效果使用此定义。"
+      "notes": "顯示名加「（衍生）」僅為數據消歧；卡面名稱原文同為「不朽者」。災厄洪流與轉變效果使用此定義。"
     },
     {
       "id": "TOKEN_UNDEAD_GIANT",
@@ -378,7 +378,7 @@
       "keywords": ["TAUNT", "RUSH", "WINDFURY", "BATTLECRY", "DEATHRATTLE"],
       "effectsText": "戰吼：死靈數+3。死亡之聲：抽1張牌。",
       "generatedOnly": true,
-      "notes": "最后更正确认是增加死灵数3，不是死灵术。"
+      "notes": "最後更正確認是增加死靈數3，不是死靈術。"
     },
     {
       "id": "TOKEN_UNDEAD_BOOK_IMMORTAL",
@@ -391,9 +391,9 @@
       "health": null,
       "deckCount": 0,
       "keywords": ["WARD", "SANCTUARY", "ENTER_FIELD", "GROWTH"],
-      "effectsText": "入場曲：若我方場上有其他同名卡，使旧同名卡消失并抽1张。生長：召喚1名衍生「不朽者」。死靈術20：消耗20死靈數，将此卡轉變為「末日之書」。",
+      "effectsText": "入場曲：若我方場上有其他同名卡，使舊同名卡消失並抽1張。生長：召喚1名衍生「不朽者」。死靈術20：消耗20死靈數，將此卡轉變為「末日之書」。",
       "generatedOnly": true,
-      "notes": "最后修正确认费用为2。转为末日后仍可再次生成新的同种书。"
+      "notes": "最後修正確認費用為2。轉為末日後仍可再次生成新的同種書。"
     },
     {
       "id": "TOKEN_UNDEAD_BOOK_PLAGUE",
@@ -406,9 +406,9 @@
       "health": null,
       "deckCount": 0,
       "keywords": ["WARD", "SANCTUARY", "ENTER_FIELD", "AURA"],
-      "effectsText": "入場曲：若我方場上有其他同名卡，使旧同名卡消失并抽1张。光環：每當手下被轉變為不朽者时，放置1个标记。回合結束時，將對手1張生命小於4的手下轉變為衍生「不朽者」。若標記數大於6，轉變為「末日之書」。",
+      "effectsText": "入場曲：若我方場上有其他同名卡，使舊同名卡消失並抽1張。光環：每當手下被轉變為不朽者時，放置1個標記。回合結束時，將對手1張生命小於4的手下轉變為衍生「不朽者」。標記達到7時，轉變為「末日之書」。",
       "generatedOnly": true,
-      "notes": "最后修正确认费用为2。大于6即至少7。取消回合结束转变后的额外放置标记；该次转变仅由光环获得1个标记。"
+      "notes": "最後修正確認費用為2。大於6即至少7。取消回合結束轉變後的額外放置標記；該次轉變僅由光環獲得1個標記。"
     },
     {
       "id": "TOKEN_UNDEAD_BOOK_REVENGE",
@@ -421,9 +421,9 @@
       "health": null,
       "deckCount": 0,
       "keywords": ["WARD", "SANCTUARY", "ENTER_FIELD"],
-      "effectsText": "入場曲：若我方場上有其他同名卡，使旧同名卡消失并抽1张；死靈數+5。回合結束時，若我方玩家生命低於10，轉變為「末日之書」。",
+      "effectsText": "入場曲：若我方場上有其他同名卡，使舊同名卡消失並抽1張；死靈數+5。回合結束時，若我方玩家生命低於10，轉變為「末日之書」。",
       "generatedOnly": true,
-      "notes": "最后更正确认是死灵数+5，不是死灵术；费用为2。"
+      "notes": "最後更正確認是死靈數+5，不是死靈術；費用為2。"
     },
     {
       "id": "TOKEN_UNDEAD_BOOK_DOOM_PRELUDE",
@@ -438,7 +438,7 @@
       "keywords": ["WARD", "SANCTUARY"],
       "effectsText": "入場曲：若我方場上有4張此同名卡，消失其他3張，抽2張牌，此卡轉變為「末日之書」。",
       "generatedOnly": true,
-      "notes": "采用最后更正：此效果属于入场曲，只有进入场上的第4张发动；消失其他3张，费用为2。"
+      "notes": "采用最後更正：此效果屬於入場曲，只有進入場上的第4張發動；消失其他3張，費用為2。"
     },
     {
       "id": "TOKEN_UNDEAD_DOOMSDAY_BOOK",
@@ -453,7 +453,7 @@
       "keywords": ["INVINCIBLE"],
       "effectsText": "若我方場上有4張「末日之書」，我方立即勝利。",
       "generatedOnly": true,
-      "notes": "通常由黑暗之书转变而来；最后修正确认费用为2。"
+      "notes": "通常由黑暗之書轉變而來；最後修正確認費用為2。"
     },
 
     {
@@ -469,7 +469,7 @@
       "keywords": [],
       "effectsText": "二選一發動：①消滅對手1手下；②抽2張牌。再從「革命絕傑 奧斯但丁」「皇家騎士 絕傑狄翁」「共和絕傑 瓦倫泰」三選一加入手牌；若已發動過，則拿另外一張。協作20：使此卡消耗為0。",
       "generatedOnly": true,
-      "notes": "名称已统一为絕傑榮耀。最后修正确认为玩家整场对局共享记录；已取得者从后续候选排除，三种都取得后再次发动将无合法绝杰可选。"
+      "notes": "名稱已統一為絕傑榮耀。最後修正確認為玩家整場對局共享記錄；已取得者從後續候選排除，三種都取得後再次發動將無合法絕杰可選。"
     },
     {
       "id": "TOKEN_ALLIANCE_HERO_AUGUSTIN",
@@ -484,7 +484,7 @@
       "keywords": ["BATTLECRY", "DEATHRATTLE"],
       "effectsText": "減費X：X為對手場上手下數量。戰吼：抽1張牌，給予對手1手下5點傷害；協作10：再給予對手玩家3點傷害。死亡之聲：此手下返回手牌。",
       "generatedOnly": true,
-      "notes": "联盟衍生牌不进棄堆。"
+      "notes": "聯盟衍生牌不進棄堆。"
     },
     {
       "id": "TOKEN_ALLIANCE_HERO_DION",
@@ -499,7 +499,7 @@
       "keywords": ["CHARGE", "LETHAL", "DIVINE_SHIELD"],
       "effectsText": "攻擊時給予對手所有手下7點傷害；協作15：恢復6點水晶。",
       "generatedOnly": true,
-      "notes": "联盟衍生牌不进棄堆。"
+      "notes": "聯盟衍生牌不進棄堆。"
     },
     {
       "id": "TOKEN_ALLIANCE_HERO_VALENTINE",
@@ -514,7 +514,7 @@
       "keywords": ["BATTLECRY", "AURA"],
       "effectsText": "減費X：X為我方場上手下數量。戰吼：新增1張「空襲」到手牌，我方玩家恢復4HP。光環：回合結束時，使我方手下獲得「單次受到傷害不大於4」，我方玩家獲得聖盾術。",
       "generatedOnly": true,
-      "notes": "最后修正确认伤害上限永久且跨回合、来源离场后仍保留；重复或与其他上限并存时取最小值。只要手下在该次回合结束结算时已在场，就与其他手下一起获得。"
+      "notes": "最後修正確認傷害上限永久且跨回合、來源離場後仍保留；重復或與其他上限並存時取最小值。只要手下在該次回合結束結算時已在場，就與其他手下一起獲得。"
     },
     {
       "id": "TOKEN_ALLIANCE_AIRSTRIKE",
@@ -529,7 +529,7 @@
       "keywords": [],
       "effectsText": "選擇：給予對手所有手下2點傷害，或給予對手玩家2點傷害；之後此卡消失。",
       "generatedOnly": true,
-      "notes": "最后修正确认完成选择效果后消失并返回衍生牌库／额外区，不进弃堆且不触发进入弃堆效果；仍计为使用过一张法术。"
+      "notes": "最後修正確認完成選擇效果後消失並返回衍生牌庫／額外區，不進棄堆且不觸發進入棄堆效果；仍計為使用過一張法術。"
     },
     {
       "id": "TOKEN_ALLIANCE_ROYAL_GUARD",
@@ -544,7 +544,7 @@
       "keywords": [],
       "effectsText": "",
       "generatedOnly": true,
-      "notes": "联盟衍生牌不进棄堆。"
+      "notes": "聯盟衍生牌不進棄堆。"
     },
     {
       "id": "TOKEN_ALLIANCE_MILITIA",
@@ -559,7 +559,7 @@
       "keywords": [],
       "effectsText": "",
       "generatedOnly": true,
-      "notes": "联盟衍生牌不进棄堆。"
+      "notes": "聯盟衍生牌不進棄堆。"
     },
     {
       "id": "TOKEN_ALLIANCE_REVOLUTIONARY_SOLDIER",
@@ -574,7 +574,7 @@
       "keywords": ["RUSH", "DEATHRATTLE"],
       "effectsText": "死亡之聲：抽1張牌。",
       "generatedOnly": true,
-      "notes": "联盟衍生牌不进棄堆。"
+      "notes": "聯盟衍生牌不進棄堆。"
     },
     {
       "id": "TOKEN_ALLIANCE_ROYAL_HONOR_GUARD",
@@ -589,7 +589,7 @@
       "keywords": ["TAUNT", "SANCTUARY", "DISCIPLINE", "RUSH", "AURA", "CANNOT_ATTACK_HERO"],
       "effectsText": "不能攻擊玩家。光環：我方其他手下因能力受到的傷害為0。",
       "generatedOnly": true,
-      "notes": "联盟衍生牌不进棄堆。"
+      "notes": "聯盟衍生牌不進棄堆。"
     },
     {
       "id": "TOKEN_ALLIANCE_ROYAL_WARRIOR",
@@ -604,7 +604,7 @@
       "keywords": ["RUSH", "DIVINE_SHIELD"],
       "effectsText": "衝刺，聖盾術。",
       "generatedOnly": true,
-      "notes": "显示名加「（衍生）」仅为数据消歧；卡面名称原文同为皇家戰士。联盟衍生牌不进棄堆。"
+      "notes": "顯示名加「（衍生）」僅為數據消歧；卡面名稱原文同為皇家戰士。聯盟衍生牌不進棄堆。"
     },
     {
       "id": "TOKEN_ALLIANCE_ROYAL_PALADIN",
@@ -619,7 +619,7 @@
       "keywords": ["RUSH", "TAUNT"],
       "effectsText": "衝刺，嘲諷。",
       "generatedOnly": true,
-      "notes": "联盟衍生牌不进棄堆。"
+      "notes": "聯盟衍生牌不進棄堆。"
     }
   ]
 }

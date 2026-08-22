@@ -20,6 +20,40 @@ import { transformField, transformMinion } from "./transformEngine";
 import { reviveMinion } from "./reviveEngine";
 import { enqueueStateBasedEffectSummons } from "./effectSummonEngine";
 
+function notifyEffectSkipped(state: GameState, playerId: PlayerId, source: CardInstance, reason: string): void {
+  const sourceName = getCardDefinition(source.definitionId).name;
+  state.effectNotices.push({
+    id: state.log.length,
+    playerId,
+    sourceInstanceId: source.instanceId,
+    sourceName,
+    reason,
+  });
+  addLog(state, "RULE", `${sourceName} 的效果未發動：${reason}`, {
+    playerId,
+    sourceInstanceId: source.instanceId,
+    reason,
+  });
+}
+
+function conditionFailureReason(condition: ConditionDefinition): string {
+  switch (condition.type) {
+    case "OPPONENT_HAS_MINION": return "對手場上沒有手下";
+    case "NO_OTHER_FRIENDLY_MINIONS": return "我方場上仍有其他手下";
+    case "MAX_MANA_EQUALS": return `最大水晶不等於 ${condition.value}`;
+    case "MAX_MANA_AT_LEAST": return `最大水晶未達 ${condition.value}`;
+    case "FRIENDLY_ORIGINAL_COST_AT_LEAST": return `我方場上沒有原始費用 ${condition.value} 以上的手下`;
+    case "FRIENDLY_FIELD_SUBTYPE": return `我方場上沒有符合 ${condition.subtype === "ARTIFACT" ? "神器" : condition.subtype} 的立場`;
+    case "FRIENDLY_SAME_FIELD_COUNT_AT_LEAST": return `同名立場未達 ${condition.value} 張`;
+    case "HERO_HP_BELOW": return `我方玩家生命未低於 ${condition.value}`;
+    case "SUMMONED_THIS_GAME_AT_LEAST": return `本場累積召喚手下未達 ${condition.value} 名`;
+    case "SUMMONED_THIS_GAME_BELOW": return `本場累積召喚手下未低於 ${condition.value} 名`;
+    case "FRIENDLY_MINION_COUNT_LESS_THAN_OPPONENT": return "我方手下數量沒有少於對手";
+    case "FRIENDLY_MINION_COUNT_AT_LEAST": return `我方場上手下未達 ${condition.value} 名`;
+    case "ALL": return condition.conditions.map(conditionFailureReason).join("；");
+  }
+}
+
 function conditionMatches(
   state: GameState,
   playerId: PlayerId,
@@ -33,6 +67,8 @@ function conditionMatches(
       return state.players[playerId].minions.every((card) => card.instanceId === source.instanceId);
     case "MAX_MANA_EQUALS":
       return state.players[playerId].maxMana === condition.value;
+    case "MAX_MANA_AT_LEAST":
+      return state.players[playerId].maxMana >= condition.value;
     case "FRIENDLY_ORIGINAL_COST_AT_LEAST":
       return state.players[playerId].minions.some((card) => {
         const cost = getCardDefinition(card.definitionId).originalCost;
@@ -117,7 +153,7 @@ function resolveEffectList(
         const before = player.heroHp;
         player.heroHp = Math.min(player.heroMaxHp, player.heroHp + effect.value);
         const restored = player.heroHp - before;
-        addLog(state, "RESOURCE", `${playerId} 恢复 ${restored} HP`, {
+        addLog(state, "RESOURCE", `${playerId} 恢復 ${restored} HP`, {
           source: source.definitionId,
           requested: effect.value,
           restored,
@@ -128,11 +164,11 @@ function resolveEffectList(
       }
       case "MODIFY_SELF_HEALTH":
         if (hasActiveKeyword(source, "DISCIPLINE") || hasActiveKeyword(source, "INVINCIBLE")) {
-          addLog(state, "PROTECTION", `${source.definitionId} 的纪律阻挡自身生命改值`, { instanceId: source.instanceId });
+          addLog(state, "PROTECTION", `${source.definitionId} 的紀律阻擋自身生命改值`, { instanceId: source.instanceId });
           break;
         }
         if (source.currentHealth === null || source.maxHealth === null) {
-          throw new RuleUndefinedError("NULL_MINION_STATS", "手下生命为 null，不能改值", source.definitionId);
+          throw new RuleUndefinedError("NULL_MINION_STATS", "手下生命為 null，不能改值", source.definitionId);
         }
         source.currentHealth += effect.value;
         source.maxHealth += effect.value;
@@ -140,22 +176,22 @@ function resolveEffectList(
         break;
       case "MODIFY_SELF_ATTACK":
         if (hasActiveKeyword(source, "DISCIPLINE") || hasActiveKeyword(source, "INVINCIBLE")) {
-          addLog(state, "PROTECTION", `${source.definitionId} 的纪律阻挡自身攻击改值`, { instanceId: source.instanceId });
+          addLog(state, "PROTECTION", `${source.definitionId} 的紀律阻擋自身攻擊改值`, { instanceId: source.instanceId });
           break;
         }
         if (source.currentAttack === null) {
-          throw new RuleUndefinedError("NULL_MINION_STATS", "手下攻击为 null，不能改值", source.definitionId);
+          throw new RuleUndefinedError("NULL_MINION_STATS", "手下攻擊為 null，不能改值", source.definitionId);
         }
         source.currentAttack += effect.value;
         addLog(state, "RESOURCE", `${source.definitionId} +${effect.value}/+0`, { instanceId: source.instanceId });
         break;
       case "MODIFY_SELF_STATS":
         if (hasActiveKeyword(source, "DISCIPLINE") || hasActiveKeyword(source, "INVINCIBLE")) {
-          addLog(state, "PROTECTION", `${source.definitionId} 的纪律阻挡自身面板改值`, { instanceId: source.instanceId });
+          addLog(state, "PROTECTION", `${source.definitionId} 的紀律阻擋自身面板改值`, { instanceId: source.instanceId });
           break;
         }
         if (source.currentAttack === null || source.currentHealth === null || source.maxHealth === null) {
-          throw new RuleUndefinedError("NULL_MINION_STATS", "手下面板为 null，不能改值", source.definitionId);
+          throw new RuleUndefinedError("NULL_MINION_STATS", "手下面板為 null，不能改值", source.definitionId);
         }
         source.currentAttack += effect.attack;
         source.currentHealth += effect.health;
@@ -164,20 +200,21 @@ function resolveEffectList(
         break;
       case "INCREASE_MAX_MANA": {
         const player = state.players[playerId];
-        player.maxMana += effect.value;
-        addLog(state, "RESOURCE", `${playerId} 水晶最大值 +${effect.value}`, { source: source.definitionId, maxMana: player.maxMana });
+        const before = player.maxMana;
+        player.maxMana = Math.min(state.rulesConfig.normalMaxMana, player.maxMana + effect.value);
+        addLog(state, "RESOURCE", `${playerId} 水晶最大值 +${player.maxMana - before}`, { source: source.definitionId, requested: effect.value, maxMana: player.maxMana, cap: state.rulesConfig.normalMaxMana });
         break;
       }
       case "RESTORE_MANA": {
         const player = state.players[playerId];
         player.mana = player.maxMana;
-        addLog(state, "RESOURCE", `${playerId} 恢复所有水晶`, { source: source.definitionId, mana: player.mana });
+        addLog(state, "RESOURCE", `${playerId} 恢復所有水晶`, { source: source.definitionId, mana: player.mana });
         break;
       }
       case "RESTORE_MANA_VALUE": {
         const player = state.players[playerId];
         player.mana = Math.min(player.maxMana, player.mana + effect.value);
-        addLog(state, "RESOURCE", `${playerId} 恢复${effect.value}水晶`, { source: source.definitionId, mana: player.mana });
+        addLog(state, "RESOURCE", `${playerId} 恢復${effect.value}水晶`, { source: source.definitionId, mana: player.mana });
         break;
       }
       case "RETURN_SELF_TO_HAND":
@@ -188,15 +225,18 @@ function resolveEffectList(
         const shuffled = shuffleSeeded(state.players[playerId].deck, state.rngSeed);
         state.players[playerId].deck = shuffled.value;
         state.rngSeed = shuffled.seed;
-        addLog(state, "RNG", `${playerId} 将转费卡返回牌组并洗牌`, { instanceId: source.instanceId, resultingSeed: state.rngSeed });
+        addLog(state, "RNG", `${playerId} 將轉費卡返回牌組並洗牌`, { instanceId: source.instanceId, resultingSeed: state.rngSeed });
         break;
       }
       case "SUMMON_SELF_FROM_HAND":
-        if (!state.players[playerId].effectSummonUsedThisTurn.includes(source.definitionId)) {
-          state.players[playerId].effectSummonUsedThisTurn.push(source.definitionId);
-        }
-        summonFromHandByEffect(state, source);
-        break;
+        state.pendingChoice = {
+          type: "EFFECT_SUMMON_CONFIRM",
+          playerId,
+          sourceInstanceId: source.instanceId,
+          remainingEffects,
+        };
+        addLog(state, "ACTION", `${getCardDefinition(source.definitionId).name} 的效果召喚等待玩家確認`, { sourceInstanceId: source.instanceId });
+        return false;
       case "CHOOSE_EFFECT_SUMMON_COPY": {
         const candidates = effect.candidateInstanceIds.filter((instanceId) =>
           state.players[playerId].hand.some((card) => card.instanceId === instanceId),
@@ -206,7 +246,7 @@ function resolveEffectList(
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: "同名卡的效果召唤本回合只能发动一次，请选择1张",
+          prompt: "同名卡的效果召喚本回合只能發動一次，請選擇1張",
           count: 1,
           candidateInstanceIds: candidates,
           resolution: { type: "SUMMON_EFFECT_COPY", definitionId: effect.definitionId },
@@ -218,12 +258,15 @@ function resolveEffectList(
         const candidates = state.players[playerId].hand
           .filter((card) => getCardDefinition(card.definitionId).cardType === "SPELL")
           .map((card) => card.instanceId);
-        if (candidates.length === 0) return false;
+        if (candidates.length === 0) {
+          notifyEffectSkipped(state, playerId, source, "手牌中沒有可複製的法術");
+          return false;
+        }
         state.pendingChoice = {
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: "指定我方手牌1张法术，复制并发动其效果",
+          prompt: "指定我方手牌1張法術，複製並發動其效果",
           count: 1,
           candidateInstanceIds: candidates,
           resolution: { type: "COPY_SPELL_EFFECT" },
@@ -240,16 +283,16 @@ function resolveEffectList(
           type: "EFFECT_OPTION",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: "选择神威焰龙的回合结束效果",
+          prompt: "選擇神威焰龍的回合結束效果",
           options: [
             {
               id: "DAMAGE",
-              label: `给予对手所有手下与对手玩家 ${damage} 点伤害`,
+              label: `給予對手所有手下與對手玩家 ${damage} 點傷害`,
               effects: [{ type: "DAMAGE_ALL_ENEMY_MINIONS", value: damage }, { type: "DAMAGE_ENEMY_HERO", value: damage }],
             },
             {
               id: "DEFEND",
-              label: `获得嘲讽与 +0/+${health}，我方玩家恢复 ${heal} HP`,
+              label: `獲得嘲諷與 +0/+${health}，我方玩家恢復 ${heal} HP`,
               effects: [
                 { type: "GAIN_SELF_KEYWORD", keyword: "TAUNT" },
                 { type: "MODIFY_SELF_HEALTH", value: health },
@@ -276,7 +319,7 @@ function resolveEffectList(
         const player = state.players[playerId];
         const before = player.heroHp;
         player.heroHp = Math.min(player.heroMaxHp, player.heroHp + transformedCount);
-        addLog(state, "RESOURCE", `${playerId} 因灾厄洪流恢复 ${player.heroHp - before} HP`, { transformedCount });
+        addLog(state, "RESOURCE", `${playerId} 因災厄洪流恢復 ${player.heroHp - before} HP`, { transformedCount });
         if (player.fields.some((field) => field.definitionId === effect.doomFieldDefinitionId)) {
           for (let count = 0; count < effect.bonusSummonCount; count += 1) {
             summonGeneratedMinion(state, playerId, effect.bonusSummonDefinitionId);
@@ -295,7 +338,7 @@ function resolveEffectList(
           type: "EFFECT_OPTION",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: "选择要召唤的黑暗之书",
+          prompt: "選擇要召喚的黑暗之書",
           options: effect.definitionIds.map((definitionId) => ({
             id: definitionId,
             label: getCardDefinition(definitionId).name,
@@ -310,7 +353,7 @@ function resolveEffectList(
           type: "EFFECT_OPTION",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: `选择机械神造物（尚需选择${effect.count}种，不可重复）`,
+          prompt: `選擇機械神造物（尚需選擇${effect.count}種，不可重復）`,
           options: effect.definitionIds.map((definitionId) => ({
             id: definitionId,
             label: getCardDefinition(definitionId).name,
@@ -359,7 +402,10 @@ function resolveEffectList(
         const others = state.players[playerId].fields
           .filter((card) => card.instanceId !== source.instanceId && card.definitionId === source.definitionId)
           .slice(0, effect.count);
-        if (others.length < effect.count) return false;
+        if (others.length < effect.count) {
+          notifyEffectSkipped(state, playerId, source, `沒有足夠的其他同名立場（需要 ${effect.count} 張，目前 ${others.length} 張）`);
+          return false;
+        }
         for (const old of others) {
           const destination = getCardDefinition(old.definitionId).generatedOnly ? "EXTRA_DECK" : "REMOVED";
           moveCard(state, old, destination, "VANISH_OTHER_SAME_FIELDS");
@@ -374,7 +420,7 @@ function resolveEffectList(
           const definition = getCardDefinition(effect.definitionId);
           const card = createCardInstance(definition, playerId, "HAND", `${playerId}-${effect.definitionId}-created-${state.turnNumber}-${state.log.length}-${count}`);
           state.players[playerId].hand.push(card);
-          addLog(state, "ZONE", `${playerId} 获得 ${definition.name}`, { instanceId: card.instanceId, reason: "CREATE_TO_HAND" });
+          addLog(state, "ZONE", `${playerId} 獲得 ${definition.name}`, { instanceId: card.instanceId, reason: "CREATE_TO_HAND" });
         }
         break;
       case "DAMAGE_ALL_ENEMY_MINIONS": {
@@ -416,7 +462,7 @@ function resolveEffectList(
           source.currentAttack -= enemyCount;
           source.currentHealth -= enemyCount;
           source.maxHealth -= enemyCount;
-          addLog(state, "RESOURCE", `${source.definitionId} 依战吼开始快照 -${enemyCount}/-${enemyCount}`, { instanceId: source.instanceId, enemyCount });
+          addLog(state, "RESOURCE", `${source.definitionId} 依戰吼開始快照 -${enemyCount}/-${enemyCount}`, { instanceId: source.instanceId, enemyCount });
           if (source.currentHealth <= 0) destroyMinion(state, source, "SELF_STAT_ZERO", timingContext);
         }
         break;
@@ -436,7 +482,7 @@ function resolveEffectList(
         const timingContext = createTimingContext(state, `DESTROY_ALL:${source.instanceId}`);
         for (const target of targets) {
           if (hasActiveKeyword(target, "SANCTUARY") || hasActiveKeyword(target, "INVINCIBLE")) {
-            addLog(state, "PROTECTION", `${target.definitionId} 阻挡范围效果直接消灭`, { source: source.instanceId });
+            addLog(state, "PROTECTION", `${target.definitionId} 阻擋范圍效果直接消滅`, { source: source.instanceId });
             continue;
           }
           destroyMinion(state, target, "EFFECT_DESTROY_ALL", timingContext);
@@ -446,11 +492,15 @@ function resolveEffectList(
       case "DESTROY_UP_TO_ENEMY_MINIONS": {
         const candidates = getLegalEnemyEffectTargets(state, playerId).map((card) => card.instanceId);
         const count = Math.min(effect.maxCount, candidates.length);
+        if (count === 0) {
+          notifyEffectSkipped(state, playerId, source, "對手場上沒有可被消滅的合法手下");
+          break;
+        }
         state.pendingChoice = {
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: `指定0～${count}名对手手下消灭`,
+          prompt: `指定0～${count}名對手手下消滅`,
           count,
           minCount: 0,
           candidateInstanceIds: candidates,
@@ -462,6 +512,7 @@ function resolveEffectList(
       case "DESTROY_DISTINCT_ENEMY_MINIONS": {
         const candidates = getLegalEnemyEffectTargets(state, playerId).map((card) => card.instanceId);
         if (candidates.length < effect.count) {
+          notifyEffectSkipped(state, playerId, source, `可被消滅的敵方手下不足 ${effect.count} 名（目前 ${candidates.length} 名）`);
           const boundary = skipCommaChain(effectIndex);
           if (boundary === undefined) return false;
           effectIndex = boundary;
@@ -471,7 +522,7 @@ function resolveEffectList(
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: `指定对手${effect.count}名不同手下消灭`,
+          prompt: `指定對手${effect.count}名不同手下消滅`,
           count: effect.count,
           candidateInstanceIds: candidates,
           resolution: { type: "DESTROY_MINIONS" },
@@ -484,12 +535,12 @@ function resolveEffectList(
           const definition = getCardDefinition(target.definitionId);
           if (effect.subtypes && !effect.subtypes.every((subtype) => definition.subtype.includes(subtype))) continue;
           if (hasActiveKeyword(target, "DISCIPLINE") || hasActiveKeyword(target, "INVINCIBLE")) {
-            addLog(state, "PROTECTION", `${target.definitionId} 的纪律阻挡获得 ${effect.keyword}`, { source: source.instanceId });
+            addLog(state, "PROTECTION", `${target.definitionId} 的紀律阻擋獲得 ${effect.keyword}`, { source: source.instanceId });
             continue;
           }
           if (!target.keywords.includes(effect.keyword)) target.keywords.push(effect.keyword);
         }
-        addLog(state, "ACTION", `${playerId} 场上合法手下获得 ${effect.keyword}`, { source: source.instanceId });
+        addLog(state, "ACTION", `${playerId} 場上合法手下獲得 ${effect.keyword}`, { source: source.instanceId });
         break;
       case "GRANT_TARGET_FRIENDLY_MINION_KEYWORD": {
         const candidates = state.players[playerId].minions.filter((card) => {
@@ -497,12 +548,15 @@ function resolveEffectList(
           return (!effect.subtypes || effect.subtypes.every((subtype) => definition.subtype.includes(subtype)))
             && !hasActiveKeyword(card, "DISCIPLINE") && !hasActiveKeyword(card, "INVINCIBLE");
         });
-        if (candidates.length === 0) return false;
+        if (candidates.length === 0) {
+          notifyEffectSkipped(state, playerId, source, "我方場上沒有符合條件且不受紀律阻擋的手下");
+          return false;
+        }
         state.pendingChoice = {
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: `指定我方1名合法手下获得${effect.keyword}`,
+          prompt: `指定我方1名合法手下獲得${effect.keyword}`,
           count: 1,
           candidateInstanceIds: candidates.map((card) => card.instanceId),
           resolution: { type: "GRANT_MINION_KEYWORD", keyword: effect.keyword },
@@ -512,10 +566,10 @@ function resolveEffectList(
       }
       case "GAIN_SELF_KEYWORD":
         if (hasActiveKeyword(source, "DISCIPLINE") || hasActiveKeyword(source, "INVINCIBLE")) {
-          addLog(state, "PROTECTION", `${source.definitionId} 的纪律阻挡自身获得 ${effect.keyword}`);
+          addLog(state, "PROTECTION", `${source.definitionId} 的紀律阻擋自身獲得 ${effect.keyword}`);
         } else if (!source.keywords.includes(effect.keyword)) {
           source.keywords.push(effect.keyword);
-          addLog(state, "ACTION", `${source.definitionId} 获得 ${effect.keyword}`, { instanceId: source.instanceId });
+          addLog(state, "ACTION", `${source.definitionId} 獲得 ${effect.keyword}`, { instanceId: source.instanceId });
         }
         break;
       case "DAMAGE_ENEMY_HERO":
@@ -524,6 +578,7 @@ function resolveEffectList(
       case "DISCARD_HAND": {
         const candidates = state.players[playerId].hand.map((card) => card.instanceId);
         if (candidates.length < effect.count) {
+          notifyEffectSkipped(state, playerId, source, `可丟棄的手牌不足 ${effect.count} 張（目前 ${candidates.length} 張）`);
           const boundary = skipCommaChain(effectIndex);
           if (boundary === undefined) return false;
           effectIndex = boundary;
@@ -533,7 +588,7 @@ function resolveEffectList(
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: `指定丢弃 ${effect.count} 张手牌`,
+          prompt: `指定丟棄 ${effect.count} 張手牌`,
           count: effect.count,
           candidateInstanceIds: candidates,
           resolution: { type: "DISCARD_HAND" },
@@ -544,6 +599,7 @@ function resolveEffectList(
       case "DAMAGE_TARGET_ENEMY_MINION": {
         const candidates = getLegalEnemyEffectTargets(state, playerId).map((card) => card.instanceId);
         if (candidates.length === 0) {
+          notifyEffectSkipped(state, playerId, source, "對手場上沒有可指定的合法手下");
           const boundary = skipCommaChain(effectIndex);
           if (boundary === undefined) return false;
           effectIndex = boundary;
@@ -553,7 +609,7 @@ function resolveEffectList(
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: `指定对手 1 手下，造成 ${effect.value} 点伤害`,
+          prompt: `指定對手 1 手下，造成 ${effect.value} 點傷害`,
           count: 1,
           candidateInstanceIds: candidates,
           resolution: { type: "DAMAGE_MINION", value: effect.value },
@@ -571,7 +627,7 @@ function resolveEffectList(
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: `指定对手1手下，造成${effect.value}点伤害`,
+          prompt: `指定對手1手下，造成${effect.value}點傷害`,
           count: 1,
           candidateInstanceIds: candidates,
           resolution: { type: "DAMAGE_MINION", value: effect.value },
@@ -582,12 +638,15 @@ function resolveEffectList(
       case "REPEAT_DAMAGE_TARGET_ENEMY_MINION_BY_FRIENDLY_FIELD_SUBTYPE": {
         const hits = state.players[playerId].fields.filter((field) => getCardDefinition(field.definitionId).subtype.includes(effect.subtype)).length;
         const candidates = getLegalEnemyEffectTargets(state, playerId).map((card) => card.instanceId);
-        if (hits === 0 || candidates.length === 0) break;
+        if (hits === 0 || candidates.length === 0) {
+          notifyEffectSkipped(state, playerId, source, hits === 0 ? `我方場上沒有符合 ${effect.subtype} 的立場` : "對手場上沒有可指定的合法手下");
+          break;
+        }
         state.pendingChoice = {
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: `指定对手1手下造成${effect.value}点伤害（剩余${hits}次）`,
+          prompt: `指定對手1手下造成${effect.value}點傷害（剩余${hits}次）`,
           count: 1,
           candidateInstanceIds: candidates,
           resolution: { type: "REPEAT_DAMAGE_MINION", value: effect.value, remainingHits: hits },
@@ -597,18 +656,18 @@ function resolveEffectList(
       }
       case "DAMAGE_DISTINCT_ENEMY_MINIONS_REWARD_KILLS": {
         const candidates = getLegalEnemyEffectTargets(state, playerId).map((card) => card.instanceId);
-        if (candidates.length < effect.count) {
-          const boundary = skipCommaChain(effectIndex);
-          if (boundary === undefined) return false;
-          effectIndex = boundary;
+        const count = Math.min(effect.count, candidates.length);
+        if (count === 0) {
+          notifyEffectSkipped(state, playerId, source, "對手場上沒有可指定的合法手下");
           break;
         }
         state.pendingChoice = {
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: `指定对手 ${effect.count} 个不同手下，各造成 ${effect.value} 点伤害`,
-          count: effect.count,
+          prompt: `指定對手場上最多 ${effect.count} 名不同手下，各造成 ${effect.value} 點傷害`,
+          count,
+          minCount: 0,
           candidateInstanceIds: candidates,
           resolution: {
             type: "DAMAGE_MINIONS_REWARD_KILLS",
@@ -620,9 +679,34 @@ function resolveEffectList(
         };
         return false;
       }
+      case "REPEAT_DAMAGE_ENEMY_MINION_OR_HERO": {
+        const candidates = getLegalEnemyEffectTargets(state, playerId).map((card) => card.instanceId);
+        if (effect.count <= 0) break;
+        if (candidates.length === 0) {
+          if (effect.heroMaxHits > 0) dealDamageToHero(state, opponentOf(playerId), effect.value, source.instanceId);
+          break;
+        }
+        state.pendingChoice = {
+          type: "EFFECT_CARDS",
+          playerId,
+          sourceInstanceId: source.instanceId,
+          prompt: `指定對手1名手下造成${effect.value}點傷害（剩餘${effect.count}次）`,
+          count: 1,
+          candidateInstanceIds: candidates,
+          resolution: {
+            type: "REPEAT_DAMAGE_MINION_OR_HERO",
+            value: effect.value,
+            remainingHits: effect.count,
+            heroHitsRemaining: effect.heroMaxHits,
+          },
+          remainingEffects,
+        };
+        return false;
+      }
       case "VANISH_ENEMY_MINIONS": {
         const candidates = getLegalEnemyEffectTargets(state, playerId).map((card) => card.instanceId);
         if (candidates.length < effect.count) {
+          notifyEffectSkipped(state, playerId, source, `可使其消失的敵方手下不足 ${effect.count} 名（目前 ${candidates.length} 名）`);
           const boundary = skipCommaChain(effectIndex);
           if (boundary === undefined) return false;
           effectIndex = boundary;
@@ -632,7 +716,7 @@ function resolveEffectList(
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: `指定使对手 ${effect.count} 个不同手下消失`,
+          prompt: `指定使對手 ${effect.count} 個不同手下消失`,
           count: effect.count,
           candidateInstanceIds: candidates,
           resolution: { type: "VANISH_MINIONS" },
@@ -644,13 +728,38 @@ function resolveEffectList(
         const candidates = getLegalEnemyEffectTargets(state, playerId, true)
           .filter((card) => effect.maxHealth === undefined || (card.currentHealth !== null && card.currentHealth <= effect.maxHealth))
           .map((card) => card.instanceId);
-        if (candidates.length < effect.count) return false;
+        if (candidates.length < effect.count) {
+          notifyEffectSkipped(state, playerId, source, `符合轉變條件的敵方手下不足 ${effect.count} 名（目前 ${candidates.length} 名）`);
+          return false;
+        }
         state.pendingChoice = {
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: `指定转变对手 ${effect.count} 个不同手下`,
+          prompt: `指定轉變對手 ${effect.count} 個不同手下`,
           count: effect.count,
+          candidateInstanceIds: candidates,
+          resolution: { type: "TRANSFORM_MINIONS", definitionId: effect.definitionId },
+          remainingEffects,
+        };
+        return false;
+      }
+      case "TRANSFORM_UP_TO_ENEMY_MINIONS": {
+        const candidates = getLegalEnemyEffectTargets(state, playerId, true)
+          .filter((card) => effect.maxHealth === undefined || (card.currentHealth !== null && card.currentHealth <= effect.maxHealth))
+          .map((card) => card.instanceId);
+        const count = Math.min(effect.maxCount, candidates.length);
+        if (count === 0) {
+          notifyEffectSkipped(state, playerId, source, "對手場上沒有符合轉變條件且不受紀律阻擋的手下");
+          break;
+        }
+        state.pendingChoice = {
+          type: "EFFECT_CARDS",
+          playerId,
+          sourceInstanceId: source.instanceId,
+          prompt: `指定轉變對手最多 ${count} 個不同手下`,
+          count,
+          minCount: 0,
           candidateInstanceIds: candidates,
           resolution: { type: "TRANSFORM_MINIONS", definitionId: effect.definitionId },
           remainingEffects,
@@ -664,12 +773,15 @@ function resolveEffectList(
           return (effect.maxOriginalCost === undefined || definition.originalCost <= effect.maxOriginalCost)
             && (effect.minOriginalCost === undefined || definition.originalCost >= effect.minOriginalCost);
         });
-        if (candidates.length === 0) return false;
+        if (candidates.length === 0) {
+          notifyEffectSkipped(state, playerId, source, "我方棄堆沒有符合條件的可復活手下");
+          return false;
+        }
         state.pendingChoice = {
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: "指定我方弃堆1张合法手下复活",
+          prompt: "指定我方棄堆1張合法手下復活",
           count: 1,
           candidateInstanceIds: candidates.map((card) => card.instanceId),
           resolution: { type: "REVIVE_MINION" },
@@ -680,6 +792,7 @@ function resolveEffectList(
       case "DESTROY_TARGET_ENEMY_MINION": {
         const candidates = getLegalEnemyEffectTargets(state, playerId).map((card) => card.instanceId);
         if (candidates.length === 0) {
+          notifyEffectSkipped(state, playerId, source, "對手場上沒有可被消滅的合法手下");
           const boundary = skipCommaChain(effectIndex);
           if (boundary === undefined) return false;
           effectIndex = boundary;
@@ -689,7 +802,7 @@ function resolveEffectList(
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: "指定消灭对手 1 手下",
+          prompt: "指定消滅對手 1 手下",
           count: 1,
           candidateInstanceIds: candidates,
           resolution: { type: "DESTROY_MINION" },
@@ -697,11 +810,14 @@ function resolveEffectList(
         };
         return false;
       }
-      case "RETURN_FRIENDLY_MINION_DRAW_BY_COST": {
-        const candidates = state.players[playerId].minions
-          .filter((card) => getCardDefinition(card.definitionId).subtype.includes(effect.subtype))
+      case "RETURN_HAND_MINION_TO_DECK_SHUFFLE_DRAW_BY_COST": {
+        const candidates = state.players[playerId].hand
+          .filter((card) => card.instanceId !== source.instanceId
+            && getCardDefinition(card.definitionId).cardType === "MINION"
+            && getCardDefinition(card.definitionId).subtype.includes(effect.subtype))
           .map((card) => card.instanceId);
         if (candidates.length === 0) {
+          notifyEffectSkipped(state, playerId, source, `手牌中沒有其他 ${effect.subtype} 手下可返回牌組`);
           const boundary = skipCommaChain(effectIndex);
           if (boundary === undefined) return false;
           effectIndex = boundary;
@@ -711,10 +827,10 @@ function resolveEffectList(
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: `指定我方 1 张 ${effect.subtype} 手下返回手牌`,
+          prompt: `指定手牌 1 張其他 ${effect.subtype} 手下返回牌組並洗牌`,
           count: 1,
           candidateInstanceIds: candidates,
-          resolution: { type: "RETURN_MINION_DRAW_BY_COST", threshold: effect.threshold, low: effect.low, high: effect.high },
+          resolution: { type: "RETURN_HAND_MINION_TO_DECK_SHUFFLE_DRAW_BY_COST", threshold: effect.threshold, low: effect.low, high: effect.high },
           remainingEffects,
         };
         return false;
@@ -725,6 +841,7 @@ function resolveEffectList(
             && (!effect.definitionId || card.definitionId === effect.definitionId))
           .map((card) => card.instanceId);
         if (candidates.length === 0) {
+          notifyEffectSkipped(state, playerId, source, "牌組中沒有符合檢索條件的卡牌");
           const boundary = skipCommaChain(effectIndex);
           if (boundary === undefined) return false;
           effectIndex = boundary;
@@ -734,7 +851,7 @@ function resolveEffectList(
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: effect.definitionId ? `从牌库检索 1 张${getCardDefinition(effect.definitionId).name}` : `从牌库检索 1 张${effect.cardType === "SPELL" ? "法术" : "卡牌"}`,
+          prompt: effect.definitionId ? `從牌庫檢索 1 張${getCardDefinition(effect.definitionId).name}` : `從牌庫檢索 1 張${effect.cardType === "SPELL" ? "法術" : "卡牌"}`,
           count: 1,
           candidateInstanceIds: candidates,
           resolution: { type: "SEARCH_DECK" },
@@ -743,24 +860,21 @@ function resolveEffectList(
         return false;
       }
       case "DISCOVER_TOP": {
-        const revealed = state.players[playerId].deck.slice(-effect.reveal);
+        const revealCount = 3 + (effect.bonusReveal ?? 0);
+        const revealed = state.players[playerId].deck.slice(-revealCount);
         const matches = (card: CardInstance) => {
           const definition = getCardDefinition(card.definitionId);
           return (!effect.cardType || definition.cardType === effect.cardType)
             && (!effect.subtype || definition.subtype.includes(effect.subtype));
         };
         const candidates = revealed.filter(matches);
-        addLog(state, "ACTION", `${playerId} 从牌组上方翻开 ${revealed.length} 张进行发现`, {
+        addLog(state, "ACTION", `${playerId} 從牌組上方翻開 ${revealed.length} 張進行發現`, {
           source: source.definitionId,
           revealed: revealed.map((card) => card.instanceId),
           legal: candidates.map((card) => card.instanceId),
         });
         if (candidates.length < effect.count) {
-          if (effect.fallbackDrawIfNoMatchInDeck && !state.players[playerId].deck.some(matches)) {
-            for (let count = 0; count < effect.fallbackDrawIfNoMatchInDeck && !state.winner; count += 1) {
-              drawCard(state, playerId, `EFFECT:${source.definitionId}:DISCOVER_FALLBACK`);
-            }
-          }
+          notifyEffectSkipped(state, playerId, source, `翻開的 ${revealed.length} 張牌中沒有足夠的發現目標（需要 ${effect.count} 張，目前 ${candidates.length} 張）`);
           const boundary = skipCommaChain(effectIndex);
           if (boundary === undefined) return false;
           effectIndex = boundary;
@@ -770,7 +884,7 @@ function resolveEffectList(
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: `从发现候选中指定 ${effect.count} 张牌`,
+          prompt: `從發現候選中指定 ${effect.count} 張牌`,
           count: effect.count,
           candidateInstanceIds: candidates.map((card) => card.instanceId),
           resolution: {
@@ -785,6 +899,7 @@ function resolveEffectList(
       case "SEAL_TARGET_ENEMY_MINION": {
         const candidates = getLegalEnemyEffectTargets(state, playerId, true).map((card) => card.instanceId);
         if (candidates.length === 0) {
+          notifyEffectSkipped(state, playerId, source, "對手場上沒有可被封印且不受紀律阻擋的手下");
           const boundary = skipCommaChain(effectIndex);
           if (boundary === undefined) return false;
           effectIndex = boundary;
@@ -794,7 +909,7 @@ function resolveEffectList(
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: "指定对手 1 手下并永久封印至离场",
+          prompt: "指定對手 1 手下並永久封印至離場",
           count: 1,
           candidateInstanceIds: candidates,
           resolution: { type: "SEAL_MINION" },
@@ -804,7 +919,7 @@ function resolveEffectList(
       }
       case "GAIN_NECROMANCY":
         state.players[playerId].resources.necromancy += effect.value;
-        addLog(state, "RESOURCE", `${playerId} 死灵数 +${effect.value}`, {
+        addLog(state, "RESOURCE", `${playerId} 死靈數 +${effect.value}`, {
           source: source.definitionId,
           necromancy: state.players[playerId].resources.necromancy,
         });
@@ -827,19 +942,28 @@ function resolveEffectList(
       }
       case "GRANT_NEXT_HERO_DAMAGE_ZERO":
         state.players[playerId].heroDamageNullifiers += effect.count;
-        addLog(state, "PROTECTION", `${playerId} 接下来${effect.count}次受到的伤害变为0`, { source: source.instanceId });
+        addLog(state, "PROTECTION", `${playerId} 接下來${effect.count}次受到的傷害變為0`, { source: source.instanceId });
         break;
       case "GRANT_NEXT_MINION_TEMPORARY_COST_REDUCTION":
         state.players[playerId].nextMinionTemporaryCostReduction += effect.value;
-        addLog(state, "RESOURCE", `${playerId} 本回合下一张手下费用-${effect.value}`, { source: source.instanceId });
+        addLog(state, "RESOURCE", `${playerId} 本回合下一張手下費用-${effect.value}`, { source: source.instanceId });
+        break;
+      case "GRANT_NEXT_LOW_COST_DRAGON_ZERO":
+        state.players[playerId].nextLowCostDragonZeroMaxCost = effect.maxOriginalCost;
+        addLog(state, "RESOURCE", `${playerId} 下一張原始費用${effect.maxOriginalCost}以下的龍族手下費用變為0`, { source: source.instanceId });
+        break;
+      case "GRANT_NEXT_HIGH_COST_DRAGON_REDUCTION":
+        state.players[playerId].nextHighCostDragonReductionMinCost = effect.minOriginalCost;
+        state.players[playerId].nextHighCostDragonReduction = effect.value;
+        addLog(state, "RESOURCE", `${playerId} 下一張原始費用${effect.minOriginalCost}以上的龍族手下費用-${effect.value}`, { source: source.instanceId });
         break;
       case "GRANT_ALL_FRIENDLY_DAMAGE_CAP":
         for (const target of state.players[playerId].minions) grantDamageCap(target, effect.value);
-        addLog(state, "PROTECTION", `${playerId} 场上手下永久获得单次伤害上限${effect.value}`, { source: source.instanceId });
+        addLog(state, "PROTECTION", `${playerId} 場上手下永久獲得單次傷害上限${effect.value}`, { source: source.instanceId });
         break;
       case "GRANT_HERO_DIVINE_SHIELD":
         state.players[playerId].heroDivineShield = true;
-        addLog(state, "PROTECTION", `${playerId} 玩家获得圣盾术`, { source: source.instanceId });
+        addLog(state, "PROTECTION", `${playerId} 玩家獲得圣盾術`, { source: source.instanceId });
         break;
       case "CHOOSE_ONE":
         state.pendingChoice = {
@@ -855,14 +979,14 @@ function resolveEffectList(
         const next: EffectDefinition = { type: "CHOOSE_UNACQUIRED_GENERATED_TO_HAND", definitionIds: effect.heroDefinitionIds, historyKey: effect.historyKey };
         const options = [];
         if (getLegalEnemyEffectTargets(state, playerId).length > 0) {
-          options.push({ id: "DESTROY", label: "消灭对手1手下", effects: [{ type: "DESTROY_TARGET_ENEMY_MINION" as const }, { type: "SEGMENT_BREAK" as const }, next] });
+          options.push({ id: "DESTROY", label: "消滅對手1手下", effects: [{ type: "DESTROY_TARGET_ENEMY_MINION" as const }, { type: "SEGMENT_BREAK" as const }, next] });
         }
-        options.push({ id: "DRAW", label: "抽2张牌", effects: [{ type: "DRAW" as const, value: 2 }, { type: "SEGMENT_BREAK" as const }, next] });
+        options.push({ id: "DRAW", label: "抽2張牌", effects: [{ type: "DRAW" as const, value: 2 }, { type: "SEGMENT_BREAK" as const }, next] });
         state.pendingChoice = {
           type: "EFFECT_OPTION",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: "选择绝杰荣耀效果",
+          prompt: "選擇絕杰榮耀效果",
           options,
           remainingEffects,
         };
@@ -871,12 +995,15 @@ function resolveEffectList(
       case "CHOOSE_UNACQUIRED_GENERATED_TO_HAND": {
         const acquired = state.players[playerId].choiceHistory[effect.historyKey] ?? [];
         const candidates = effect.definitionIds.filter((definitionId) => !acquired.includes(definitionId));
-        if (candidates.length === 0) break;
+        if (candidates.length === 0) {
+          notifyEffectSkipped(state, playerId, source, "所有可選卡牌都已取得，沒有剩餘候選項目");
+          break;
+        }
         state.pendingChoice = {
           type: "EFFECT_OPTION",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: "选择尚未取得的绝杰加入手牌",
+          prompt: "選擇尚未取得的絕杰加入手牌",
           options: candidates.map((definitionId) => ({
             id: definitionId,
             label: getCardDefinition(definitionId).name,
@@ -899,9 +1026,19 @@ function resolveEffectList(
       case "MECHANICAL_TECHNIQUE": {
         const player = state.players[playerId];
         const executableEffects = effect.effects.filter((nested) => canExecuteEffect(state, playerId, source, nested));
-        if (player.resources.recycleCharge < effect.cost || executableEffects.length === 0) break;
+        if (player.resources.recycleCharge < effect.cost || executableEffects.length === 0) {
+          notifyEffectSkipped(
+            state,
+            playerId,
+            source,
+            player.resources.recycleCharge < effect.cost
+              ? `回收充能不足（需要 ${effect.cost}，目前 ${player.resources.recycleCharge}）`
+              : "機械術的後續效果都沒有合法目標或未達發動條件",
+          );
+          break;
+        }
         player.resources.recycleCharge -= effect.cost;
-        addLog(state, "RESOURCE", `${source.definitionId} 发动机械术${effect.cost}`, {
+        addLog(state, "RESOURCE", `${source.definitionId} 發動機械術${effect.cost}`, {
           source: source.instanceId,
           recycleCharge: player.resources.recycleCharge,
         });
@@ -914,12 +1051,15 @@ function resolveEffectList(
           return (!effect.cardType || definition.cardType === effect.cardType)
             && (!effect.subtype || definition.subtype.includes(effect.subtype));
         });
-        if (candidates.length < effect.count) break;
+        if (candidates.length < effect.count) {
+          notifyEffectSkipped(state, playerId, source, `符合條件的手牌不足 ${effect.count} 張（目前 ${candidates.length} 張）`);
+          break;
+        }
         state.pendingChoice = {
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: `指定${effect.count}张手牌使费用变为0`,
+          prompt: `指定${effect.count}張手牌使費用變為0`,
           count: effect.count,
           candidateInstanceIds: candidates.map((card) => card.instanceId),
           resolution: { type: "SET_CARD_COST_ZERO" },
@@ -935,7 +1075,7 @@ function resolveEffectList(
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: `选择0～${Math.min(effect.maxCount, candidates.length)}张手牌返回牌组并洗牌`,
+          prompt: `選擇0～${Math.min(effect.maxCount, candidates.length)}張手牌返回牌組並洗牌`,
           count: Math.min(effect.maxCount, candidates.length),
           minCount: 0,
           candidateInstanceIds: candidates,
@@ -950,7 +1090,7 @@ function resolveEffectList(
         if (source.necroRevivedTurn === state.turnNumber || player.resources.necromancy < effect.value) break;
         if (player.minions.length >= state.rulesConfig.minionLimit) break;
         player.resources.necromancy -= effect.value;
-        addLog(state, "RESOURCE", `${source.definitionId} 消耗 ${effect.value} 死灵数发动死灵复活`, {
+        addLog(state, "RESOURCE", `${source.definitionId} 消耗 ${effect.value} 死靈數發動死靈復活`, {
           instanceId: source.instanceId,
           necromancy: player.resources.necromancy,
         });
@@ -960,10 +1100,16 @@ function resolveEffectList(
       case "SEGMENT_BREAK":
         break;
       case "CONDITIONAL":
-        if (conditionMatches(state, playerId, source, effect.condition) && !resolveEffectList(state, playerId, source, effect.effects)) return false;
+        if (!conditionMatches(state, playerId, source, effect.condition)) {
+          notifyEffectSkipped(state, playerId, source, conditionFailureReason(effect.condition));
+        } else if (!resolveEffectList(state, playerId, source, effect.effects)) return false;
         break;
       case "RULE_UNDEFINED":
-        throw new RuleUndefinedError(effect.ruleId, "效果标记为未定义", source.definitionId);
+        throw new RuleUndefinedError(effect.ruleId, "效果標記為未定義", source.definitionId);
+      default: {
+        const unhandledEffect: never = effect;
+        throw new NotImplementedError(`尚未實作效果類型：${(unhandledEffect as EffectDefinition).type}`, source.definitionId);
+      }
     }
   }
   return true;
@@ -978,17 +1124,18 @@ export function resolvePendingEffects(state: GameState): void {
       for (const controllerId of controllerOrder) {
         const group = batch.filter((effect) => effect.controllerId === controllerId);
         if (group.length === 0 || group.every((effect) => effect.orderConfirmed)) continue;
-        if (group.length === 1) {
-          group[0].orderConfirmed = true;
+        const sourceInstanceIds = [...new Set(group.map((effect) => effect.sourceInstanceId))];
+        if (sourceInstanceIds.length === 1) {
+          for (const effect of group) effect.orderConfirmed = true;
           continue;
         }
         state.pendingChoice = {
           type: "TRIGGER_ORDER",
           playerId: controllerId,
           timingId,
-          instanceIds: group.map((effect) => effect.sourceInstanceId),
+          instanceIds: sourceInstanceIds,
         };
-        addLog(state, "ACTION", `${controllerId} 选择同一时机触发效果的处理顺序`, { timingId });
+        addLog(state, "ACTION", `${controllerId} 選擇同一時機觸發效果的處理順序`, { timingId });
         return;
       }
       const remainder = state.pendingEffects.filter((effect) => effect.timingId !== timingId);
@@ -1001,7 +1148,7 @@ export function resolvePendingEffects(state: GameState): void {
     const pending = state.pendingEffects.shift()!;
     const source = findCard(state, pending.sourceInstanceId);
     if (!source) throw new Error(`Triggered effect source ${pending.sourceInstanceId} no longer exists`);
-    addLog(state, "ACTION", `${source.definitionId} 结算延后触发效果`, {
+    addLog(state, "ACTION", `${source.definitionId} 結算延後觸發效果`, {
       sourceInstanceId: source.instanceId,
       cause: pending.cause,
     });
@@ -1014,17 +1161,17 @@ export function resolvePendingEffects(state: GameState): void {
 export function selectTriggerOrder(state: GameState, playerId: PlayerId, instanceIds: string[]): void {
   const choice = state.pendingChoice;
   if (!choice || choice.type !== "TRIGGER_ORDER" || choice.playerId !== playerId) {
-    throw new Error("目前没有此触发排序选择");
+    throw new Error("目前沒有此觸發排序選擇");
   }
   if (instanceIds.length !== choice.instanceIds.length || new Set(instanceIds).size !== instanceIds.length) {
-    throw new Error("必须排列全部且不重复的触发来源");
+    throw new Error("必須排列全部且不重復的觸發來源");
   }
-  if (instanceIds.some((id) => !choice.instanceIds.includes(id))) throw new Error("触发来源不合法");
+  if (instanceIds.some((id) => !choice.instanceIds.includes(id))) throw new Error("觸發來源不合法");
   const batch = state.pendingEffects.filter((effect) => effect.timingId === choice.timingId);
   const remainder = state.pendingEffects.filter((effect) => effect.timingId !== choice.timingId);
   const selectedController = batch.filter((effect) => effect.controllerId === playerId);
   const ordered = instanceIds
-    .map((id) => selectedController.find((effect) => effect.sourceInstanceId === id)!)
+    .flatMap((id) => selectedController.filter((effect) => effect.sourceInstanceId === id))
     .map((effect) => ({ ...effect, orderConfirmed: true }));
   const otherController = batch.filter((effect) => effect.controllerId !== playerId);
   state.pendingEffects = playerId === state.activePlayerId
@@ -1049,22 +1196,22 @@ export function resolveEffects(
 export function selectEffectCards(state: GameState, playerId: PlayerId, instanceIds: string[]): void {
   const choice = state.pendingChoice;
   if (!choice || choice.type !== "EFFECT_CARDS" || choice.playerId !== playerId) {
-    throw new InvalidActionError("目前没有此效果选择");
+    throw new InvalidActionError("目前沒有此效果選擇");
   }
   const minCount = choice.minCount ?? choice.count;
   if (instanceIds.length < minCount || instanceIds.length > choice.count || new Set(instanceIds).size !== instanceIds.length) {
-    throw new InvalidActionError(choice.minCount === undefined ? `必须指定 ${choice.count} 张不同卡牌` : `必须指定 ${minCount}～${choice.count} 张不同卡牌`);
+    throw new InvalidActionError(choice.minCount === undefined ? `必須指定 ${choice.count} 張不同卡牌` : `必須指定 ${minCount}～${choice.count} 張不同卡牌`);
   }
-  if (instanceIds.some((id) => !choice.candidateInstanceIds.includes(id))) throw new InvalidActionError("指定目标不合法");
+  if (instanceIds.some((id) => !choice.candidateInstanceIds.includes(id))) throw new InvalidActionError("指定目標不合法");
   const source = findCard(state, choice.sourceInstanceId);
-  if (!source) throw new InvalidActionError("效果来源已不存在");
+  if (!source) throw new InvalidActionError("效果來源已不存在");
   state.pendingChoice = undefined;
   const timingContext = createTimingContext(state, `CHOICE:${source.instanceId}`);
 
   if (choice.resolution.type === "DISCARD_HAND") {
     for (const instanceId of instanceIds) {
       const card = state.players[playerId].hand.find((candidate) => candidate.instanceId === instanceId);
-      if (!card) throw new InvalidActionError("弃牌目标已经不在手牌");
+      if (!card) throw new InvalidActionError("棄牌目標已經不在手牌");
       const definition = getCardDefinition(card.definitionId);
       moveCard(state, card, definition.generatedOnly ? "EXTRA_DECK" : "GRAVEYARD", "EFFECT_DISCARD");
       const discardEffects = !card.sealed && card.keywords.includes("ON_DISCARD") ? definition.triggeredEffects?.ON_DISCARD : undefined;
@@ -1076,34 +1223,45 @@ export function selectEffectCards(state: GameState, playerId: PlayerId, instance
   } else if (choice.resolution.type === "SET_CARD_COST_ZERO") {
     for (const instanceId of instanceIds) {
       const card = state.players[playerId].hand.find((candidate) => candidate.instanceId === instanceId);
-      if (!card) throw new InvalidActionError("费用变更目标已经不在手牌");
+      if (!card) throw new InvalidActionError("費用變更目標已經不在手牌");
       card.counters.fixedCost = 0;
       card.currentCost = 0;
-      addLog(state, "RESOURCE", `${card.definitionId} 费用变为0`, { instanceId: card.instanceId });
+      addLog(state, "RESOURCE", `${card.definitionId} 費用變為0`, { instanceId: card.instanceId });
     }
   } else if (choice.resolution.type === "RETURN_HAND_TO_DECK_MACHINE_DISCOUNT") {
     for (const instanceId of instanceIds) {
       const card = state.players[playerId].hand.find((candidate) => candidate.instanceId === instanceId);
-      if (!card) throw new InvalidActionError("返回牌组的目标已经不在手牌");
+      if (!card) throw new InvalidActionError("返回牌組的目標已經不在手牌");
       moveCard(state, card, "DECK", "RETURN_HAND_TO_DECK");
     }
     const shuffled = shuffleSeeded(state.players[playerId].deck, state.rngSeed);
     state.players[playerId].deck = shuffled.value;
     state.rngSeed = shuffled.seed;
     state.players[playerId].nextMachineCostReduction = instanceIds.length * choice.resolution.reductionPerCard;
-    addLog(state, "RNG", `${playerId} 将${instanceIds.length}张手牌返回牌组并洗牌`, {
+    addLog(state, "RNG", `${playerId} 將${instanceIds.length}張手牌返回牌組並洗牌`, {
       instanceIds,
       resultingSeed: state.rngSeed,
       nextMachineCostReduction: state.players[playerId].nextMachineCostReduction,
     });
     drawCard(state, playerId, `EFFECT:${source.definitionId}`);
-  } else if (choice.resolution.type === "RETURN_MINION_DRAW_BY_COST") {
-    const target = findCard(state, instanceIds[0]);
-    if (!target || target.zone !== "MINION" || target.controllerId !== playerId) throw new InvalidActionError("返回目标已经不在我方手下区");
-    const originalCost = getCardDefinition(target.definitionId).originalCost;
-    if (originalCost === null) throw new RuleUndefinedError("NULL_CARD_COST", "返回目标原始费用为 null", target.definitionId);
-    const destination = getCardDefinition(target.definitionId).generatedOnly ? "EXTRA_DECK" : "HAND";
-    moveCard(state, target, destination, "RETURN_TO_HAND");
+  } else if (choice.resolution.type === "RETURN_HAND_MINION_TO_DECK_SHUFFLE_DRAW_BY_COST") {
+    const target = state.players[playerId].hand.find((card) => card.instanceId === instanceIds[0]);
+    if (!target) throw new InvalidActionError("返回目標已經不在我方手牌");
+    const targetDefinition = getCardDefinition(target.definitionId);
+    const originalCost = targetDefinition.originalCost;
+    if (originalCost === null) throw new RuleUndefinedError("NULL_CARD_COST", "返回目標原始費用為 null", target.definitionId);
+    if (targetDefinition.generatedOnly) {
+      moveCard(state, target, "EXTRA_DECK", "RETURN_HAND_MINION_TO_DECK_SHUFFLE");
+    } else {
+      moveCard(state, target, "DECK", "RETURN_HAND_MINION_TO_DECK_SHUFFLE");
+      const shuffled = shuffleSeeded(state.players[playerId].deck, state.rngSeed);
+      state.players[playerId].deck = shuffled.value;
+      state.rngSeed = shuffled.seed;
+      addLog(state, "RNG", `${playerId} 將手牌龍族手下返回牌組並洗牌`, {
+        instanceId: target.instanceId,
+        resultingSeed: state.rngSeed,
+      });
+    }
     const drawCount = originalCost >= choice.resolution.threshold ? choice.resolution.high : choice.resolution.low;
     for (let count = 0; count < drawCount && !state.winner; count += 1) drawCard(state, playerId, `EFFECT:${source.definitionId}`);
   } else if (choice.resolution.type === "SEARCH_DECK") {
@@ -1111,19 +1269,19 @@ export function selectEffectCards(state: GameState, playerId: PlayerId, instance
   } else if (choice.resolution.type === "DISCOVER_TO_HAND") {
     for (const instanceId of instanceIds) {
       const card = state.players[playerId].deck.find((candidate) => candidate.instanceId === instanceId);
-      if (!card) throw new InvalidActionError("发现目标已经不在牌库");
+      if (!card) throw new InvalidActionError("發現目標已經不在牌庫");
       moveCard(state, card, "HAND", "DISCOVER");
       if (choice.resolution.temporaryCostReduction) {
         grantTemporaryCostReduction(state, playerId, card, choice.resolution.temporaryCostReduction);
       }
     }
-    addLog(state, "ACTION", `${playerId} 完成发现；未选牌保持原相对顺序`, { selected: instanceIds });
+    addLog(state, "ACTION", `${playerId} 完成發現；未選牌保持原相對順序`, { selected: instanceIds });
     if (choice.resolution.discardFromSelected) {
       state.pendingChoice = {
         type: "EFFECT_CARDS",
         playerId,
         sourceInstanceId: source.instanceId,
-        prompt: `从本次发现加入手牌的牌中指定丢弃 ${choice.resolution.discardFromSelected} 张`,
+        prompt: `從本次發現加入手牌的牌中指定丟棄 ${choice.resolution.discardFromSelected} 張`,
         count: choice.resolution.discardFromSelected,
         candidateInstanceIds: [...instanceIds],
         resolution: { type: "DISCARD_HAND" },
@@ -1133,19 +1291,23 @@ export function selectEffectCards(state: GameState, playerId: PlayerId, instance
     }
   } else if (choice.resolution.type === "SUMMON_EFFECT_COPY") {
     const selected = state.players[playerId].hand.find((card) => card.instanceId === instanceIds[0]);
-    if (!selected || selected.definitionId !== choice.resolution.definitionId) throw new InvalidActionError("效果召唤选择已经失效");
-    if (!state.players[playerId].effectSummonUsedThisTurn.includes(choice.resolution.definitionId)) {
-      state.players[playerId].effectSummonUsedThisTurn.push(choice.resolution.definitionId);
-    }
-    summonFromHandByEffect(state, selected);
+    if (!selected || selected.definitionId !== choice.resolution.definitionId) throw new InvalidActionError("效果召喚選擇已經失效");
+    state.pendingChoice = {
+      type: "EFFECT_SUMMON_CONFIRM",
+      playerId,
+      sourceInstanceId: selected.instanceId,
+      remainingEffects: choice.remainingEffects,
+    };
+    addLog(state, "ACTION", `${getCardDefinition(selected.definitionId).name} 的效果召喚等待玩家確認`, { sourceInstanceId: selected.instanceId });
+    return;
   } else if (choice.resolution.type === "COPY_SPELL_EFFECT") {
     const selected = state.players[playerId].hand.find((card) => card.instanceId === instanceIds[0]);
-    if (!selected) throw new InvalidActionError("复制的法术已经不在我方手牌");
+    if (!selected) throw new InvalidActionError("複製的法術已經不在我方手牌");
     const copiedDefinition = getCardDefinition(selected.definitionId);
     if (copiedDefinition.cardType !== "SPELL" || !copiedDefinition.effects?.length) {
-      throw new NotImplementedError("所选法术效果尚未实现，不能略过后复制", copiedDefinition.id);
+      throw new NotImplementedError("所選法術效果尚未實現，不能略過後複製", copiedDefinition.id);
     }
-    addLog(state, "ACTION", `${source.definitionId} 复制并发动 ${copiedDefinition.name} 的效果`, {
+    addLog(state, "ACTION", `${source.definitionId} 複製並發動 ${copiedDefinition.name} 的效果`, {
       source: source.instanceId,
       copiedSpell: selected.instanceId,
     });
@@ -1154,7 +1316,7 @@ export function selectEffectCards(state: GameState, playerId: PlayerId, instance
   } else if (choice.resolution.type === "DAMAGE_MINIONS_REWARD_KILLS") {
     const targets = instanceIds.map((instanceId) => {
       const target = findCard(state, instanceId);
-      if (!target || target.zone !== "MINION") throw new InvalidActionError("伤害目标已经不在手下区");
+      if (!target || target.zone !== "MINION") throw new InvalidActionError("傷害目標已經不在手下區");
       return target;
     });
     for (const target of targets) dealDamageToMinion(state, target, choice.resolution.value, source.instanceId, "EFFECT");
@@ -1168,14 +1330,14 @@ export function selectEffectCards(state: GameState, playerId: PlayerId, instance
       const requested = killed.length * choice.resolution.healPerKill;
       const before = player.heroHp;
       player.heroHp = Math.min(player.heroMaxHp, player.heroHp + requested);
-      addLog(state, "RESOURCE", `${playerId} 因消灭奖励恢复 ${player.heroHp - before} HP`, { requested, killed: killed.length });
+      addLog(state, "RESOURCE", `${playerId} 因消滅獎勵恢復 ${player.heroHp - before} HP`, { requested, killed: killed.length });
     }
   } else if (choice.resolution.type === "VANISH_MINIONS") {
     for (const instanceId of instanceIds) {
       const target = findCard(state, instanceId);
-      if (!target || target.zone !== "MINION") throw new InvalidActionError("消失目标已经不在手下区");
+      if (!target || target.zone !== "MINION") throw new InvalidActionError("消失目標已經不在手下區");
       if (hasActiveKeyword(target, "INVINCIBLE")) {
-        addLog(state, "PROTECTION", `${target.definitionId} 的无敌阻挡消失`, { source: source.instanceId });
+        addLog(state, "PROTECTION", `${target.definitionId} 的無敵阻擋消失`, { source: source.instanceId });
         continue;
       }
       const destination = getCardDefinition(target.definitionId).generatedOnly ? "EXTRA_DECK" : "REMOVED";
@@ -1184,16 +1346,16 @@ export function selectEffectCards(state: GameState, playerId: PlayerId, instance
   } else if (choice.resolution.type === "TRANSFORM_MINIONS") {
     for (const instanceId of instanceIds) {
       const target = findCard(state, instanceId);
-      if (!target || target.zone !== "MINION") throw new InvalidActionError("转变目标已经不在手下区");
+      if (!target || target.zone !== "MINION") throw new InvalidActionError("轉變目標已經不在手下區");
       transformMinion(state, target, choice.resolution.definitionId);
     }
   } else if (choice.resolution.type === "REVIVE_MINION") {
     const target = findCard(state, instanceIds[0]);
-    if (!target || target.zone !== "GRAVEYARD") throw new InvalidActionError("复活目标已经不在弃堆");
+    if (!target || target.zone !== "GRAVEYARD") throw new InvalidActionError("復活目標已經不在棄堆");
     reviveMinion(state, playerId, target);
   } else if (choice.resolution.type === "REPEAT_DAMAGE_MINION") {
     const target = findCard(state, instanceIds[0]);
-    if (!target || target.zone !== "MINION") throw new InvalidActionError("重复伤害目标已经不在手下区");
+    if (!target || target.zone !== "MINION") throw new InvalidActionError("重復傷害目標已經不在手下區");
     dealDamageToMinion(state, target, choice.resolution.value, source.instanceId, "EFFECT");
     if ((target.currentHealth ?? 1) <= 0) destroyMinion(state, target, "EFFECT_DAMAGE_DEATH", timingContext);
     const remainingHits = choice.resolution.remainingHits - 1;
@@ -1203,13 +1365,36 @@ export function selectEffectCards(state: GameState, playerId: PlayerId, instance
         type: "EFFECT_CARDS",
         playerId,
         sourceInstanceId: source.instanceId,
-        prompt: `重新指定对手1手下造成${choice.resolution.value}点伤害（剩余${remainingHits}次）`,
+        prompt: `重新指定對手1手下造成${choice.resolution.value}點傷害（剩余${remainingHits}次）`,
         count: 1,
         candidateInstanceIds: candidates,
         resolution: { type: "REPEAT_DAMAGE_MINION", value: choice.resolution.value, remainingHits },
         remainingEffects: choice.remainingEffects,
       };
       return;
+    }
+  } else if (choice.resolution.type === "REPEAT_DAMAGE_MINION_OR_HERO") {
+    const target = findCard(state, instanceIds[0]);
+    if (!target || target.zone !== "MINION") throw new InvalidActionError("重複傷害目標已經不在手下區");
+    dealDamageToMinion(state, target, choice.resolution.value, source.instanceId, "EFFECT");
+    if ((target.currentHealth ?? 1) <= 0) destroyMinion(state, target, "EFFECT_DAMAGE_DEATH", timingContext);
+    const remainingHits = choice.resolution.remainingHits - 1;
+    const candidates = getLegalEnemyEffectTargets(state, playerId).map((card) => card.instanceId);
+    if (remainingHits > 0 && candidates.length > 0) {
+      state.pendingChoice = {
+        type: "EFFECT_CARDS",
+        playerId,
+        sourceInstanceId: source.instanceId,
+        prompt: `重新指定對手1名手下造成${choice.resolution.value}點傷害（剩餘${remainingHits}次）`,
+        count: 1,
+        candidateInstanceIds: candidates,
+        resolution: { ...choice.resolution, remainingHits },
+        remainingEffects: choice.remainingEffects,
+      };
+      return;
+    }
+    if (remainingHits > 0 && choice.resolution.heroHitsRemaining > 0) {
+      dealDamageToHero(state, opponentOf(playerId), choice.resolution.value, source.instanceId);
     }
   } else if (choice.resolution.type === "DESTROY_MINIONS") {
     for (const instanceId of instanceIds) {
@@ -1220,38 +1405,55 @@ export function selectEffectCards(state: GameState, playerId: PlayerId, instance
     }
   } else {
     const target = findCard(state, instanceIds[0]);
-    if (!target || target.zone !== "MINION") throw new InvalidActionError("效果目标已经不在手下区");
+    if (!target || target.zone !== "MINION") throw new InvalidActionError("效果目標已經不在手下區");
     if (choice.resolution.type === "DAMAGE_MINION") {
       dealDamageToMinion(state, target, choice.resolution.value, source.instanceId, "EFFECT");
       if ((target.currentHealth ?? 1) <= 0) destroyMinion(state, target, "EFFECT_DAMAGE_DEATH", timingContext);
     } else if (choice.resolution.type === "DESTROY_MINION") {
       if (hasActiveKeyword(target, "SANCTUARY") || hasActiveKeyword(target, "INVINCIBLE")) {
-        addLog(state, "PROTECTION", `${target.definitionId} 阻挡效果直接消灭`, { source: source.instanceId, target: target.instanceId });
+        addLog(state, "PROTECTION", `${target.definitionId} 阻擋效果直接消滅`, { source: source.instanceId, target: target.instanceId });
       } else {
         destroyMinion(state, target, "EFFECT_DESTROY", timingContext);
       }
     } else if (choice.resolution.type === "GRANT_MINION_KEYWORD") {
       if (!target.keywords.includes(choice.resolution.keyword)) target.keywords.push(choice.resolution.keyword);
-      addLog(state, "ACTION", `${target.definitionId} 获得 ${choice.resolution.keyword}`, { source: source.instanceId, target: target.instanceId });
+      addLog(state, "ACTION", `${target.definitionId} 獲得 ${choice.resolution.keyword}`, { source: source.instanceId, target: target.instanceId });
     } else {
       target.sealed = true;
-      addLog(state, "ACTION", `${target.definitionId} 被永久封印至离场`, { source: source.instanceId, target: target.instanceId });
+      addLog(state, "ACTION", `${target.definitionId} 被永久封印至離場`, { source: source.instanceId, target: target.instanceId });
     }
   }
 
   resolveEffects(state, playerId, source, choice.remainingEffects);
 }
 
+export function confirmEffectSummon(state: GameState, playerId: PlayerId): void {
+  const choice = state.pendingChoice;
+  if (!choice || choice.type !== "EFFECT_SUMMON_CONFIRM" || choice.playerId !== playerId) {
+    throw new InvalidActionError("目前沒有待確認的效果召喚");
+  }
+  const source = state.players[playerId].hand.find((card) => card.instanceId === choice.sourceInstanceId);
+  if (!source) throw new InvalidActionError("效果召喚卡牌已不在手牌");
+  if (state.players[playerId].minions.length >= state.rulesConfig.minionLimit) throw new InvalidActionError("手下區已滿，無法效果召喚");
+  state.pendingChoice = undefined;
+  if (!state.players[playerId].effectSummonUsedThisTurn.includes(source.definitionId)) {
+    state.players[playerId].effectSummonUsedThisTurn.push(source.definitionId);
+  }
+  addLog(state, "ACTION", `${playerId} 確認效果召喚 ${getCardDefinition(source.definitionId).name}`, { sourceInstanceId: source.instanceId });
+  summonFromHandByEffect(state, source);
+  resolveEffects(state, playerId, source, choice.remainingEffects);
+}
+
 export function selectEffectOption(state: GameState, playerId: PlayerId, optionId: string): void {
   const choice = state.pendingChoice;
   if (!choice || choice.type !== "EFFECT_OPTION" || choice.playerId !== playerId) {
-    throw new InvalidActionError("目前没有此效果选项");
+    throw new InvalidActionError("目前沒有此效果選項");
   }
   const option = choice.options.find((candidate) => candidate.id === optionId);
-  if (!option) throw new InvalidActionError("效果选项不合法");
+  if (!option) throw new InvalidActionError("效果選項不合法");
   const source = findCard(state, choice.sourceInstanceId);
-  if (!source) throw new InvalidActionError("效果来源已不存在");
+  if (!source) throw new InvalidActionError("效果來源已不存在");
   state.pendingChoice = undefined;
-  addLog(state, "ACTION", `${playerId} 选择：${option.label}`, { source: source.instanceId, optionId });
+  addLog(state, "ACTION", `${playerId} 選擇：${option.label}`, { source: source.instanceId, optionId });
   resolveEffects(state, playerId, source, [...option.effects, ...choice.remainingEffects]);
 }

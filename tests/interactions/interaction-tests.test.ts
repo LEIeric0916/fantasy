@@ -12,9 +12,9 @@ import { summonGeneratedField, summonGeneratedMinion } from "../../src/game/engi
 import { beginTurn, drawCard } from "../../src/game/engine/turnEngine";
 import { mainState, putCard } from "../helpers";
 
-// docs/interaction-tests.md 的逐项自动化索引。
-describe("A. 核心区域与回合", () => {
-  it("A01｜倒数先于生长", () => {
+// docs/interaction-tests.md 的逐項自動化索引。
+describe("A. 核心區域與回合", () => {
+  it("A01｜倒數先於生長", () => {
     const state = mainState();
     const field = putCard(state, "P1", "TOKEN_MACHINE_ATTACK_SHIP", "FIELD", "A01");
     field.keywords.push("GROWTH");
@@ -23,19 +23,19 @@ describe("A. 核心区域与回合", () => {
     expect(state.players.P1.fields.some((card) => card.instanceId === field.instanceId)).toBe(false);
     expect(state.players.P1.extraDeck.some((card) => card.instanceId === field.instanceId)).toBe(true);
   });
-  it("A02｜满场召唤失败", () => {
+  it("A02｜滿場召喚失敗", () => {
     const state = mainState();
     for (let index = 0; index < 7; index += 1) summonGeneratedMinion(state, "P1", "TOKEN_DRAGON_HELLFIRE");
     expect(summonGeneratedMinion(state, "P1", "TOKEN_DRAGON_HELLFIRE")).toBe(false);
     expect(state.players.P1.minions).toHaveLength(7);
   });
-  it("A03｜手牌超过 10 不立即烧牌", () => {
+  it("A03｜手牌超過 10 不立即燒牌", () => {
     const state = mainState();
     while (state.players.P1.hand.length < 11) drawCard(state, "P1", "TEST");
     expect(state.players.P1.hand).toHaveLength(11);
     expect(state.players.P1.graveyard).toHaveLength(0);
   });
-  it("A04｜空牌库再抽立即败北", () => {
+  it("A04｜空牌庫再抽立即敗北", () => {
     const state = mainState(); state.players.P1.deck = []; drawCard(state, "P1");
     expect(state).toMatchObject({ phase: "GAME_OVER", winner: "P2", loseReason: "DECK_OUT" });
   });
@@ -47,8 +47,8 @@ describe("A. 核心区域与回合", () => {
   });
 });
 
-describe("B. 战斗与防护", () => {
-  it("B01｜潜行优先于嘲讽", () => {
+describe("B. 戰斗與防護", () => {
+  it("B01｜潛行優先於嘲諷", () => {
     const state = mainState();
     const attacker = putCard(state, "P1", "TOKEN_DRAGON_HELLFIRE", "MINION", "stealth-taunt-attacker");
     const hidden = putCard(state, "P2", "TOKEN_DRAGON_HELLFIRE", "MINION", "stealth-taunt");
@@ -56,7 +56,7 @@ describe("B. 战斗与防护", () => {
     expect(getLegalAttackTargets(state, attacker.instanceId)).toContainEqual({ type: "HERO", playerId: "P2" });
     expect(getLegalAttackTargets(state, attacker.instanceId)).not.toContainEqual({ type: "MINION", instanceId: hidden.instanceId });
   });
-  it("B02｜威慑优先于嘲讽", () => {
+  it("B02｜威懾優先於嘲諷", () => {
     const state = mainState();
     const attacker = putCard(state, "P1", "TOKEN_DRAGON_HELLFIRE", "MINION", "deterrence-attacker");
     const deterred = putCard(state, "P2", "TOKEN_DRAGON_HELLFIRE", "MINION", "deterrence-taunt");
@@ -64,7 +64,7 @@ describe("B. 战斗与防护", () => {
     expect(getLegalAttackTargets(state, attacker.instanceId)).toContainEqual({ type: "HERO", playerId: "P2" });
     expect(getLegalAttackTargets(state, attacker.instanceId)).not.toContainEqual({ type: "MINION", instanceId: deterred.instanceId });
   });
-  it("B03｜潜行解除", () => {
+  it("B03｜潛行解除", () => {
     let state = mainState();
     const attacker = putCard(state, "P1", "UNDEAD_001", "MINION", "stealth-attack");
     attacker.keywords.push("STEALTH");
@@ -75,7 +75,7 @@ describe("B. 战斗与防护", () => {
     dealDamageToHero(state, "P2", 1, abilitySource.instanceId, "EFFECT");
     expect(abilitySource.keywords).not.toContain("STEALTH");
   });
-  it("B04｜必杀在伤害后结算", () => {
+  it("B04｜必殺在傷害後結算", () => {
     let state = mainState();
     const attacker = putCard(state, "P1", "UNDEAD_001", "MINION", "lethal-attacker");
     attacker.keywords.push("LETHAL");
@@ -92,7 +92,7 @@ describe("B. 战斗与防护", () => {
     expect(after.currentHealth).toBe(1);
     expect(after.keywords).not.toContain("DIVINE_SHIELD");
   });
-  it("B06｜纪律阻挡正负改值但不挡伤害", () => {
+  it("B06｜紀律阻擋正負改值但不擋傷害", () => {
     const state = mainState();
     const disciplined = putCard(state, "P1", "TOKEN_MACHINE_DIVINE_ENDYMION", "MINION", "discipline");
     const before = [disciplined.currentAttack, disciplined.currentHealth];
@@ -100,7 +100,7 @@ describe("B. 战斗与防护", () => {
     expect([disciplined.currentAttack, disciplined.currentHealth]).toEqual(before);
     expect(dealDamageToMinion(state, disciplined, 3, "test", "EFFECT")).toBe(3);
   });
-  it("B07｜庇护、无敌与消失", () => {
+  it("B07｜庇護、無敵與消失", () => {
     const state = mainState();
     const source = putCard(state, "P1", "DRAGON_012", "MINION", "protection-source");
     const sanctuary = putCard(state, "P2", "UNDEAD_001", "MINION", "sanctuary");
@@ -119,8 +119,8 @@ describe("B. 战斗与防护", () => {
   });
 });
 
-describe("C. 消灭、消失、转变与资源", () => {
-  it("C01｜消失不触发死亡系统", () => {
+describe("C. 消滅、消失、轉變與資源", () => {
+  it("C01｜消失不觸發死亡系統", () => {
     const state = mainState();
     const source = putCard(state, "P1", "DRAGON_012", "MINION", "vanish-source");
     const target = putCard(state, "P2", "MACHINE_013", "MINION", "vanish-target");
@@ -131,7 +131,7 @@ describe("C. 消灭、消失、转变与资源", () => {
     expect(state.players.P2.resources.necromancy).toBe(before);
     expect(state.players.P2.resources.recycleCharge).toBe(0);
   });
-  it("C02｜转变不触发原卡离场与死亡", () => {
+  it("C02｜轉變不觸發原卡離場與死亡", () => {
     const state = mainState();
     const target = putCard(state, "P2", "MACHINE_013", "MINION", "transform-target");
     expect(transformMinion(state, target, "TOKEN_UNDEAD_GENERIC")).toBe(true);
@@ -139,7 +139,7 @@ describe("C. 消灭、消失、转变与资源", () => {
     expect(target).toMatchObject({ definitionId: "TOKEN_UNDEAD_GENERIC", originalDefinitionId: "MACHINE_013", zone: "MINION" });
     expect(state.players.P2.resources).toMatchObject({ necromancy: 0, recycleCharge: 0 });
   });
-  it("C03｜災厄洪流与巴哈姆特", () => {
+  it("C03｜災厄洪流與巴哈姆特", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const dragon = putCard(state, "P2", "DRAGON_001", "MINION", "flood-dragon");
@@ -160,7 +160,7 @@ describe("C. 消灭、消失、转变与资源", () => {
     expect(state.players.P2.minions).toHaveLength(0);
     expect(state.players.P2.extraDeck.filter((card) => card.definitionId === "TOKEN_UNDEAD_GENERIC")).toHaveLength(4);
   });
-  it("C05｜災厄洪流与末日之书", () => {
+  it("C05｜災厄洪流與末日之書", () => {
     let state = mainState();
     state.players.P1.hand = [];
     putCard(state, "P1", "TOKEN_UNDEAD_DOOMSDAY_BOOK", "FIELD", "doom");
@@ -171,7 +171,7 @@ describe("C. 消灭、消失、转变与资源", () => {
   });
 });
 
-describe("D. 回收与机械术", () => {
+describe("D. 回收與機械術", () => {
   it("D01｜回收", () => {
     const state = mainState();
     const card = putCard(state, "P1", "MACHINE_002", "MINION", "recycle");
@@ -181,7 +181,7 @@ describe("D. 回收与机械术", () => {
     expect(state.players.P1.resources.recycleCharge).toBe(1);
     expect(state.players.P1.graveyard).not.toContainEqual(expect.objectContaining({ instanceId: card.instanceId }));
   });
-  it("D02｜回收与其他死亡效果", () => {
+  it("D02｜回收與其他死亡效果", () => {
     const state = mainState();
     const wheel = putCard(state, "P1", "MACHINE_012", "FIELD", "recycle-last-words");
     destroyCardOnField(state, wheel, "TEST");
@@ -190,7 +190,7 @@ describe("D. 回收与机械术", () => {
     expect(state.players.P1.minions.some((card) => card.definitionId === "TOKEN_MACHINE_DESTROYER")).toBe(true);
     expect(state.players.P1.resources.recycleCharge).toBe(1);
   });
-  it("D03｜机械术全部不可执行", () => {
+  it("D03｜機械術全部不可執行", () => {
     const state = mainState();
     state.players.P1.resources.recycleCharge = 2;
     const source = putCard(state, "P1", "MACHINE_002", "MINION", "tech-none");
@@ -198,7 +198,7 @@ describe("D. 回收与机械术", () => {
     expect(state.players.P1.resources.recycleCharge).toBe(2);
     expect(state.pendingChoice).toBeUndefined();
   });
-  it("D04｜机械术部分可执行", () => {
+  it("D04｜機械術部分可執行", () => {
     const state = mainState();
     state.players.P1.resources.recycleCharge = 2;
     const source = putCard(state, "P1", "MACHINE_002", "MINION", "tech-partial");
@@ -207,7 +207,7 @@ describe("D. 回收与机械术", () => {
     expect(state.players.P1.resources.recycleCharge).toBe(0);
     expect(state.players.P1.deck).toHaveLength(deckSize - 1);
   });
-  it("D05｜机械毁灭者最新版", () => {
+  it("D05｜機械毀滅者最新版", () => {
     const state = mainState();
     state.players.P1.heroHp = 29;
     const destroyer = putCard(state, "P1", "TOKEN_MACHINE_DESTROYER", "MINION", "latest");
@@ -218,7 +218,7 @@ describe("D. 回收与机械术", () => {
     expect(state.players.P1.heroHp).toBe(30);
     expect(destroyer.zone).toBe("EXTRA_DECK");
   });
-  it("D06｜伊利亚斯伤害上限", () => {
+  it("D06｜伊利亞斯傷害上限", () => {
     const state = mainState();
     putCard(state, "P1", "TOKEN_MACHINE_DIVINE_ELIAS", "MINION", "elias");
     const army = putCard(state, "P1", "TOKEN_MACHINE_EMPIRE_SOLDIER", "MINION", "capped");
@@ -229,8 +229,8 @@ describe("D. 回收与机械术", () => {
   });
 });
 
-describe("E. 死灵、弃牌与复活", () => {
-  it("E01｜死灵数只看从场上被消灭", () => {
+describe("E. 死靈、棄牌與復活", () => {
+  it("E01｜死靈數只看從場上被消滅", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const source = putCard(state, "P1", "UNDEAD_002", "HAND", "discard-source");
@@ -243,13 +243,13 @@ describe("E. 死灵、弃牌与复活", () => {
     resolvePendingEffects(state);
     expect(state.players.P1.resources.necromancy).toBe(1);
   });
-  it("E02｜死灵数 +X 不消耗资源", () => {
+  it("E02｜死靈數 +X 不消耗資源", () => {
     const state = mainState();
     const preacher = putCard(state, "P1", "TOKEN_UNDEAD_PREACHER", "MINION", "preacher");
     resolveEffects(state, "P1", preacher, getCardDefinition(preacher.definitionId).effects ?? []);
     expect(state.players.P1.resources.necromancy).toBe(3);
   });
-  it("E03｜死灵复活：由场上死亡", () => {
+  it("E03｜死靈復活：由場上死亡", () => {
     const state = mainState();
     state.players.P1.resources.necromancy = 3;
     const minion = putCard(state, "P1", "UNDEAD_009", "MINION", "field-revive");
@@ -258,7 +258,7 @@ describe("E. 死灵、弃牌与复活", () => {
     expect(minion.zone).toBe("MINION");
     expect(state.players.P1.resources.necromancy).toBe(0);
   });
-  it("E04｜死灵复活：由其他区域送弃堆", () => {
+  it("E04｜死靈復活：由其他區域送棄堆", () => {
     let state = mainState();
     state.players.P1.hand = [];
     state.players.P1.resources.necromancy = 4;
@@ -278,7 +278,7 @@ describe("E. 死灵、弃牌与复活", () => {
     expect(minion.zone).toBe("GRAVEYARD");
     expect(state.players.P1.resources.necromancy).toBe(8);
   });
-  it("E06｜复活触发", () => {
+  it("E06｜復活觸發", () => {
     const state = mainState();
     const ubis = putCard(state, "P1", "UNDEAD_003", "MINION", "revive-trigger");
     destroyMinion(state, ubis, "TEST"); resolvePendingEffects(state);
@@ -288,8 +288,8 @@ describe("E. 死灵、弃牌与复活", () => {
   });
 });
 
-describe("F. 黑暗之书与末日之书", () => {
-  it("F01｜未指定种类的黑暗之书", () => {
+describe("F. 黑暗之書與末日之書", () => {
+  it("F01｜未指定種類的黑暗之書", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const source = putCard(state, "P1", "UNDEAD_006", "HAND", "choose-book");
@@ -297,7 +297,7 @@ describe("F. 黑暗之书与末日之书", () => {
     expect(state.pendingChoice).toMatchObject({ type: "EFFECT_OPTION" });
     expect(state.pendingChoice?.type === "EFFECT_OPTION" ? state.pendingChoice.options : []).toHaveLength(4);
   });
-  it("F02｜同种类可再次生成", () => {
+  it("F02｜同種類可再次生成", () => {
     const state = mainState();
     expect(summonGeneratedField(state, "P1", "TOKEN_UNDEAD_BOOK_REVENGE")).toBe(true);
     resolvePendingEffects(state);
@@ -307,7 +307,7 @@ describe("F. 黑暗之书与末日之书", () => {
     expect(old.zone).toBe("EXTRA_DECK");
     expect(state.players.P1.fields.filter((card) => card.definitionId === "TOKEN_UNDEAD_BOOK_REVENGE")).toHaveLength(1);
   });
-  it("F03｜不朽典录", () => {
+  it("F03｜不朽典錄", () => {
     const state = mainState();
     state.players.P1.resources.necromancy = 23;
     const book = putCard(state, "P1", "TOKEN_UNDEAD_BOOK_IMMORTAL", "FIELD", "activate");
@@ -315,7 +315,7 @@ describe("F. 黑暗之书与末日之书", () => {
     expect(result.state.players.P1.resources.necromancy).toBe(3);
     expect(result.state.players.P1.fields[0].definitionId).toBe("TOKEN_UNDEAD_DOOMSDAY_BOOK");
   });
-  it("F04｜瘟疫典录标记", () => {
+  it("F04｜瘟疫典錄標記", () => {
     let state = mainState();
     const book = putCard(state, "P1", "TOKEN_UNDEAD_BOOK_PLAGUE", "FIELD", "plague");
     const target = putCard(state, "P2", "TOKEN_UNDEAD_SPIRIT", "MINION", "plague-target");
@@ -324,7 +324,7 @@ describe("F. 黑暗之书与末日之书", () => {
     state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [target.instanceId] }).state;
     expect(state.players.P1.fields.find((card) => card.instanceId === book.instanceId)?.counters.plagueMarks).toBe(1);
   });
-  it("F05｜复仇典录", () => {
+  it("F05｜復仇典錄", () => {
     let low = mainState();
     low.players.P1.heroHp = 9;
     putCard(low, "P1", "TOKEN_UNDEAD_BOOK_REVENGE", "FIELD", "low");
@@ -336,7 +336,7 @@ describe("F. 黑暗之书与末日之书", () => {
     equal = applyAction(equal, { type: "END_TURN", playerId: "P1" }).state;
     expect(equal.players.P1.fields[0].definitionId).toBe("TOKEN_UNDEAD_BOOK_REVENGE");
   });
-  it("F06｜末日序曲四张结算", () => {
+  it("F06｜末日序曲四張結算", () => {
     const state = mainState();
     const deckSize = state.players.P1.deck.length;
     const ids: string[] = [];
@@ -349,7 +349,7 @@ describe("F. 黑暗之书与末日之书", () => {
     expect(state.players.P1.fields[0]).toMatchObject({ instanceId: ids[3], definitionId: "TOKEN_UNDEAD_DOOMSDAY_BOOK" });
     expect(state.players.P1.deck).toHaveLength(deckSize - 2);
   });
-  it("F07｜四本末日特殊胜利", () => {
+  it("F07｜四本末日特殊勝利", () => {
     let state = mainState();
     state.players.P1.heroHp = 9;
     for (let index = 0; index < 3; index += 1) putCard(state, "P1", "TOKEN_UNDEAD_DOOMSDAY_BOOK", "FIELD", `doom-${index}`);
@@ -359,14 +359,14 @@ describe("F. 黑暗之书与末日之书", () => {
   });
 });
 
-describe("G. 指定卡牌确认", () => {
-  it("G01｜炎龍召喚（见 dragon/batch1.test.ts 完整断言）", () => {
+describe("G. 指定卡牌確認", () => {
+  it("G01｜炎龍召喚（見 dragon/batch1.test.ts 完整斷言）", () => {
     expect(getCardDefinition("DRAGON_013").effects).toEqual([
       { type: "SUMMON", definitionId: "TOKEN_DRAGON_HELLFIRE", count: 1 },
       { type: "DAMAGE_ALL_ENEMY_MINIONS", value: 4 },
     ]);
   });
-  it("G02｜炎火之龍与魔導戰龍", () => {
+  it("G02｜炎火之龍與魔導戰龍", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const fireDragon = putCard(state, "P1", "DRAGON_008", "HAND", "copy-source");
@@ -377,7 +377,7 @@ describe("G. 指定卡牌确认", () => {
     expect(state.players.P1.hand.some((card) => card.instanceId === magicDragon.instanceId)).toBe(true);
     expect(state.players.P1.effectSummonUsedThisTurn).not.toContain("DRAGON_004");
   });
-  it("G03｜巴哈姆特减费", () => {
+  it("G03｜巴哈姆特減費", () => {
     const state = mainState();
     const bahamut = putCard(state, "P1", "DRAGON_012", "HAND", "cost");
     for (let index = 0; index < 2; index += 1) {
@@ -389,7 +389,7 @@ describe("G. 指定卡牌确认", () => {
     moveCard(state, transformed, "GRAVEYARD", "TEST");
     expect(refreshCardCost(state, "P1", bahamut)).toBe(18);
   });
-  it("G04｜絕傑榮耀名称", () => {
+  it("G04｜絕傑榮耀名稱", () => {
     expect(getCardDefinition("TOKEN_ALLIANCE_HEROIC_GLORY").name).toBe("絕傑榮耀");
     expect(getCardDefinition("ALLIANCE_001").effectsText).toContain("絕傑榮耀");
   });

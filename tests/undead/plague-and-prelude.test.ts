@@ -4,8 +4,8 @@ import { resolvePendingEffects } from "../../src/game/engine/effectEngine";
 import { summonGeneratedField } from "../../src/game/engine/summonEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("瘟疫典录与末日序曲", () => {
-  it("瘟疫典录回合结束指定生命小于4的敌方手下；转变仅由光环取得1个标记", () => {
+describe("瘟疫典錄與末日序曲", () => {
+  it("瘟疫典錄回合結束指定生命小於4的敵方手下；轉變僅由光環取得1個標記", () => {
     let state = mainState();
     const book = putCard(state, "P1", "TOKEN_UNDEAD_BOOK_PLAGUE", "FIELD", "plague");
     const target = putCard(state, "P2", "TOKEN_UNDEAD_SPIRIT", "MINION", "target");
@@ -19,7 +19,7 @@ describe("瘟疫典录与末日序曲", () => {
     expect(state.players.P1.fields.find((card) => card.instanceId === book.instanceId)?.counters.plagueMarks).toBe(1);
   });
 
-  it("瘟疫标记达到7时立即转为末日之书", () => {
+  it("瘟疫標記達到7時立即轉為末日之書", () => {
     let state = mainState();
     const book = putCard(state, "P1", "TOKEN_UNDEAD_BOOK_PLAGUE", "FIELD", "threshold");
     book.counters.plagueMarks = 6;
@@ -31,7 +31,24 @@ describe("瘟疫典录与末日序曲", () => {
     expect(state.players.P1.fields.find((card) => card.instanceId === book.instanceId)?.definitionId).toBe("TOKEN_UNDEAD_DOOMSDAY_BOOK");
   });
 
-  it("只有进入场上的第4张末日序曲发动入场曲并保留为末日之书", () => {
+  it("瘟疫標記恰好為6時不會因其他行動提前轉變", () => {
+    let state = mainState();
+    const book = putCard(state, "P1", "TOKEN_UNDEAD_BOOK_PLAGUE", "FIELD", "six-marks");
+    book.counters.plagueMarks = 6;
+
+    state = applyAction(state, { type: "DEBUG_SUMMON", playerId: "P2", definitionId: "TOKEN_UNDEAD_SPIRIT" }).state;
+    const after = state.players.P1.fields.find((card) => card.instanceId === book.instanceId);
+    expect(after?.definitionId).toBe("TOKEN_UNDEAD_BOOK_PLAGUE");
+    expect(after?.counters.plagueMarks).toBe(6);
+  });
+
+  it("不朽的追憶者明確具有聖盾術與衝刺", () => {
+    const state = mainState();
+    const recollector = putCard(state, "P1", "UNDEAD_008", "MINION", "recollector-keywords");
+    expect(recollector.keywords).toEqual(expect.arrayContaining(["DIVINE_SHIELD", "RUSH"]));
+  });
+
+  it("只有進入場上的第4張末日序曲發動入場曲並保留為末日之書", () => {
     const state = mainState();
     const initialDeckSize = state.players.P1.deck.length;
     const ids: string[] = [];

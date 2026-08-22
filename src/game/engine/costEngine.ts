@@ -5,7 +5,7 @@ import { RuleUndefinedError } from "./errors";
 
 export function setCurrentCost(state: GameState, card: CardInstance, value: number): number {
   if (card.currentCost === null) {
-    throw new RuleUndefinedError("NULL_CARD_COST", "卡牌费用为 null，不能改值", card.definitionId);
+    throw new RuleUndefinedError("NULL_CARD_COST", "卡牌費用為 null，不能改值", card.definitionId);
   }
   card.currentCost = Math.max(state.rulesConfig.minCardCost, value);
   return card.currentCost;
@@ -13,14 +13,14 @@ export function setCurrentCost(state: GameState, card: CardInstance, value: numb
 
 export function modifyCurrentCost(state: GameState, card: CardInstance, amount: number): number {
   if (card.currentCost === null) {
-    throw new RuleUndefinedError("NULL_CARD_COST", "卡牌费用为 null，不能改值", card.definitionId);
+    throw new RuleUndefinedError("NULL_CARD_COST", "卡牌費用為 null，不能改值", card.definitionId);
   }
   return setCurrentCost(state, card, card.currentCost + amount);
 }
 
 export function refreshCardCost(state: GameState, playerId: PlayerId, card: CardInstance): number {
   const definition = getCardDefinition(card.definitionId);
-  if (definition.originalCost === null) throw new RuleUndefinedError("NULL_CARD_COST", "卡牌费用为 null，不能计算", definition.id);
+  if (definition.originalCost === null) throw new RuleUndefinedError("NULL_CARD_COST", "卡牌費用為 null，不能計算", definition.id);
   let value = definition.originalCost + (card.counters.temporaryCostAdjustment ?? 0);
   if (definition.cardType === "MINION") value -= state.players[playerId].nextMinionTemporaryCostReduction;
   if (definition.cardType === "MINION" && definition.subtype.includes("MACHINE")) {
@@ -55,6 +55,14 @@ export function refreshCardCost(state: GameState, playerId: PlayerId, card: Card
   } else if (definition.dynamicCost?.type === "TURN_SUMMONED_DRAGON_COST_AT_LEAST"
     && state.players[playerId].summonedDragonOriginalCostThisTurn >= definition.dynamicCost.threshold) {
     value -= definition.dynamicCost.reduction;
+  }
+  const dragonZeroMaxCost = state.players[playerId].nextLowCostDragonZeroMaxCost;
+  if (definition.cardType === "MINION" && definition.subtype.includes("DRAGON")
+    && definition.originalCost <= (dragonZeroMaxCost ?? -1)) value = 0;
+  const highCostDragonThreshold = state.players[playerId].nextHighCostDragonReductionMinCost;
+  if (definition.cardType === "MINION" && definition.subtype.includes("DRAGON")
+    && definition.originalCost >= (highCostDragonThreshold ?? Number.POSITIVE_INFINITY)) {
+    value -= state.players[playerId].nextHighCostDragonReduction;
   }
   if (card.counters.fixedCost !== undefined) value = card.counters.fixedCost;
   return setCurrentCost(state, card, value);

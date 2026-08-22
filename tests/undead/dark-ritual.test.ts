@@ -4,8 +4,8 @@ import { applyAction } from "../../src/game/engine/gameEngine";
 import { createCardInstance } from "../../src/game/state/CardInstance";
 import { mainState, putCard } from "../helpers";
 
-describe("黑暗祭仪", () => {
-  it("顶部翻5，指定3张手下加入手牌，再只能从这3张中指定丢弃1张", () => {
+describe("黑暗祭儀", () => {
+  it("頂部翻5，指定3張手下加入手牌，再只能從這3張中指定丟棄1張", () => {
     let state = mainState();
     state.players.P1.hand = [];
     state.players.P1.heroHp = 25;
@@ -29,8 +29,8 @@ describe("黑暗祭仪", () => {
     expect(state.players.P1.graveyard.some((card) => card.instanceId === onDiscard.instanceId)).toBe(true);
     expect(state.players.P1.heroHp).toBe(27);
     expect(state.players.P1.resources.necromancy).toBe(2);
-    const healIndex = state.log.findIndex((entry) => entry.message.includes("恢复 2 HP"));
-    const discardTriggerIndex = state.log.findIndex((entry) => entry.message.includes("死灵数 +2"));
+    const healIndex = state.log.findIndex((entry) => entry.message.includes("恢復 2 HP"));
+    const discardTriggerIndex = state.log.findIndex((entry) => entry.message.includes("死靈數 +2"));
     expect(healIndex).toBeLessThan(discardTriggerIndex);
   });
 });

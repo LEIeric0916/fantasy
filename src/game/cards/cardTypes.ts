@@ -42,6 +42,7 @@ export type ConditionDefinition =
   | { type: "OPPONENT_HAS_MINION" }
   | { type: "NO_OTHER_FRIENDLY_MINIONS" }
   | { type: "MAX_MANA_EQUALS"; value: number }
+  | { type: "MAX_MANA_AT_LEAST"; value: number }
   | { type: "FRIENDLY_ORIGINAL_COST_AT_LEAST"; value: number }
   | { type: "FRIENDLY_FIELD_SUBTYPE"; subtype: string }
   | { type: "FRIENDLY_SAME_FIELD_COUNT_AT_LEAST"; value: number }
@@ -75,12 +76,14 @@ export type EffectDefinition =
   | { type: "SNAPSHOT_ENEMY_COUNT_AOE_HERO_DRAW_SELF_DEBUFF"; aoeDamage: number; heroDamage: number; draw: number }
   | { type: "REPEAT_DAMAGE_TARGET_ENEMY_MINION_BY_FRIENDLY_FIELD_SUBTYPE"; value: number; subtype: string }
   | { type: "DAMAGE_DISTINCT_ENEMY_MINIONS_REWARD_KILLS"; count: number; value: number; drawPerKill: number; healPerKill: number }
+  | { type: "REPEAT_DAMAGE_ENEMY_MINION_OR_HERO"; count: number; value: number; heroMaxHits: number }
   | { type: "DESTROY_TARGET_ENEMY_MINION" }
   | { type: "DESTROY_UP_TO_ENEMY_MINIONS"; maxCount: number }
   | { type: "DESTROY_DISTINCT_ENEMY_MINIONS"; count: number }
   | { type: "DESTROY_ALL_ENEMY_MINIONS" }
   | { type: "VANISH_ENEMY_MINIONS"; count: number }
   | { type: "TRANSFORM_ENEMY_MINIONS"; count: number; definitionId: string; maxHealth?: number }
+  | { type: "TRANSFORM_UP_TO_ENEMY_MINIONS"; maxCount: number; definitionId: string; maxHealth?: number }
   | { type: "REVIVE_FRIENDLY_GRAVE_MINION"; maxOriginalCost?: number; minOriginalCost?: number }
   | { type: "VANISH_OLD_SAME_FIELD_AND_DRAW" }
   | { type: "VANISH_OTHER_SAME_FIELDS"; count: number }
@@ -89,9 +92,9 @@ export type EffectDefinition =
   | { type: "GRANT_ALL_FRIENDLY_KEYWORD"; keyword: Keyword; subtypes?: string[] }
   | { type: "GRANT_TARGET_FRIENDLY_MINION_KEYWORD"; keyword: Keyword; subtypes?: string[] }
   | { type: "GAIN_SELF_KEYWORD"; keyword: Keyword }
-  | { type: "RETURN_FRIENDLY_MINION_DRAW_BY_COST"; subtype: string; threshold: number; low: number; high: number }
+  | { type: "RETURN_HAND_MINION_TO_DECK_SHUFFLE_DRAW_BY_COST"; subtype: string; threshold: number; low: number; high: number }
   | { type: "SEARCH_DECK"; cardType?: CardType; definitionId?: string }
-  | { type: "DISCOVER_TOP"; reveal: number; count: number; cardType?: CardType; subtype?: string; temporaryCostReduction?: number; discardFromSelected?: number; fallbackDrawIfNoMatchInDeck?: number }
+  | { type: "DISCOVER_TOP"; bonusReveal?: number; count: number; cardType?: CardType; subtype?: string; temporaryCostReduction?: number; discardFromSelected?: number }
   | { type: "ADD_GENERATED_TO_HAND"; definitionId: string; count: number }
   | { type: "RESTORE_MANA" }
   | { type: "RESTORE_MANA_VALUE"; value: number }
@@ -109,6 +112,8 @@ export type EffectDefinition =
   | { type: "GAIN_RECYCLE_CHARGE_BY_FRIENDLY_FIELD_SUBTYPE"; subtype: string }
   | { type: "GRANT_NEXT_HERO_DAMAGE_ZERO"; count: number }
   | { type: "GRANT_NEXT_MINION_TEMPORARY_COST_REDUCTION"; value: number }
+  | { type: "GRANT_NEXT_LOW_COST_DRAGON_ZERO"; maxOriginalCost: number }
+  | { type: "GRANT_NEXT_HIGH_COST_DRAGON_REDUCTION"; minOriginalCost: number; value: number }
   | { type: "GRANT_ALL_FRIENDLY_DAMAGE_CAP"; value: number }
   | { type: "GRANT_HERO_DIVINE_SHIELD" }
   | { type: "CHOOSE_ONE"; prompt: string; options: { id: string; label: string; effects: EffectDefinition[] }[] }
@@ -173,6 +178,7 @@ export interface CardDefinition {
   friendlySummonAura?: { effects: EffectDefinition[]; maxPerTurn: number };
   friendlyEffectDamageImmunityAura?: { excludeSelf: boolean };
   selfKeywordWhileOtherFriendlySubtypes?: { subtypes: string[]; keyword: Keyword };
+  fieldWinCondition?: { count: number; loseReason: "DOOMSDAY_BOOK" };
 }
 
 export interface CardInstance {

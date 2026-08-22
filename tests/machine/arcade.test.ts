@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("机械神机圣徒 阿卡德", () => {
-  it("机械术3指定两张神器费用变0并召唤士兵", () => {
+describe("機械神機圣徒 阿卡德", () => {
+  it("機械術3指定兩張神器費用變0並召喚士兵", () => {
     let state = mainState();
     state.players.P1.faction = "MACHINE";
     state.players.P1.resources.recycleCharge = 3;
@@ -21,7 +21,7 @@ describe("机械神机圣徒 阿卡德", () => {
     expect(state.players.P1.minions.some((card) => card.definitionId === "TOKEN_MACHINE_EMPIRE_SOLDIER")).toBe(true);
   });
 
-  it("手中不足两张神器时跳过改费，但士兵可召唤则仍扣3并召唤", () => {
+  it("手中不足兩張神器時跳過改費，但士兵可召喚則仍扣3並召喚", () => {
     let state = mainState();
     state.players.P1.faction = "MACHINE";
     state.players.P1.resources.recycleCharge = 3;
@@ -34,7 +34,7 @@ describe("机械神机圣徒 阿卡德", () => {
     expect(state.players.P1.minions.some((card) => card.definitionId === "TOKEN_MACHINE_EMPIRE_SOLDIER")).toBe(true);
   });
 
-  it("改费与召唤都无法执行时不扣充能", () => {
+  it("改費與召喚都無法執行時不扣充能", () => {
     let state = mainState();
     state.players.P1.faction = "MACHINE";
     state.players.P1.resources.recycleCharge = 3;

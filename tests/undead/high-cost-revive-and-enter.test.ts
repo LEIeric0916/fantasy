@@ -4,8 +4,8 @@ import { resolvePendingEffects } from "../../src/game/engine/effectEngine";
 import { destroyMinion, moveCard } from "../../src/game/engine/zoneEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("盖德尔斯战吼", () => {
-  it("由玩家指定弃堆原始费用5以上手下复活", () => {
+describe("蓋德爾斯戰吼", () => {
+  it("由玩家指定棄堆原始費用5以上手下復活", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const target = putCard(state, "P1", "DRAGON_005", "MINION", "high-cost");
@@ -16,7 +16,7 @@ describe("盖德尔斯战吼", () => {
     expect(state.players.P1.minions.some((card) => card.instanceId === target.instanceId)).toBe(true);
   });
 
-  it("死灵复活属于自身复活，复活后仍触发战吼", () => {
+  it("死靈復活屬於自身復活，復活後仍觸發戰吼", () => {
     let state = mainState();
     state.players.P1.resources.necromancy = 3;
     const target = putCard(state, "P1", "DRAGON_005", "MINION", "necro-battlecry-target");
@@ -33,8 +33,8 @@ describe("盖德尔斯战吼", () => {
   });
 });
 
-describe("进击死灵进场效果", () => {
-  it("从手牌正常进入场上时召唤两名不朽者巨灵", () => {
+describe("進擊死靈進場效果", () => {
+  it("從手牌正常進入場上時召喚兩名不朽者巨靈", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const source = putCard(state, "P1", "UNDEAD_011", "HAND", "normal-enter");
@@ -42,7 +42,7 @@ describe("进击死灵进场效果", () => {
     expect(state.players.P1.minions.filter((card) => card.definitionId === "TOKEN_UNDEAD_GIANT")).toHaveLength(2);
   });
 
-  it("我方有末日之书时，新召唤的两名巨灵获得冲锋", () => {
+  it("我方有末日之書時，新召喚的兩名巨靈獲得沖鋒", () => {
     let state = mainState();
     state.players.P1.hand = [];
     putCard(state, "P1", "TOKEN_UNDEAD_DOOMSDAY_BOOK", "FIELD", "doom-book");
@@ -53,7 +53,7 @@ describe("进击死灵进场效果", () => {
     expect(giants.every((card) => card.keywords.includes("CHARGE"))).toBe(true);
   });
 
-  it("死灵复活进入场上时同样触发进场效果", () => {
+  it("死靈復活進入場上時同樣觸發進場效果", () => {
     const state = mainState();
     state.players.P1.resources.necromancy = 4;
     const source = putCard(state, "P1", "UNDEAD_011", "MINION", "necro-enter");

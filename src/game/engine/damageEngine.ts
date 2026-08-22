@@ -13,7 +13,7 @@ function revealStealthDamageSource(state: GameState, source: string, actualDamag
     .find((card) => card.instanceId === source);
   if (!sourceCard || !hasActiveKeyword(sourceCard, "STEALTH")) return;
   sourceCard.keywords = sourceCard.keywords.filter((keyword) => keyword !== "STEALTH");
-  addLog(state, "ACTION", `${sourceCard.definitionId} 造成伤害并解除潜行`, { instanceId: sourceCard.instanceId });
+  addLog(state, "ACTION", `${sourceCard.definitionId} 造成傷害並解除潛行`, { instanceId: sourceCard.instanceId });
 }
 
 export function dealDamageToMinion(
@@ -25,11 +25,11 @@ export function dealDamageToMinion(
 ): number {
   if (amount < 1) return 0;
   if (hasActiveKeyword(card, "INVINCIBLE")) {
-    addLog(state, "PROTECTION", `${card.definitionId} 的无敌使 ${amount} 点伤害变为 0`, { source, kind });
+    addLog(state, "PROTECTION", `${card.definitionId} 的無敵使 ${amount} 點傷害變為 0`, { source, kind });
     return 0;
   }
   if (kind === "EFFECT" && hasActiveKeyword(card, "IMMUNE_EFFECT_DAMAGE")) {
-    addLog(state, "PROTECTION", `${card.definitionId} 的能力伤害免疫使 ${amount} 点伤害变为 0`, { source, kind });
+    addLog(state, "PROTECTION", `${card.definitionId} 的能力傷害免疫使 ${amount} 點傷害變為 0`, { source, kind });
     return 0;
   }
   if (kind === "EFFECT" && state.players[card.controllerId].minions.some((sourceCard) => {
@@ -37,15 +37,15 @@ export function dealDamageToMinion(
     const aura = getCardDefinition(sourceCard.definitionId).friendlyEffectDamageImmunityAura;
     return Boolean(aura && (!aura.excludeSelf || sourceCard.instanceId !== card.instanceId));
   })) {
-    addLog(state, "PROTECTION", `${card.definitionId} 受到的${amount}点效果伤害因友方光环变为0`, { source, kind });
+    addLog(state, "PROTECTION", `${card.definitionId} 受到的${amount}點效果傷害因友方光環變為0`, { source, kind });
     return 0;
   }
   if (hasActiveKeyword(card, "DIVINE_SHIELD")) {
     card.keywords = card.keywords.filter((keyword) => keyword !== "DIVINE_SHIELD");
-    addLog(state, "PROTECTION", `${card.definitionId} 的聖盾術使 ${amount} 点伤害变为 0`, { source, kind });
+    addLog(state, "PROTECTION", `${card.definitionId} 的聖盾術使 ${amount} 點傷害變為 0`, { source, kind });
     return 0;
   }
-  if (card.currentHealth === null) throw new InvalidActionError("生命为 null 的卡牌不可受到伤害");
+  if (card.currentHealth === null) throw new InvalidActionError("生命為 null 的卡牌不可受到傷害");
   const auraCaps = state.players[card.controllerId].minions.flatMap((source) => {
     if (source.sealed) return [];
     const aura = getCardDefinition(source.definitionId).damageCapAura;
@@ -58,7 +58,7 @@ export function dealDamageToMinion(
   card.damageTaken += actual;
   card.currentHealth -= actual;
   revealStealthDamageSource(state, source, actual);
-  addLog(state, "COMBAT", `${card.definitionId} 受到 ${actual} 点${kind === "COMBAT" ? "战斗" : "效果"}伤害`, {
+  addLog(state, "COMBAT", `${card.definitionId} 受到 ${actual} 點${kind === "COMBAT" ? "戰斗" : "效果"}傷害`, {
     source,
     kind,
     requested: amount,
@@ -78,22 +78,22 @@ export function dealDamageToHero(state: GameState, targetId: PlayerId, amount: n
   const player = state.players[targetId];
   if (player.heroDivineShield) {
     player.heroDivineShield = false;
-    addLog(state, "PROTECTION", `${targetId} 玩家的圣盾术使${amount}点伤害变为0`, { source, kind });
+    addLog(state, "PROTECTION", `${targetId} 玩家的圣盾術使${amount}點傷害變為0`, { source, kind });
     return 0;
   }
   if (player.heroDamageNullifiers > 0) {
     player.heroDamageNullifiers -= 1;
-    addLog(state, "PROTECTION", `${targetId} 玩家下一次受到的${amount}点伤害变为0`, { source, kind });
+    addLog(state, "PROTECTION", `${targetId} 玩家下一次受到的${amount}點傷害變為0`, { source, kind });
     return 0;
   }
   player.heroHp -= amount;
   revealStealthDamageSource(state, source, amount);
-  addLog(state, "COMBAT", `${targetId} 玩家受到 ${amount} 点${kind === "COMBAT" ? "战斗" : "效果"}伤害`, { source, amount, kind });
+  addLog(state, "COMBAT", `${targetId} 玩家受到 ${amount} 點${kind === "COMBAT" ? "戰斗" : "效果"}傷害`, { source, amount, kind });
   if (player.heroHp <= 0) {
     state.phase = "GAME_OVER";
     state.winner = targetId === "P1" ? "P2" : "P1";
     state.loseReason = "HP_ZERO";
-    addLog(state, "RESULT", `${state.winner} 获胜`, { reason: "HP_ZERO" });
+    addLog(state, "RESULT", `${state.winner} 獲勝`, { reason: "HP_ZERO" });
   }
   return amount;
 }

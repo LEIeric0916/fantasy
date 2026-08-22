@@ -4,18 +4,18 @@ import { resolvePendingEffects } from "../../src/game/engine/effectEngine";
 import { destroyMinion } from "../../src/game/engine/zoneEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("死灵数与死灵复活", () => {
-  it("我方手下从场上被消灭时死灵数+1，即使是衍生牌", () => {
+describe("死靈數與死靈復活", () => {
+  it("我方手下從場上被消滅時死靈數+1，即使是衍生牌", () => {
     const state = mainState();
     const minion = putCard(state, "P1", "TOKEN_UNDEAD_SPIRIT", "MINION", "destroyed");
     destroyMinion(state, minion, "TEST");
-    expect(state.players.P1.resources.necromancy).toBe(0);
+    expect(state.players.P1.resources.necromancy).toBe(1);
     resolvePendingEffects(state);
     expect(state.players.P1.resources.necromancy).toBe(1);
     expect(state.players.P1.extraDeck.some((card) => card.instanceId === minion.instanceId)).toBe(true);
   });
 
-  it("我方回合盖德尔斯被消灭时先获得+1，达到4后扣4并立即复活", () => {
+  it("我方回合蓋德爾斯被消滅時先獲得+1，達到4後扣4並立即復活", () => {
     const state = mainState();
     state.players.P1.resources.necromancy = 3;
     const minion = putCard(state, "P1", "UNDEAD_009", "MINION", "self-revive");
@@ -26,7 +26,7 @@ describe("死灵数与死灵复活", () => {
     expect(minion.necroRevivedTurn).toBe(state.turnNumber);
   });
 
-  it("同一实例同一回合死灵复活最多一次", () => {
+  it("同一實例同一回合死靈復活最多一次", () => {
     const state = mainState();
     state.players.P1.resources.necromancy = 10;
     const minion = putCard(state, "P1", "UNDEAD_009", "MINION", "once");
@@ -39,7 +39,7 @@ describe("死灵数与死灵复活", () => {
     expect(state.players.P1.resources.necromancy).toBe(8);
   });
 
-  it("由手牌被效果送入弃堆不获得死亡+1，但已有4死灵数时仍可复活", () => {
+  it("由手牌被效果送入棄堆不獲得死亡+1，但已有4死靈數時仍可復活", () => {
     let state = mainState();
     state.players.P1.hand = [];
     state.players.P1.resources.necromancy = 4;
@@ -51,7 +51,7 @@ describe("死灵数与死灵复活", () => {
     expect(state.players.P1.minions.some((card) => card.instanceId === revived.instanceId)).toBe(true);
   });
 
-  it("非该玩家回合时进入弃堆不会发动死灵复活", () => {
+  it("非該玩家回合時進入棄堆不會發動死靈復活", () => {
     const state = mainState();
     state.players.P2.resources.necromancy = 10;
     const minion = putCard(state, "P2", "UNDEAD_009", "MINION", "opponent-turn");

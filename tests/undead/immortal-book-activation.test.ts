@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("黑暗之书 不朽典录", () => {
-  it("死灵数至少20时消耗20并转为末日之书", () => {
+describe("黑暗之書 不朽典錄", () => {
+  it("死靈數至少20時消耗20並轉為末日之書", () => {
     const state = mainState();
     state.players.P1.resources.necromancy = 23;
     const book = putCard(state, "P1", "TOKEN_UNDEAD_BOOK_IMMORTAL", "FIELD", "activate");
@@ -15,7 +15,7 @@ describe("黑暗之书 不朽典录", () => {
     expect(result.state.players.P1.fields[0].definitionId).toBe("TOKEN_UNDEAD_DOOMSDAY_BOOK");
   });
 
-  it("死灵不足或书被封印时不消耗资源也不转变", () => {
+  it("死靈不足或書被封印時不消耗資源也不轉變", () => {
     const insufficient = mainState();
     insufficient.players.P1.resources.necromancy = 19;
     const firstBook = putCard(insufficient, "P1", "TOKEN_UNDEAD_BOOK_IMMORTAL", "FIELD", "low");

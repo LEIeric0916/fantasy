@@ -22,7 +22,7 @@
       "keywords": ["TAUNT", "BATTLECRY"],
       "effectsText": "戰吼：新增1張「絕傑榮耀」到手牌；抽1張牌；檢索1張「皇家兵團」到手牌。",
       "generatedOnly": false,
-      "notes": "名称已由旧写法「榮耀絕傑」统一为「絕傑榮耀」。"
+      "notes": "名稱已由舊寫法「榮耀絕傑」統一為「絕傑榮耀」。"
     },
     {
       "id": "ALLIANCE_002",
@@ -52,7 +52,7 @@
       "keywords": ["BATTLECRY", "AURA"],
       "effectsText": "戰吼：召喚1名「民兵」，抽1張牌。光環：我方每召喚1手下，抽1張牌；一回合最多發動2次。",
       "generatedOnly": false,
-      "notes": "最后修正确认先处理战吼；光环角色进场当下即生效，因此战吼召唤民兵会触发自身光环，总计抽2张。"
+      "notes": "最後修正確認先處理戰吼；光環角色進場當下即生效，因此戰吼召喚民兵會觸發自身光環，總計抽2張。"
     },
     {
       "id": "ALLIANCE_004",
@@ -67,7 +67,7 @@
       "keywords": ["RUSH", "BATTLECRY"],
       "effectsText": "戰吼：召喚1名「革命士兵」；若我方場上手下少於對手手下，再發動一次。攻擊時若協作10，給予對手場上所有手下2點傷害。",
       "generatedOnly": false,
-      "notes": "最后修正确认采用方案1：先召唤第一名革命士兵，再比较双方场上手下数量决定是否再发动一次。"
+      "notes": "最後修正確認采用方案1：先召喚第一名革命士兵，再比較雙方場上手下數量決定是否再發動一次。"
     },
     {
       "id": "ALLIANCE_005",
@@ -82,7 +82,7 @@
       "keywords": ["RUSH", "DIVINE_SHIELD"],
       "effectsText": "回合結束時，使我方1手下獲得聖盾術，並對對手玩家造成2點傷害。協作15：聖盾目標改為我方全體手下，傷害改為4點。",
       "generatedOnly": false,
-      "notes": "「赋予目标变全体」按上下文整理为我方全体手下。"
+      "notes": "「賦予目標變全體」按上下文整理為我方全體手下。"
     },
     {
       "id": "ALLIANCE_006",
@@ -97,7 +97,7 @@
       "keywords": ["TAUNT", "BATTLECRY", "DEATHRATTLE", "IMMUNE_EFFECT_DAMAGE"],
       "effectsText": "因能力受到的傷害為0。戰吼：這回合使我方下一張手下消耗-4。死亡之聲：抽1張牌。",
       "generatedOnly": false,
-      "notes": "最后修正确认能力伤害等同所有卡牌效果数值伤害，包括敌我、指定、范围、光环与触发伤害；战斗及规则反击伤害仍正常承受。"
+      "notes": "最後修正確認能力傷害等同所有卡牌效果數值傷害，包括敵我、指定、范圍、光環與觸發傷害；戰斗及規則反擊傷害仍正常承受。"
     },
     {
       "id": "ALLIANCE_007",
@@ -112,7 +112,7 @@
       "keywords": ["TAUNT", "BATTLECRY", "RECYCLE"],
       "effectsText": "減費X：X為對手場上手下數量。戰吼：發現1張手下，並使其這回合費用-2。回收。",
       "generatedOnly": false,
-      "notes": "联盟牌拥有回收；按通用回收规则处理。"
+      "notes": "聯盟牌擁有回收；按通用回收規則處理。"
     },
     {
       "id": "ALLIANCE_008",
@@ -127,7 +127,7 @@
       "keywords": ["WARD", "BATTLECRY"],
       "effectsText": "戰吼：召喚1名「皇家親衛隊」。聯合3：恢復2水晶。",
       "generatedOnly": false,
-      "notes": "恢复2水晶不增加最大值。"
+      "notes": "恢復2水晶不增加最大值。"
     },
     {
       "id": "ALLIANCE_009",
@@ -142,7 +142,7 @@
       "keywords": ["DISCIPLINE", "HEADHUNT", "SANCTUARY", "RECYCLE", "CAN_ONLY_ATTACK_HERO", "CANNOT_COUNTERATTACK"],
       "effectsText": "減費5：第5回合以上且聯合3時。取首：攻擊時無視嘲諷。只能攻擊玩家，不能反擊。光環：我方場上有其他人類・軍隊手下時，獲得威懾。回收。",
       "generatedOnly": false,
-      "notes": "最后修正确认反击为规则反击；此卡被手下攻击时不会以攻击力造成规则反击伤害。"
+      "notes": "最後修正確認反擊為規則反擊；此卡被手下攻擊時不會以攻擊力造成規則反擊傷害。"
     },
     {
       "id": "ALLIANCE_010",
@@ -157,7 +157,7 @@
       "keywords": ["RUSH", "DIVINE_SHIELD", "BATTLECRY"],
       "effectsText": "減費2X：X為我方這回合召喚手下次數。戰吼：檢索1張主牌「皇家戰士」；協作10：另從衍生牌庫召喚1名衍生「皇家戰士」。",
       "generatedOnly": false,
-      "notes": "主牌检索与未指定来源召唤已明确区分。"
+      "notes": "主牌檢索與未指定來源召喚已明確區分。"
     },
     {
       "id": "ALLIANCE_011",
@@ -172,7 +172,7 @@
       "keywords": ["RUSH", "BATTLECRY"],
       "effectsText": "減費X：X為對手場上手下數量。戰吼：給予對手場上所有手下4點傷害、對手玩家3點傷害，抽2張牌；此手下-X/-X。",
       "generatedOnly": false,
-      "notes": "最后修正确认战吼开始时按敌方手下数量计算一次X；即使范围伤害使敌方手下离场，自身仍使用该快照-X/-X。"
+      "notes": "最後修正確認戰吼開始時按敵方手下數量計算一次X；即使范圍傷害使敵方手下離場，自身仍使用該快照-X/-X。"
     },
     {
       "id": "ALLIANCE_012",
@@ -187,7 +187,7 @@
       "keywords": ["CHARGE", "TAUNT", "BATTLECRY", "DEATHRATTLE"],
       "effectsText": "戰吼：消滅對手3手下。協作15：給予對手玩家4點傷害。死亡之聲：召喚2名「皇家聖騎兵」。",
       "generatedOnly": false,
-      "notes": "最后修正确认：消灭对手3手下，须指定3个不同CardInstance；协作15为句号式独立效果。"
+      "notes": "最後修正確認：消滅對手3手下，須指定3個不同CardInstance；協作15為句號式獨立效果。"
     }
   ]
 }

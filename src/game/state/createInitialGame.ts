@@ -18,6 +18,10 @@ export interface CreateGameOptions {
   shuffle?: boolean;
 }
 
+function createRandomSeed(): number {
+  return Math.floor(Math.random() * 0x1_0000_0000) >>> 0;
+}
+
 function buildDeck(faction: Faction, ownerId: PlayerId): CardInstance[] {
   let serial = 0;
   return getMainDeckDefinitions(faction).flatMap((definition) =>
@@ -55,6 +59,9 @@ function createPlayer(id: PlayerId, faction: Faction, deck: CardInstance[]): Pla
     nextMachineCostReduction: 0,
     heroDamageNullifiers: 0,
     nextMinionTemporaryCostReduction: 0,
+    nextLowCostDragonZeroMaxCost: null,
+    nextHighCostDragonReductionMinCost: null,
+    nextHighCostDragonReduction: 0,
     heroDivineShield: false,
   };
 }
@@ -62,7 +69,8 @@ function createPlayer(id: PlayerId, faction: Faction, deck: CardInstance[]): Pla
 export function createInitialGame(options: CreateGameOptions = {}): GameState {
   const factions = options.factions ?? { P1: "DRAGON", P2: "UNDEAD" };
   const startingPlayerId = options.startingPlayerId ?? "P1";
-  let seed = options.seed ?? 20260822;
+  const initialSeed = options.seed ?? createRandomSeed();
+  let seed = initialSeed;
   const decks = { P1: buildDeck(factions.P1, "P1"), P2: buildDeck(factions.P2, "P2") };
   if (options.shuffle !== false) {
     const p1 = shuffleSeeded(decks.P1, seed);
@@ -73,7 +81,7 @@ export function createInitialGame(options: CreateGameOptions = {}): GameState {
     seed = p2.seed;
   }
   const state: GameState = {
-    gameId: `game-${options.seed ?? 20260822}`,
+    gameId: `game-${initialSeed}`,
     turnNumber: 0,
     activePlayerId: startingPlayerId,
     startingPlayerId,
@@ -84,6 +92,7 @@ export function createInitialGame(options: CreateGameOptions = {}): GameState {
     },
     pendingEffects: [],
     log: [],
+    effectNotices: [],
     rngSeed: seed,
     rulesConfig: {
       ...DEFAULT_RULES_CONFIG,
@@ -100,8 +109,8 @@ export function createInitialGame(options: CreateGameOptions = {}): GameState {
       player.hand.push(card);
     }
   }
-  addLog(state, "RNG", "建立可重现牌组", { seed: options.seed ?? 20260822, resultingSeed: seed });
-  addLog(state, "PHASE", "双方各抽取 4 张起始手牌，进入换牌阶段");
+  addLog(state, "RNG", "建立隨機牌組與起始手牌", { seed: initialSeed, resultingSeed: seed });
+  addLog(state, "PHASE", "雙方各抽取 4 張起始手牌，進入換牌階段");
   return state;
 }
 

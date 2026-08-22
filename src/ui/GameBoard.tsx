@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { getCardDefinition } from "../game/cards/cardRegistry";
-import type { PlayerId } from "../game/cards/cardTypes";
+import { getCardDefinition, isCardImplemented } from "../game/cards/cardRegistry";
+import type { CardInstance, PlayerId } from "../game/cards/cardTypes";
 import { getLegalAttackTargets } from "../game/engine/combatEngine";
+import { refreshHandCosts } from "../game/engine/costEngine";
 import { applyAction, type GameAction } from "../game/engine/gameEngine";
 import type { GameState } from "../game/state/GameState";
 import { CardView } from "./CardView";
@@ -9,41 +10,90 @@ import { CardView } from "./CardView";
 interface Props { initialState: GameState; onRestart: () => void }
 
 export function GameBoard({ initialState, onRestart }: Props) {
-  const [state, setState] = useState(initialState);
+  const [state, setState] = useState(() => {
+    const readyState = structuredClone(initialState);
+    refreshHandCosts(readyState);
+    return readyState;
+  });
   const [message, setMessage] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [attackerId, setAttackerId] = useState<string>();
+  const [inspectedCard, setInspectedCard] = useState<CardInstance>();
+  const [viewedGraveyardPlayerId, setViewedGraveyardPlayerId] = useState<PlayerId>();
   const [privacyGate, setPrivacyGate] = useState(false);
   const active = state.players[state.activePlayerId];
   const opponentId: PlayerId = state.activePlayerId === "P1" ? "P2" : "P1";
   const opponent = state.players[opponentId];
+  const activeFieldSlots = state.rulesConfig.fieldLimits[active.faction] ?? 7;
+  const opponentFieldSlots = state.rulesConfig.fieldLimits[opponent.faction] ?? 7;
+  const allCards = useMemo(() => (["P1", "P2"] as const).flatMap((playerId) => {
+    const player = state.players[playerId];
+    return [...player.deck, ...player.hand, ...player.minions, ...player.fields, ...player.graveyard, ...player.removed, ...player.extraDeck];
+  }), [state]);
+  const cardName = (instanceId: string) => {
+    const card = allCards.find((candidate) => candidate.instanceId === instanceId);
+    return card ? getCardDefinition(card.definitionId).name : "未知卡牌";
+  };
   const legalTargets = useMemo(() => attackerId ? getLegalAttackTargets(state, attackerId) : [], [state, attackerId]);
+
+  function canPlay(card: CardInstance): boolean {
+    if (state.phase !== "MAIN" || state.pendingChoice || card.currentCost === null || card.currentCost > active.mana) return false;
+    const definition = getCardDefinition(card.definitionId);
+    if (!isCardImplemented(definition)) return false;
+    if (definition.cardType === "MINION" && active.minions.length >= state.rulesConfig.minionLimit) return false;
+    if (definition.cardType === "FIELD") {
+      const limit = state.rulesConfig.fieldLimits[active.faction];
+      if (limit !== null && limit !== undefined && active.fields.length >= limit) return false;
+    }
+    return true;
+  }
+
+  function canUseAlternate(card: CardInstance): boolean {
+    const alternate = getCardDefinition(card.definitionId).alternatePlay;
+    return Boolean(state.phase === "MAIN" && !state.pendingChoice && alternate && active.mana >= alternate.cost);
+  }
+
+  function canActivateField(card: CardInstance): boolean {
+    if (state.phase !== "MAIN" || state.pendingChoice || card.sealed) return false;
+    const activated = getCardDefinition(card.definitionId).activatedEffect;
+    if (!activated) return false;
+    const available = activated.resource === "NECROMANCY"
+      ? active.resources.necromancy
+      : active.resources.recycleCharge;
+    return available >= activated.cost;
+  }
+
+  function canAttack(card: CardInstance): boolean {
+    return !state.pendingChoice && getLegalAttackTargets(state, card.instanceId).length > 0;
+  }
 
   function dispatch(action: GameAction, gateAfter = false) {
     const result = applyAction(state, action);
+    const activePlayerChanged = result.state.activePlayerId !== state.activePlayerId;
     setState(result.state);
     setMessage(result.error ? `${result.error.code}：${result.error.message}` : "");
     if (!result.error) {
       setSelected([]);
       setAttackerId(undefined);
-      if (gateAfter) setPrivacyGate(true);
+      if (gateAfter || activePlayerChanged) setPrivacyGate(true);
     }
   }
 
   const mulliganPlayer: PlayerId = !state.players.P1.mulliganDone ? "P1" : "P2";
   if (privacyGate) {
-    return <main className="privacy"><h1>请交给 {state.phase === "MULLIGAN" ? mulliganPlayer : state.activePlayerId}</h1><button onClick={() => setPrivacyGate(false)}>已交接，显示画面</button></main>;
+    return <main className="privacy"><h1>請交給 {state.phase === "MULLIGAN" ? mulliganPlayer : state.activePlayerId}</h1><button onClick={() => setPrivacyGate(false)}>已交接，顯示畫面</button></main>;
   }
 
   if (state.phase === "MULLIGAN") {
     const player = state.players[mulliganPlayer];
     return (
-      <main>
-        <header><div><p className="eyebrow">MULLIGAN · {mulliganPlayer}</p><h1>选择要更换的起始手牌</h1></div><button className="quiet" onClick={onRestart}>重新设定</button></header>
-        <p className="notice">先抽取等量替换牌，再把换出的 0～4 张加入牌库并洗牌。</p>
-        <section className="hand open">{player.hand.map((card) => <CardView key={card.instanceId} card={card} selected={selected.includes(card.instanceId)} onClick={() => setSelected((items) => items.includes(card.instanceId) ? items.filter((id) => id !== card.instanceId) : [...items, card.instanceId])} />)}</section>
+      <main className="mulligan-screen">
+        <header><div><p className="eyebrow">MULLIGAN · {mulliganPlayer}</p><h1>選擇要更換的起始手牌</h1></div><button className="quiet" onClick={onRestart}>重新設定</button></header>
+        <p className="notice">先抽取等量替換牌，再把換出的 0～4 張加入牌庫並洗牌。</p>
+        <section className="hand open">{player.hand.map((card) => <CardView key={card.instanceId} card={card} selected={selected.includes(card.instanceId)} onInspect={() => setInspectedCard(card)} onClick={() => setSelected((items) => items.includes(card.instanceId) ? items.filter((id) => id !== card.instanceId) : [...items, card.instanceId])} />)}</section>
         {message && <p className="error">{message}</p>}
-        <button onClick={() => dispatch({ type: "MULLIGAN", playerId: mulliganPlayer, instanceIds: selected }, true)}>确认换牌（{selected.length}）</button>
+        <button onClick={() => dispatch({ type: "MULLIGAN", playerId: mulliganPlayer, instanceIds: selected }, true)}>確認換牌（{selected.length}）</button>
+        {inspectedCard && <CardDetailModal card={inspectedCard} onClose={() => setInspectedCard(undefined)} />}
       </main>
     );
   }
@@ -57,78 +107,220 @@ export function GameBoard({ initialState, onRestart }: Props) {
     : undefined;
   const effectChoice = state.pendingChoice?.type === "EFFECT_CARDS" ? state.pendingChoice : undefined;
   const optionChoice = state.pendingChoice?.type === "EFFECT_OPTION" ? state.pendingChoice : undefined;
+  const effectSummonConfirm = state.pendingChoice?.type === "EFFECT_SUMMON_CONFIRM" ? state.pendingChoice : undefined;
 
   return (
-    <main>
-      <header>
-        <div><p className="eyebrow">TURN {state.turnNumber} · {state.phase}</p><h1>戰記 <span>规则验证台</span></h1></div>
-        <div className="actions"><button className="quiet" onClick={onRestart}>重新开始</button>{state.phase === "MAIN" && !state.pendingChoice && <button onClick={() => dispatch({ type: "END_TURN", playerId: state.activePlayerId }, active.hand.length <= state.rulesConfig.handLimitAtEnd)}>结束回合</button>}</div>
+    <main className="game-board">
+      <header className="game-header">
+        <div><p className="eyebrow">TURN {state.turnNumber} · {state.phase}</p><h1>戰記 <span>規則驗證臺</span></h1></div>
+        <div className="actions"><button className="quiet" onClick={onRestart}>重新開始</button>{state.phase === "MAIN" && !state.pendingChoice && <button onClick={() => dispatch({ type: "END_TURN", playerId: state.activePlayerId })}>結束回合</button>}</div>
       </header>
-      {state.phase === "GAME_OVER" && <section className="result"><strong>{state.winner} 获胜</strong><span>{state.loseReason}</span></section>}
+      {state.phase === "GAME_OVER" && <section className="result"><strong>{state.winner} 獲勝</strong><span>{state.loseReason}</span></section>}
       {message && <p className="error">{message}</p>}
+      {state.effectNotices.length > 0 && <section className="effect-notices" role="status" aria-live="polite">
+        <strong>效果未發動</strong>
+        {state.effectNotices.map((notice) => <p key={`${notice.id}-${notice.sourceInstanceId}`}><b>{notice.sourceName}</b>：{notice.reason}</p>)}
+      </section>}
       {orderChoice && <section className="notice">
-        <strong>选择同一时机的处理顺序</strong>
-        <p>依次点击来源；同批次新生成的卡不进入本次合法目标范围。</p>
-        <p>目前顺序：{selected.join(" → ") || "尚未选择"}</p>
-        {orderChoice.instanceIds.filter((id) => !selected.includes(id)).map((id) => <button key={id} onClick={() => setSelected((items) => [...items, id])}>{id}</button>)}
+        <strong>選擇同一時機的處理順序</strong>
+        <p>依次點擊來源；同批次新生成的卡不進入本次合法目標范圍。</p>
+        <p>目前順序：{selected.map(cardName).join(" → ") || "尚未選擇"}</p>
+        {orderChoice.instanceIds.filter((id) => !selected.includes(id)).map((id) => {
+          const card = allCards.find((candidate) => candidate.instanceId === id);
+          return <span className="choice-card-option" key={id}><button onClick={() => setSelected((items) => [...items, id])}>{cardName(id)}</button>{card && <button className="quiet" onClick={() => setInspectedCard(card)}>詳細</button>}</span>;
+        })}
         <button disabled={selected.length !== orderChoice.instanceIds.length} onClick={() => dispatch({
           type: orderChoice.type === "TRIGGER_ORDER" ? "SELECT_TRIGGER_ORDER" : "SELECT_COUNTDOWN_ORDER",
           playerId: orderChoice.playerId,
           instanceIds: selected,
-        })}>确认顺序</button>
+        })}>確認順序</button>
       </section>}
       {effectChoice && <section className="notice">
         <strong>{effectChoice.prompt}</strong>
-        <p>已选择 {selected.length}/{effectChoice.count}；{effectChoice.minCount === 0 ? "可选择0张。" : "同一次指定不可重复选择同一卡牌实例。"}</p>
+        <p>已選擇 {selected.length}/{effectChoice.count}；{effectChoice.minCount === 0 ? "可選擇0張。" : "同一次指定不可重復選擇同一卡牌實例。"}</p>
         {effectChoice.candidateInstanceIds.map((id) => {
-          const card = [...state.players.P1.deck, ...state.players.P2.deck, ...state.players.P1.hand, ...state.players.P2.hand, ...state.players.P1.minions, ...state.players.P2.minions]
-            .find((candidate) => candidate.instanceId === id);
+          const card = allCards.find((candidate) => candidate.instanceId === id);
           const chosen = selected.includes(id);
-          return <button key={id} className={chosen ? "selected" : "quiet"} onClick={() => setSelected((items) => chosen ? items.filter((item) => item !== id) : items.length < effectChoice.count ? [...items, id] : items)}>{card ? getCardDefinition(card.definitionId).name : id}</button>;
+          return <span className="choice-card-option" key={id}><button className={chosen ? "selected" : "quiet"} onClick={() => setSelected((items) => chosen ? items.filter((item) => item !== id) : items.length < effectChoice.count ? [...items, id] : items)}>{card ? getCardDefinition(card.definitionId).name : "未知卡牌"}</button>{card && <button className="quiet" onClick={() => setInspectedCard(card)}>詳細</button>}</span>;
         })}
-        <button disabled={selected.length < (effectChoice.minCount ?? effectChoice.count) || selected.length > effectChoice.count} onClick={() => dispatch({ type: "SELECT_EFFECT_CARDS", playerId: effectChoice.playerId, instanceIds: selected })}>确认指定</button>
+        <button disabled={selected.length < (effectChoice.minCount ?? effectChoice.count) || selected.length > effectChoice.count} onClick={() => dispatch({ type: "SELECT_EFFECT_CARDS", playerId: effectChoice.playerId, instanceIds: selected })}>確認指定</button>
       </section>}
       {optionChoice && <section className="notice">
         <strong>{optionChoice.prompt}</strong>
-        <p>选择画面已经按当前条件显示最终数值。</p>
+        <p>選擇畫面已經按當前條件顯示最終數值。</p>
         {optionChoice.options.map((option) => <button key={option.id} onClick={() => dispatch({ type: "SELECT_EFFECT_OPTION", playerId: optionChoice.playerId, optionId: option.id })}>{option.label}</button>)}
       </section>}
-
-      <section className={`player-strip ${heroLegal ? "legal" : ""}`} onClick={() => attackerId && heroLegal && dispatch({ type: "ATTACK", playerId: state.activePlayerId, attackerId, target: { type: "HERO", playerId: opponentId } })}>
-        <strong>{opponentId} · {opponent.faction}</strong><span>HP {opponent.heroHp}</span><span>水晶 {opponent.mana}/{opponent.maxMana}</span><span>手牌 {opponent.hand.length}</span><span>牌库 {opponent.deck.length}</span>
-      </section>
-      <Zone title="对手立场区" cards={opponent.fields} />
-      <Zone title="对手手下区 · 7 格" cards={opponent.minions} legal={isLegalMinion} onCard={(id) => attackerId && isLegalMinion(id) && dispatch({ type: "ATTACK", playerId: state.activePlayerId, attackerId, target: { type: "MINION", instanceId: id } })} />
-      <div className="divider" />
-      <Zone title="我方手下区 · 7 格" cards={active.minions} selected={(id) => id === attackerId} onCard={(id) => setAttackerId(id === attackerId ? undefined : id)} />
-      <Zone title="我方立场区" cards={active.fields} />
-      {!state.pendingChoice && state.phase === "MAIN" && active.fields.some((card) => getCardDefinition(card.definitionId).activatedEffect) && <section className="actions">
-        {active.fields.filter((card) => getCardDefinition(card.definitionId).activatedEffect).map((card) => {
-          const definition = getCardDefinition(card.definitionId);
-          const activated = definition.activatedEffect!;
-          return <button className="quiet" key={card.instanceId} disabled={card.sealed} onClick={() => dispatch({ type: "ACTIVATE_FIELD", playerId: active.id, instanceId: card.instanceId })}>发动 {definition.name}（死灵术 {activated.cost}）</button>;
-        })}
+      {effectSummonConfirm && <section className="notice effect-summon-confirm">
+        <strong>效果召喚即將發動</strong>
+        <p><b>{cardName(effectSummonConfirm.sourceInstanceId)}</b> 已達成條件，確認後將從手牌召喚到場上並繼續結算。</p>
+        <button onClick={() => dispatch({ type: "CONFIRM_EFFECT_SUMMON", playerId: effectSummonConfirm.playerId })}>確認召喚</button>
+        {allCards.find((card) => card.instanceId === effectSummonConfirm.sourceInstanceId) && <button className="quiet" onClick={() => setInspectedCard(allCards.find((card) => card.instanceId === effectSummonConfirm.sourceInstanceId))}>查看卡牌</button>}
       </section>}
-      <section className="player-strip"><strong>{active.id} · {active.faction}</strong><span>HP {active.heroHp}</span><span>水晶 {active.mana}/{active.maxMana}</span><span>死灵 {active.resources.necromancy}</span><span>回收 {active.resources.recycleCharge}</span></section>
 
-      <h2>我方手牌 <small>{active.hand.length} 张</small></h2>
-      <section className="hand">{active.hand.map((card) => <CardView key={card.instanceId} card={card} selected={selected.includes(card.instanceId)} onClick={() => handLimit ? setSelected((items) => items.includes(card.instanceId) ? items.filter((id) => id !== card.instanceId) : [...items, card.instanceId]) : !effectChoice && dispatch({ type: "PLAY_CARD", playerId: active.id, instanceId: card.instanceId })} />)}</section>
+      <section className="battlefield" aria-label="完整對戰區域">
+        {attackerId && <div className="attack-drag-indicator" role="status" aria-live="polite"><span aria-hidden="true">➤</span><b>拖曳至攻擊目標</b></div>}
+        <div className="board-side opponent-side">
+          <section
+            className={`player-panel hero-drop-zone ${heroLegal ? "legal" : ""}`}
+            onDragOver={(event) => { if (heroLegal) event.preventDefault(); }}
+            onDrop={(event) => {
+              event.preventDefault();
+              if (attackerId && heroLegal) dispatch({ type: "ATTACK", playerId: state.activePlayerId, attackerId, target: { type: "HERO", playerId: opponentId } });
+            }}
+            onClick={() => attackerId && heroLegal && dispatch({ type: "ATTACK", playerId: state.activePlayerId, attackerId, target: { type: "HERO", playerId: opponentId } })}
+          >
+            <div className="player-identity"><small>對手玩家</small><strong>{opponentId}</strong><span> · {opponent.faction}</span></div>
+            <div className="hero-resource-row"><span className={`hero-health ${opponent.heroHp <= 10 ? "critical" : ""}`} data-testid={`player-health-${opponentId}`}><small>生命</small><b>{opponent.heroHp}</b><small>/{opponent.heroMaxHp}</small></span><span className="mana-display"><small>水晶</small><b>{opponent.mana}<i>/</i>{opponent.maxMana}</b><em>上限 {state.rulesConfig.normalMaxMana}</em></span></div>
+            <div className="player-stats"><span><small>手牌</small><b>{opponent.hand.length}</b></span><span><small>牌庫</small><b>{opponent.deck.length}</b></span><button className="zone-count" onClick={() => setViewedGraveyardPlayerId(opponentId)}><small>棄堆</small><b>{opponent.graveyard.length}</b></button><span className="special-record"><small>{specialRecord(opponent).label}</small><b>{specialRecord(opponent).value}</b></span></div>
+          </section>
+          <Zone compact kind="FIELD" slotCount={opponentFieldSlots} title={`對手立場區 · ${opponentFieldSlots} 格`} cards={opponent.fields} onInspect={setInspectedCard} />
+          <Zone
+            compact
+            title="對手手下區 · 7 格"
+            cards={opponent.minions}
+            legal={isLegalMinion}
+            dropTarget={isLegalMinion}
+            onInspect={setInspectedCard}
+            onCard={(id) => attackerId && isLegalMinion(id) && dispatch({ type: "ATTACK", playerId: state.activePlayerId, attackerId, target: { type: "MINION", instanceId: id } })}
+            onDropCard={(id) => attackerId && isLegalMinion(id) && dispatch({ type: "ATTACK", playerId: state.activePlayerId, attackerId, target: { type: "MINION", instanceId: id } })}
+          />
+        </div>
+        <div className="board-divider"><span>拖曳可行動手下至敵方手下或玩家區域以攻擊</span></div>
+        <div className="board-side active-side">
+          <Zone
+            compact
+            title="我方手下區 · 7 格"
+            cards={active.minions}
+            selected={(id) => id === attackerId}
+            actionable={(id) => canAttack(active.minions.find((card) => card.instanceId === id)!)}
+            draggable={(id) => canAttack(active.minions.find((card) => card.instanceId === id)!)}
+            onInspect={setInspectedCard}
+            onDragStart={setAttackerId}
+            onDragEnd={() => setAttackerId(undefined)}
+            onCard={(id) => setAttackerId(id === attackerId ? undefined : id)}
+          />
+          <Zone compact kind="FIELD" slotCount={activeFieldSlots} title={`我方立場區 · ${activeFieldSlots} 格`} cards={active.fields} onInspect={setInspectedCard} />
+          <section className="player-panel">
+            <div className="player-identity"><small>目前玩家</small><strong>{active.id}</strong><span> · {active.faction}</span></div>
+            <div className="hero-resource-row"><span className={`hero-health ${active.heroHp <= 10 ? "critical" : ""}`} data-testid={`player-health-${active.id}`}><small>生命</small><b>{active.heroHp}</b><small>/{active.heroMaxHp}</small></span><span className="mana-display"><small>水晶</small><b>{active.mana}<i>/</i>{active.maxMana}</b><em>上限 {state.rulesConfig.normalMaxMana}</em></span></div>
+            <div className="player-stats"><span><small>手牌</small><b>{active.hand.length}</b></span><span><small>牌庫</small><b>{active.deck.length}</b></span><button className="zone-count" onClick={() => setViewedGraveyardPlayerId(active.id)}><small>棄堆</small><b>{active.graveyard.length}</b></button><span className="special-record"><small>{specialRecord(active).label}</small><b>{specialRecord(active).value}</b></span></div>
+          </section>
+        </div>
+      </section>
+
+      <section className="hand-panel">
+        <h2>我方手牌 <small>{active.hand.length} 張</small><span>發光邊框表示本回合可出牌</span></h2>
+        <section className="hand">{active.hand.map((card) => <CardView
+          key={card.instanceId}
+          card={card}
+          handSummary
+          selected={selected.includes(card.instanceId)}
+          playable={canPlay(card) || canUseAlternate(card)}
+          onInspect={() => setInspectedCard(card)}
+          onClick={() => handLimit ? setSelected((items) => items.includes(card.instanceId) ? items.filter((id) => id !== card.instanceId) : [...items, card.instanceId]) : !state.pendingChoice && dispatch({ type: "PLAY_CARD", playerId: active.id, instanceId: card.instanceId })}
+        />)}</section>
+      </section>
       {!state.pendingChoice && state.phase === "MAIN" && active.hand.some((card) => getCardDefinition(card.definitionId).alternatePlay) && <section className="actions">
         {active.hand.filter((card) => getCardDefinition(card.definitionId).alternatePlay).map((card) => {
           const definition = getCardDefinition(card.definitionId);
-          return <button className="quiet" key={card.instanceId} onClick={() => dispatch({ type: "PLAY_ALTERNATE", playerId: active.id, instanceId: card.instanceId })}>转费 {definition.alternatePlay!.cost}：{definition.name}</button>;
+          return <button className="quiet" key={card.instanceId} onClick={() => dispatch({ type: "PLAY_ALTERNATE", playerId: active.id, instanceId: card.instanceId })}>轉費 {definition.alternatePlay!.cost}：{definition.name}</button>;
         })}
       </section>}
-      {handLimitChoice && <button onClick={() => dispatch({ type: "SELECT_DISCARD", playerId: active.id, instanceIds: selected }, true)}>确认弃牌（需 {handLimitChoice.count} 张）</button>}
+      {handLimitChoice && <button onClick={() => dispatch({ type: "SELECT_DISCARD", playerId: active.id, instanceIds: selected }, true)}>確認棄牌（需 {handLimitChoice.count} 張）</button>}
 
-      {state.phase === "MAIN" && <details className="debug"><summary>Debug：生成基础衍生手下</summary><p>序列化 Debug Action，仅用于验证召唤、战斗及关键词。</p><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: active.id, definitionId: "TOKEN_DRAGON_HELLFIRE" })}>我方：地獄炎龍</button><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: active.id, definitionId: "TOKEN_UNDEAD_SPIRIT" })}>我方：不朽者之靈</button><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: opponentId, definitionId: "TOKEN_ALLIANCE_ROYAL_WARRIOR" })}>对手：皇家戰士</button></details>}
-
-      <details className="log" open><summary>Game Log · {state.log.length}</summary>{[...state.log].reverse().map((entry) => <div key={entry.index}><time>#{entry.index} T{entry.turn}</time><strong>{entry.type}</strong><span>{entry.message}</span></div>)}</details>
-      <details><summary>Zone 检视</summary><pre>{JSON.stringify({ active: { graveyard: active.graveyard.map((c) => c.definitionId), removed: active.removed.map((c) => c.definitionId), extraDeck: active.extraDeck.map((c) => c.definitionId) }, opponent: { graveyard: opponent.graveyard.map((c) => c.definitionId), removed: opponent.removed.map((c) => c.definitionId), extraDeck: opponent.extraDeck.map((c) => c.definitionId) } }, null, 2)}</pre></details>
+      <section className="utility-bar">
+        {active.fields.filter(canActivateField).map((card) => {
+          const definition = getCardDefinition(card.definitionId);
+          const activated = definition.activatedEffect!;
+          const resourceName = activated.resource === "NECROMANCY" ? "死靈術" : "機械術";
+          return <button className="quiet field-action" key={card.instanceId} onClick={() => dispatch({ type: "ACTIVATE_FIELD", playerId: active.id, instanceId: card.instanceId })}>發動 {definition.name}（{resourceName} {activated.cost}）</button>;
+        })}
+        <details className="log"><summary>Game Log · {state.log.length}</summary>{[...state.log].reverse().map((entry) => <div key={entry.index}><time>#{entry.index} T{entry.turn}</time><strong>{entry.type}</strong><span>{entry.message}</span></div>)}</details>
+        <details><summary>Zone 檢視</summary><pre>{JSON.stringify({ active: { graveyard: active.graveyard.map((c) => c.definitionId), removed: active.removed.map((c) => c.definitionId), extraDeck: active.extraDeck.map((c) => c.definitionId) }, opponent: { graveyard: opponent.graveyard.map((c) => c.definitionId), removed: opponent.removed.map((c) => c.definitionId), extraDeck: opponent.extraDeck.map((c) => c.definitionId) } }, null, 2)}</pre></details>
+        {state.phase === "MAIN" && <details className="debug"><summary>Debug 召喚</summary><p>序列化 Debug Action，僅用於驗證召喚、戰斗及關鍵詞。</p><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: active.id, definitionId: "TOKEN_DRAGON_HELLFIRE" })}>我方：地獄炎龍</button><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: active.id, definitionId: "TOKEN_UNDEAD_SPIRIT" })}>我方：不朽者之靈</button><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: opponentId, definitionId: "TOKEN_ALLIANCE_ROYAL_WARRIOR" })}>對手：皇家戰士</button></details>}
+      </section>
+      {inspectedCard && <CardDetailModal card={inspectedCard} onClose={() => setInspectedCard(undefined)} />}
+      {viewedGraveyardPlayerId && <GraveyardModal playerId={viewedGraveyardPlayerId} cards={state.players[viewedGraveyardPlayerId].graveyard} onInspect={(card) => { setViewedGraveyardPlayerId(undefined); setInspectedCard(card); }} onClose={() => setViewedGraveyardPlayerId(undefined)} />}
     </main>
   );
 }
 
-function Zone({ title, cards, legal, selected, onCard }: { title: string; cards: GameState["players"][PlayerId]["minions"]; legal?: (id: string) => boolean; selected?: (id: string) => boolean; onCard?: (id: string) => void }) {
-  return <section><h2>{title} <small>{cards.length}</small></h2><div className="zone">{cards.map((card) => <CardView key={card.instanceId} card={card} selected={selected?.(card.instanceId)} disabled={Boolean(legal && !legal(card.instanceId))} onClick={() => onCard?.(card.instanceId)} />)}{Array.from({ length: Math.max(0, 7 - cards.length) }, (_, index) => <span className="slot" key={index} />)}</div></section>;
+interface ZoneProps {
+  title: string;
+  cards: GameState["players"][PlayerId]["minions"];
+  compact?: boolean;
+  kind?: "MINION" | "FIELD";
+  slotCount?: number;
+  legal?: (id: string) => boolean;
+  selected?: (id: string) => boolean;
+  actionable?: (id: string) => boolean;
+  draggable?: (id: string) => boolean;
+  dropTarget?: (id: string) => boolean;
+  onCard?: (id: string) => void;
+  onInspect?: (card: CardInstance) => void;
+  onDragStart?: (id: string) => void;
+  onDragEnd?: () => void;
+  onDropCard?: (id: string) => void;
+}
+
+function Zone({ title, cards, compact, kind = "MINION", slotCount = 7, legal, selected, actionable, draggable, dropTarget, onCard, onInspect, onDragStart, onDragEnd, onDropCard }: ZoneProps) {
+  const columns = `repeat(${slotCount}, minmax(0, 1fr))`;
+  const leadingSlots = Math.floor(Math.max(0, slotCount - cards.length) / 2);
+  const trailingSlots = Math.max(0, slotCount - cards.length - leadingSlots);
+  return <section className={`${compact ? "compact-zone" : ""} ${kind === "FIELD" ? "field-zone" : "minion-zone"}`}><h2>{title} <small>{cards.length}</small></h2><div className="zone" style={{ gridTemplateColumns: columns }}>{Array.from({ length: leadingSlots }, (_, index) => <span className="slot" data-position="leading" key={`leading-${index}`} />)}{cards.map((card) => <CardView
+    key={card.instanceId}
+    card={card}
+    selected={selected?.(card.instanceId)}
+    actionable={actionable?.(card.instanceId)}
+    draggable={draggable?.(card.instanceId)}
+    dropTarget={dropTarget?.(card.instanceId)}
+    disabled={Boolean(legal && !legal(card.instanceId))}
+    onClick={() => onCard?.(card.instanceId)}
+    onInspect={() => onInspect?.(card)}
+    onDragStart={() => onDragStart?.(card.instanceId)}
+    onDragEnd={onDragEnd}
+    onDrop={() => onDropCard?.(card.instanceId)}
+  />)}{Array.from({ length: trailingSlots }, (_, index) => <span className="slot" data-position="trailing" key={`trailing-${index}`} />)}</div></section>;
+}
+
+function specialRecord(player: GameState["players"][PlayerId]): { label: string; value: number | string } {
+  if (player.faction === "UNDEAD") return { label: "死靈數", value: player.resources.necromancy };
+  if (player.faction === "MACHINE") return { label: "回收充能", value: player.resources.recycleCharge };
+  if (player.faction === "ALLIANCE") return { label: "協作數", value: player.summonedThisGame };
+  if (player.faction === "DRAGON") return {
+    label: "棄堆龍族",
+    value: player.graveyard.filter((card) => {
+      const definition = getCardDefinition(card.definitionId);
+      return definition.cardType === "MINION" && definition.subtype.includes("DRAGON");
+    }).length,
+  };
+  return { label: "特殊紀錄", value: "—" };
+}
+
+function GraveyardModal({ playerId, cards, onInspect, onClose }: { playerId: PlayerId; cards: CardInstance[]; onInspect: (card: CardInstance) => void; onClose: () => void }) {
+  return <div className="card-modal-backdrop" role="presentation" onClick={onClose}>
+    <section className="graveyard-modal" role="dialog" aria-modal="true" aria-label={`${playerId} 棄堆`} onClick={(event) => event.stopPropagation()}>
+      <button className="modal-close" onClick={onClose} aria-label="關閉棄堆">×</button>
+      <p className="eyebrow">{playerId} · GRAVEYARD</p><h2>棄堆 <small>{cards.length} 張</small></h2>
+      {cards.length === 0 ? <p className="empty-zone-message">目前棄堆沒有卡牌。</p> : <div className="graveyard-list">{cards.map((card) => <button className="graveyard-card-row" key={card.instanceId} onClick={() => onInspect(card)}><span>{getCardDefinition(card.definitionId).name}</span><small>{getCardDefinition(card.definitionId).cardType} · 費用 {card.currentCost ?? "?"}</small></button>)}</div>}
+    </section>
+  </div>;
+}
+
+function CardDetailModal({ card, onClose }: { card: CardInstance; onClose: () => void }) {
+  const definition = getCardDefinition(card.definitionId);
+  return <div className="card-modal-backdrop" role="presentation" onClick={onClose}>
+    <section className="card-modal" role="dialog" aria-modal="true" aria-label={`${definition.name} 卡牌資訊`} onClick={(event) => event.stopPropagation()}>
+      <button className="modal-close" onClick={onClose} aria-label="關閉卡牌資訊">×</button>
+      <p className="eyebrow">{definition.cardType} · {definition.subtype.join(" · ") || "無種族"}</p>
+      <h2>{definition.name}</h2>
+      <div className="card-modal-stats">
+        <span>費用 <strong>{card.currentCost ?? definition.originalCost ?? "?"}</strong></span>
+        {definition.cardType === "MINION" && <><span>攻擊 <strong>{card.currentAttack ?? "?"}</strong></span><span>生命 <strong>{card.currentHealth ?? "?"}</strong></span></>}
+      </div>
+      <p className="card-modal-keywords"><strong>關鍵字：</strong>{card.keywords.join("、") || "無"}</p>
+      {card.counters.plagueMarks !== undefined && <p className="modal-plague-counter">瘟疫標記 <strong>{card.counters.plagueMarks}</strong> / 7</p>}
+      <p className="card-modal-effect">{definition.effectsText || "無卡牌效果"}</p>
+    </section>
+  </div>;
 }

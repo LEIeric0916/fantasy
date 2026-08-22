@@ -3,8 +3,8 @@ import { getLegalAttackTargets } from "../../src/game/engine/combatEngine";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("基本战斗、嘲讽、冲刺与冲锋", () => {
-  it("嘲讽存在时不能攻击其他手下或玩家", () => {
+describe("基本戰斗、嘲諷、沖刺與沖鋒", () => {
+  it("嘲諷存在時不能攻擊其他手下或玩家", () => {
     const state = mainState();
     const attacker = putCard(state, "P1", "TOKEN_DRAGON_HELLFIRE", "MINION", "attacker");
     const taunt = putCard(state, "P2", "DRAGON_001", "MINION", "taunt");
@@ -12,7 +12,7 @@ describe("基本战斗、嘲讽、冲刺与冲锋", () => {
     expect(getLegalAttackTargets(state, attacker.instanceId)).toEqual([{ type: "MINION", instanceId: taunt.instanceId }]);
   });
 
-  it("一般手下进场回合不能攻击", () => {
+  it("一般手下進場回合不能攻擊", () => {
     const state = mainState();
     const attacker = putCard(state, "P1", "TOKEN_DRAGON_HELLFIRE", "MINION", "new");
     attacker.summonedOnTurn = state.turnNumber;
@@ -20,7 +20,7 @@ describe("基本战斗、嘲讽、冲刺与冲锋", () => {
     expect(getLegalAttackTargets(state, attacker.instanceId)).toEqual([]);
   });
 
-  it("冲刺进场回合能攻击手下但不能攻击玩家", () => {
+  it("沖刺進場回合能攻擊手下但不能攻擊玩家", () => {
     const state = mainState();
     const attacker = putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_WARRIOR", "MINION", "rush");
     attacker.summonedOnTurn = state.turnNumber;
@@ -28,14 +28,14 @@ describe("基本战斗、嘲讽、冲刺与冲锋", () => {
     expect(getLegalAttackTargets(state, attacker.instanceId)).toEqual([{ type: "MINION", instanceId: target.instanceId }]);
   });
 
-  it("冲锋进场回合可以攻击玩家", () => {
+  it("沖鋒進場回合可以攻擊玩家", () => {
     const state = mainState();
     const attacker = putCard(state, "P1", "TOKEN_UNDEAD_SPIRIT", "MINION", "charge");
     attacker.summonedOnTurn = state.turnNumber;
     expect(getLegalAttackTargets(state, attacker.instanceId)).toContainEqual({ type: "HERO", playerId: "P2" });
   });
 
-  it("攻击手下时同时造成伤害，死亡主牌进入弃堆", () => {
+  it("攻擊手下時同時造成傷害，死亡主牌進入棄堆", () => {
     let state = mainState();
     const attacker = putCard(state, "P1", "UNDEAD_001", "MINION", "a");
     const defender = putCard(state, "P2", "UNDEAD_001", "MINION", "d");
@@ -46,7 +46,7 @@ describe("基本战斗、嘲讽、冲刺与冲锋", () => {
 });
 
 describe("聖盾術", () => {
-  it("第一次至少 1 点伤害变为 0 并失去盾，第二次正常受伤", () => {
+  it("第一次至少 1 點傷害變為 0 並失去盾，第二次正常受傷", () => {
     let state = mainState();
     const shielded = putCard(state, "P2", "ALLIANCE_005", "MINION", "shield");
     const first = putCard(state, "P1", "DRAGON_012", "MINION", "first");
@@ -59,7 +59,7 @@ describe("聖盾術", () => {
     expect(state.players.P2.graveyard.some((card) => card.instanceId === shielded.instanceId)).toBe(true);
   });
 
-  it("重复获得时仍只有一个聖盾術关键字", () => {
+  it("重復獲得時仍只有一個聖盾術關鍵字", () => {
     const state = mainState();
     const card = putCard(state, "P1", "ALLIANCE_005", "MINION", "one-layer");
     if (!card.keywords.includes("DIVINE_SHIELD")) card.keywords.push("DIVINE_SHIELD");

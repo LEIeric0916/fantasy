@@ -4,8 +4,8 @@ import { dealDamageToHero, dealDamageToMinion } from "../../src/game/engine/dama
 import { summonGeneratedMinion } from "../../src/game/engine/summonEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("机械神造物光环与战吼", () => {
-  it("伊达政宗光环使后续进场的机械军队获得冲锋", () => {
+describe("機械神造物光環與戰吼", () => {
+  it("伊達政宗光環使後續進場的機械軍隊獲得沖鋒", () => {
     const state = mainState();
     putCard(state, "P1", "TOKEN_MACHINE_DIVINE_DATE_MASAMUNE", "MINION", "masamune");
     summonGeneratedMinion(state, "P1", "TOKEN_MACHINE_EMPIRE_SOLDIER");
@@ -13,7 +13,7 @@ describe("机械神造物光环与战吼", () => {
     expect(soldier.keywords).toContain("CHARGE");
   });
 
-  it("加百列光环使后续进场的机械军队获得圣盾术", () => {
+  it("加百列光環使後續進場的機械軍隊獲得圣盾術", () => {
     const state = mainState();
     putCard(state, "P1", "TOKEN_MACHINE_DIVINE_GABRIEL", "MINION", "gabriel");
     summonGeneratedMinion(state, "P1", "TOKEN_MACHINE_EMPIRE_REAPER");
@@ -21,7 +21,7 @@ describe("机械神造物光环与战吼", () => {
     expect(reaper.keywords).toContain("DIVINE_SHIELD");
   });
 
-  it("伊利亚斯最多指定4名敌人消灭，且在场时机械军队单次伤害上限为3", () => {
+  it("伊利亞斯最多指定4名敵人消滅，且在場時機械軍隊單次傷害上限為3", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const elias = putCard(state, "P1", "TOKEN_MACHINE_DIVINE_ELIAS", "HAND", "elias");
@@ -34,7 +34,7 @@ describe("机械神造物光环与战吼", () => {
     expect(dealDamageToMinion(state, ally, 12, "test", "EFFECT")).toBe(3);
   });
 
-  it("路西法恢复不超过最大生命，并使下一次玩家伤害变为0", () => {
+  it("路西法恢復不超過最大生命，並使下一次玩家傷害變為0", () => {
     let state = mainState();
     state.players.P1.heroHp = 29;
     state.players.P1.hand = [];

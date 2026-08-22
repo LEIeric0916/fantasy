@@ -7,6 +7,8 @@
 - `docs/game-rules.md`：核心規則與關鍵字
 - `docs/development-spec.md`：瀏覽器 MVP 開發規格
 - `docs/interaction-tests.md`：已確認的特殊互動與驗收案例
+- `docs/project-architecture.md`：規則、卡牌資料、引擎、UI、測試與未來 AI 對戰的運作導覽
+- `docs/engine-bilingual-guide.md`：12 個主要遊戲引擎的英文程式名稱、中文翻譯與執行流程
 - `data/dragon-cards.json`：龍族主牌（40 張）
 - `data/undead-cards.json`：不朽者主牌（40 張）
 - `data/machine-cards.json`：機械主牌（40 張）
@@ -21,7 +23,7 @@
 - `keywords` 使用穩定英文代碼；中文定義見規則書。
 - 聯盟目前主牌只有 35 張，禁止自動補齊缺少的 5 張。
 
-## 浏览器灰盒 MVP
+## 瀏覽器灰盒 MVP
 
 ```bash
 npm install
@@ -30,10 +32,10 @@ npm test
 npm run build
 ```
 
-- React UI 可选择龙族、不朽者、机械、联盟作为双方阵营；联盟严格使用 35 张主牌。
-- 换牌、首回合抽牌、检索后洗牌、水晶、幸運幣、回合阶段、区域、7 格上限、结束回合弃至 10 张与空牌库败北均由纯 TypeScript Engine 处理。
-- 召唤、战斗、同时触发排序、倒数、生长、复活、回收、封印、转变、消失、资料化卡效与 Game Log 已接入；React 只派发 Action 并显示 GameState。
-- 战吼会在付费打出、自身效果召唤（含效果召唤、死灵复活）及衍生牌效果召唤后发动；召唤来源效果先完整结算。由其他卡牌复活的普通主牌不触发战吼。
-- `docs/interaction-tests.md` 的 A01–G04 已全部转成可执行 Vitest 测试，无 `it.todo`。
-- 当前回归结果：55 个测试文件、236 项测试全部通过；TypeScript 与 Vite 正式构建通过。`dist/` 可直接部署到静态网页托管服务。
-- 所有 `null`、非空 `notes` 与规则审计项见 `docs/RULE_UNDEFINED.md`；运行时可由 `getRuleUndefinedInventory()` 查询。未确认内容不会由引擎自行补完。
+- React UI 可選擇龍族、不朽者、機械、聯盟作為雙方陣營；聯盟嚴格使用 35 張主牌。
+- 換牌、首回合抽牌、檢索後洗牌、水晶、幸運幣、回合階段、區域、7 格上限、結束回合棄至 10 張與空牌庫敗北均由純 TypeScript Engine 處理。
+- 召喚、戰斗、同時觸發排序、倒數、生長、復活、回收、封印、轉變、消失、資料化卡效與 Game Log 已接入；React 只派發 Action 並顯示 GameState。
+- 戰吼會在付費打出、自身效果召喚（含效果召喚、死靈復活）及衍生牌效果召喚後發動；召喚來源效果先完整結算。由其他卡牌復活的普通主牌不觸發戰吼。
+- `docs/interaction-tests.md` 的 A01–G04 已全部轉成可執行 Vitest 測試，無 `it.todo`。
+- 當前回歸結果：56 個測試文件、262 項測試全部通過；TypeScript 與 Vite 正式構建通過。`dist/` 可直接部署到靜態網頁托管服務。
+- 所有 `null`、非空 `notes` 與規則審計項見 `docs/RULE_UNDEFINED.md`；運行時可由 `getRuleUndefinedInventory()` 查詢。未確認內容不會由引擎自行補完。

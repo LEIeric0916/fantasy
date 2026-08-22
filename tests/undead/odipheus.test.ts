@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("不朽的惩戒魔龙 奥迪菲斯", () => {
-  it("战吼消灭敌方所有可被效果直接消灭的手下，庇护者保留", () => {
+describe("不朽的懲戒魔龍 奧迪菲斯", () => {
+  it("戰吼消滅敵方所有可被效果直接消滅的手下，庇護者保留", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const source = putCard(state, "P1", "UNDEAD_012", "HAND", "battlecry");
@@ -14,7 +14,7 @@ describe("不朽的惩戒魔龙 奥迪菲斯", () => {
     expect(state.players.P2.minions.some((card) => card.instanceId === sanctuary.instanceId)).toBe(true);
   });
 
-  it("交战时先给予对手玩家3伤，再进行战斗伤害结算", () => {
+  it("交戰時先給予對手玩家3傷，再進行戰斗傷害結算", () => {
     let state = mainState();
     const source = putCard(state, "P1", "UNDEAD_012", "MINION", "combat-aura");
     const enemy = putCard(state, "P2", "DRAGON_012", "MINION", "enemy");
@@ -25,12 +25,12 @@ describe("不朽的惩戒魔龙 奥迪菲斯", () => {
       target: { type: "MINION", instanceId: enemy.instanceId },
     }).state;
     expect(state.players.P2.heroHp).toBe(27);
-    const auraIndex = state.log.findIndex((entry) => entry.message === "P2 玩家受到 3 点效果伤害");
-    const combatIndex = state.log.findIndex((entry) => entry.message.includes("交战"));
+    const auraIndex = state.log.findIndex((entry) => entry.message === "P2 玩家受到 3 點效果傷害");
+    const combatIndex = state.log.findIndex((entry) => entry.message.includes("交戰"));
     expect(auraIndex).toBeLessThan(combatIndex);
   });
 
-  it("杀意在完整战斗后由玩家选择召唤一种黑暗之书", () => {
+  it("殺意在完整戰斗後由玩家選擇召喚一種黑暗之書", () => {
     let state = mainState();
     const source = putCard(state, "P1", "UNDEAD_012", "MINION", "on-kill");
     const enemy = putCard(state, "P2", "UNDEAD_001", "MINION", "victim");

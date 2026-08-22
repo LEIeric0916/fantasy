@@ -10,8 +10,8 @@ function moveToDeckTop(state: ReturnType<typeof mainState>, instanceId: string) 
   deck.push(card);
 }
 
-describe("发现与回合限定减费", () => {
-  it("龙的诞生翻开顶部4张并选择龙族手下，使其本回合费用-4", () => {
+describe("發現與回合限定減費", () => {
+  it("龍的誕生翻開頂部4張並選擇龍族手下，使其本回合費用-4", () => {
     let state = mainState();
     state.players.P1.hand = [];
     putCard(state, "P2", "UNDEAD_001", "MINION", "cost-1");
@@ -31,7 +31,7 @@ describe("发现与回合限定减费", () => {
     expect(state.players.P1.hand.find((card) => card.instanceId === candidate.instanceId)?.currentCost).toBe(20);
   });
 
-  it("动态减费最低为0", () => {
+  it("動態減費最低為0", () => {
     let state = mainState();
     state.players.P1.hand = [];
     for (let index = 0; index < 7; index += 1) putCard(state, "P2", "UNDEAD_001", "MINION", `enemy-${index}`);
@@ -42,7 +42,23 @@ describe("发现与回合限定减费", () => {
     expect(result.state.players.P1.mana).toBe(0);
   });
 
-  it("龙之吟翻开顶部8张；未选牌保持顺序，并在选择后恢复所有水晶", () => {
+  it("聖印龍與龍的誕生只計算敵方手下，且場面變動後立即刷新費用", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    const sealDragon = putCard(state, "P1", "DRAGON_006", "HAND", "seal-cost");
+    const birth = putCard(state, "P1", "DRAGON_014", "HAND", "birth-cost");
+    putCard(state, "P2", "TOKEN_UNDEAD_BOOK_IMMORTAL", "FIELD", "enemy-field");
+
+    state = applyAction(state, { type: "DEBUG_SUMMON", playerId: "P2", definitionId: "TOKEN_UNDEAD_SPIRIT" }).state;
+    expect(state.players.P1.hand.find((card) => card.instanceId === sealDragon.instanceId)?.currentCost).toBe(6);
+    expect(state.players.P1.hand.find((card) => card.instanceId === birth.instanceId)?.currentCost).toBe(5);
+
+    state = applyAction(state, { type: "DEBUG_SUMMON", playerId: "P2", definitionId: "TOKEN_UNDEAD_SPIRIT" }).state;
+    expect(state.players.P1.hand.find((card) => card.instanceId === sealDragon.instanceId)?.currentCost).toBe(5);
+    expect(state.players.P1.hand.find((card) => card.instanceId === birth.instanceId)?.currentCost).toBe(4);
+  });
+
+  it("龍之吟翻開頂部8張；未選牌保持順序，並在選擇後恢復所有水晶", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const spell = putCard(state, "P1", "DRAGON_015", "HAND", "song");

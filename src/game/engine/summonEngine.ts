@@ -30,7 +30,7 @@ export function applyFriendlyEnterAuras(state: GameState, playerId: PlayerId, ca
     const aura = getCardDefinition(source.definitionId).grantOnFriendlyEnterAura;
     if (!aura || !aura.subtypes.every((subtype) => targetDefinition.subtype.includes(subtype))) continue;
     if (!card.keywords.includes(aura.keyword)) card.keywords.push(aura.keyword);
-    addLog(state, "ACTION", `${source.definitionId} 光环使 ${card.definitionId} 获得 ${aura.keyword}`, { source: source.instanceId, target: card.instanceId });
+    addLog(state, "ACTION", `${source.definitionId} 光環使 ${card.definitionId} 獲得 ${aura.keyword}`, { source: source.instanceId, target: card.instanceId });
   }
 }
 
@@ -60,13 +60,13 @@ export function enqueueBattlecryAfterSummon(state: GameState, card: CardInstance
 export function summonGeneratedMinion(state: GameState, playerId: PlayerId, definitionId: string): boolean {
   const player = state.players[playerId];
   if (player.minions.length >= state.rulesConfig.minionLimit) {
-    addLog(state, "ACTION", `${definitionId} 召唤失败：手下区已满`, { reason: "MINION_LIMIT" });
+    addLog(state, "ACTION", `${definitionId} 召喚失敗：手下區已滿`, { reason: "MINION_LIMIT" });
     return false;
   }
   const definition = getCardDefinition(definitionId);
   if (definition.cardType !== "MINION") throw new Error(`${definitionId} is not a minion`);
   if (definition.attack === null || definition.health === null) {
-    throw new RuleUndefinedError("NULL_MINION_STATS", "攻击或生命为 null，不能召唤", definitionId);
+    throw new RuleUndefinedError("NULL_MINION_STATS", "攻擊或生命為 null，不能召喚", definitionId);
   }
   const serial = player.summonedThisGame + 1;
   const card = createCardInstance(definition, playerId, "MINION", `${playerId}-${definitionId}-generated-${state.turnNumber}-${serial}`);
@@ -75,7 +75,7 @@ export function summonGeneratedMinion(state: GameState, playerId: PlayerId, defi
   recordMinionSummoned(state, playerId, card);
   applyFriendlyEnterAuras(state, playerId, card);
   enqueueFriendlySummonAuras(state, playerId, card);
-  addLog(state, "ZONE", `召唤 ${definition.name}`, { instanceId: card.instanceId, reason: "EFFECT_SUMMON" });
+  addLog(state, "ZONE", `召喚 ${definition.name}`, { instanceId: card.instanceId, reason: "EFFECT_SUMMON" });
   enqueueBattlecryAfterSummon(state, card, "EFFECT_SUMMON:BATTLECRY");
   if (definition.enterFieldEffects?.length) {
     enqueueTriggeredEffects(state, card, definition.enterFieldEffects, "ENTER_FIELD", createTimingContext(state, `ENTER_FIELD:${card.instanceId}`));
@@ -87,7 +87,7 @@ export function summonFromHandByEffect(state: GameState, card: CardInstance): bo
   const player = state.players[card.controllerId];
   if (card.zone !== "HAND") return false;
   if (player.minions.length >= state.rulesConfig.minionLimit) {
-    addLog(state, "ACTION", `${card.definitionId} 效果召唤结算失败：手下区已满`, { instanceId: card.instanceId });
+    addLog(state, "ACTION", `${card.definitionId} 效果召喚結算失敗：手下區已滿`, { instanceId: card.instanceId });
     return false;
   }
   const definition = getCardDefinition(card.definitionId);
@@ -97,7 +97,7 @@ export function summonFromHandByEffect(state: GameState, card: CardInstance): bo
   recordMinionSummoned(state, player.id, card);
   applyFriendlyEnterAuras(state, player.id, card);
   enqueueFriendlySummonAuras(state, player.id, card);
-  addLog(state, "ACTION", `${definition.name} 从手牌效果召唤`, { instanceId: card.instanceId });
+  addLog(state, "ACTION", `${definition.name} 從手牌效果召喚`, { instanceId: card.instanceId });
   enqueueBattlecryAfterSummon(state, card, "SELF_EFFECT_SUMMON:BATTLECRY");
   if (definition.enterFieldEffects?.length) {
     enqueueTriggeredEffects(state, card, definition.enterFieldEffects, "ENTER_FIELD", createTimingContext(state, `ENTER_FIELD:${card.instanceId}`));
@@ -109,14 +109,14 @@ export function summonGeneratedField(state: GameState, playerId: PlayerId, defin
   const player = state.players[playerId];
   const limit = state.rulesConfig.fieldLimits[player.faction];
   if (limit !== null && limit !== undefined && player.fields.length >= limit) {
-    addLog(state, "ACTION", `${definitionId} 召唤失败：立场区已满`, { reason: "FIELD_LIMIT" });
+    addLog(state, "ACTION", `${definitionId} 召喚失敗：立場區已滿`, { reason: "FIELD_LIMIT" });
     return false;
   }
   const definition = getCardDefinition(definitionId);
-  if (definition.cardType !== "FIELD") throw new InvalidActionError(`${definitionId} 不是立场`);
+  if (definition.cardType !== "FIELD") throw new InvalidActionError(`${definitionId} 不是立場`);
   const card = createCardInstance(definition, playerId, "FIELD", `${playerId}-${definitionId}-generated-${state.turnNumber}-${state.log.length}`);
   player.fields.push(card);
-  addLog(state, "ZONE", `召唤立场 ${definition.name}`, { instanceId: card.instanceId, reason: "EFFECT_SUMMON_FIELD" });
+  addLog(state, "ZONE", `召喚立場 ${definition.name}`, { instanceId: card.instanceId, reason: "EFFECT_SUMMON_FIELD" });
   if (definition.effects?.length) {
     enqueueTriggeredEffects(state, card, definition.effects, "ENTER_FIELD", createTimingContext(state, `ENTER_FIELD:${card.instanceId}`));
   }

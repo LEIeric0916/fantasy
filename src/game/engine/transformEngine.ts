@@ -6,12 +6,12 @@ import { hasActiveKeyword } from "../keywords/keywordRules";
 import { InvalidActionError, RuleUndefinedError } from "./errors";
 
 export function transformMinion(state: GameState, card: CardInstance, definitionId: string): boolean {
-  if (card.zone !== "MINION") throw new InvalidActionError("只有场上的手下可以转变");
+  if (card.zone !== "MINION") throw new InvalidActionError("只有場上的手下可以轉變");
   if (hasActiveKeyword(card, "DISCIPLINE") || hasActiveKeyword(card, "INVINCIBLE")) return false;
   const definition = getCardDefinition(definitionId);
-  if (definition.cardType !== "MINION") throw new InvalidActionError("转变目标定义必须是手下");
+  if (definition.cardType !== "MINION") throw new InvalidActionError("轉變目標定義必須是手下");
   if (definition.attack === null || definition.health === null) {
-    throw new RuleUndefinedError("NULL_MINION_STATS", "转变后的手下数值为 null", definitionId);
+    throw new RuleUndefinedError("NULL_MINION_STATS", "轉變後的手下數值為 null", definitionId);
   }
   const previousDefinitionId = card.definitionId;
   card.definitionId = definition.id;
@@ -26,7 +26,7 @@ export function transformMinion(state: GameState, card: CardInstance, definition
   card.attacksUsedThisTurn = 0;
   card.summonedOnTurn = null;
   card.silenced = false;
-  addLog(state, "ZONE", `${previousDefinitionId} 转变为 ${definition.id}`, {
+  addLog(state, "ZONE", `${previousDefinitionId} 轉變為 ${definition.id}`, {
     instanceId: card.instanceId,
     originalDefinitionId: card.originalDefinitionId,
   });
@@ -35,7 +35,7 @@ export function transformMinion(state: GameState, card: CardInstance, definition
       const aura = !field.sealed ? getCardDefinition(field.definitionId).transformAura : undefined;
       if (!aura || aura.transformedDefinitionId !== definition.id) continue;
       field.counters[aura.counter] = (field.counters[aura.counter] ?? 0) + 1;
-      addLog(state, "RESOURCE", `${field.definitionId} 放置1个标记`, {
+      addLog(state, "RESOURCE", `${field.definitionId} 放置1個標記`, {
         instanceId: field.instanceId,
         counter: aura.counter,
         value: field.counters[aura.counter],
@@ -47,20 +47,25 @@ export function transformMinion(state: GameState, card: CardInstance, definition
 }
 
 export function checkDoomsdayWin(state: GameState, playerId: CardInstance["controllerId"]): boolean {
-  const count = state.players[playerId].fields.filter((field) => field.definitionId === "TOKEN_UNDEAD_DOOMSDAY_BOOK").length;
-  if (count < 4) return false;
+  const winningField = state.players[playerId].fields.find((field) => {
+    const condition = getCardDefinition(field.definitionId).fieldWinCondition;
+    if (!condition) return false;
+    return state.players[playerId].fields.filter((candidate) => candidate.definitionId === field.definitionId).length >= condition.count;
+  });
+  if (!winningField) return false;
+  const condition = getCardDefinition(winningField.definitionId).fieldWinCondition!;
   state.phase = "GAME_OVER";
   state.winner = playerId;
-  state.loseReason = "DOOMSDAY_BOOK";
-  addLog(state, "RESULT", `${playerId} 集齐4张末日之书，立即获胜`, { reason: "DOOMSDAY_BOOK" });
+  state.loseReason = condition.loseReason;
+  addLog(state, "RESULT", `${playerId} 集齊${condition.count}張${getCardDefinition(winningField.definitionId).name}，立即獲勝`, { reason: condition.loseReason });
   return true;
 }
 
 export function transformField(state: GameState, card: CardInstance, definitionId: string): boolean {
-  if (card.zone !== "FIELD") throw new InvalidActionError("只有场上的立场可以转变");
+  if (card.zone !== "FIELD") throw new InvalidActionError("只有場上的立場可以轉變");
   if (hasActiveKeyword(card, "DISCIPLINE") || hasActiveKeyword(card, "INVINCIBLE")) return false;
   const definition = getCardDefinition(definitionId);
-  if (definition.cardType !== "FIELD") throw new InvalidActionError("转变目标定义必须是立场");
+  if (definition.cardType !== "FIELD") throw new InvalidActionError("轉變目標定義必須是立場");
   const previousDefinitionId = card.definitionId;
   card.definitionId = definition.id;
   card.currentCost = definition.originalCost;
@@ -68,7 +73,7 @@ export function transformField(state: GameState, card: CardInstance, definitionI
   card.counters = { ...definition.initialCounters };
   card.flags = {};
   card.silenced = false;
-  addLog(state, "ZONE", `${previousDefinitionId} 转变为 ${definition.id}`, {
+  addLog(state, "ZONE", `${previousDefinitionId} 轉變為 ${definition.id}`, {
     instanceId: card.instanceId,
     originalDefinitionId: card.originalDefinitionId,
   });

@@ -3,8 +3,8 @@ import { getCardDefinition } from "../../src/game/cards/cardRegistry";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("资料驱动 Effect：聖印白龍", () => {
-  it("战吼抽 1、恢复 1 HP，并在条件成立时 +0/+2", () => {
+describe("資料驅動 Effect：聖印白龍", () => {
+  it("戰吼抽 1、恢復 1 HP，並在條件成立時 +0/+2", () => {
     let state = mainState();
     state.players.P1.heroHp = 25;
     putCard(state, "P2", "UNDEAD_001", "MINION", "enemy");
@@ -20,7 +20,7 @@ describe("资料驱动 Effect：聖印白龍", () => {
     expect(summoned.maxHealth).toBe(4);
   });
 
-  it("已有其他我方手下时不获得 +0/+2", () => {
+  it("已有其他我方手下時不獲得 +0/+2", () => {
     let state = mainState();
     state.players.P1.heroHp = 25;
     putCard(state, "P1", "TOKEN_DRAGON_HELLFIRE", "MINION", "friendly");
@@ -30,7 +30,7 @@ describe("资料驱动 Effect：聖印白龍", () => {
     expect(state.players.P1.minions.find((card) => card.instanceId === whiteDragon.instanceId)?.currentHealth).toBe(2);
   });
 
-  it("恢复量超过已损失生命时只恢复至最大生命", () => {
+  it("恢復量超過已損失生命時只恢復至最大生命", () => {
     let state = mainState();
     state.players.P1.heroHp = 30;
     const whiteDragon = putCard(state, "P1", "DRAGON_001", "HAND", "heal-cap");
@@ -44,8 +44,8 @@ describe("资料驱动 Effect：聖印白龍", () => {
   });
 });
 
-describe("资料驱动 Effect：炎龍召喚", () => {
-  it("G01｜召唤 5/5 嘲讽地獄炎龍，再对敌方所有手下造成 4 伤", () => {
+describe("資料驅動 Effect：炎龍召喚", () => {
+  it("G01｜召喚 5/5 嘲諷地獄炎龍，再對敵方所有手下造成 4 傷", () => {
     let state = mainState();
     const firstEnemy = putCard(state, "P2", "UNDEAD_001", "MINION", "enemy-1");
     const secondEnemy = putCard(state, "P2", "DRAGON_001", "MINION", "enemy-2");
@@ -59,7 +59,7 @@ describe("资料驱动 Effect：炎龍召喚", () => {
     expect(state.players.P1.mana).toBe(5);
   });
 
-  it("满场时略过召唤，但后续敌方全体 4 伤仍执行", () => {
+  it("滿場時略過召喚，但後續敵方全體 4 傷仍執行", () => {
     let state = mainState();
     for (let index = 0; index < 7; index += 1) putCard(state, "P1", "TOKEN_DRAGON_HELLFIRE", "MINION", `full-${index}`);
     const enemy = putCard(state, "P2", "UNDEAD_001", "MINION", "enemy");
@@ -69,7 +69,7 @@ describe("资料驱动 Effect：炎龍召喚", () => {
     expect(state.players.P2.graveyard.some((card) => card.instanceId === enemy.instanceId)).toBe(true);
   });
 
-  it("敌方圣盾会阻挡本次 4 点效果伤害并失去圣盾", () => {
+  it("敵方圣盾會阻擋本次 4 點效果傷害並失去圣盾", () => {
     let state = mainState();
     const shielded = putCard(state, "P2", "ALLIANCE_005", "MINION", "shielded");
     const spell = putCard(state, "P1", "DRAGON_013", "HAND", "shield-spell");

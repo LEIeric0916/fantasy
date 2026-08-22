@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("机械法师 奥古斯", () => {
-  it("战吼召唤收割者与毁灭者；机械术15选择两种不同神造物并按选择顺序触发战吼", () => {
+describe("機械法師 奧古斯", () => {
+  it("戰吼召喚收割者與毀滅者；機械術15選擇兩種不同神造物並按選擇順序觸發戰吼", () => {
     let state = mainState();
     state.players.P1.faction = "MACHINE";
     state.players.P1.hand = [];
@@ -31,7 +31,7 @@ describe("机械法师 奥古斯", () => {
     expect(reapers.filter((card) => card.keywords.includes("DIVINE_SHIELD"))).toHaveLength(2);
   });
 
-  it("充能不足15时只执行战吼，不出现神造物选择", () => {
+  it("充能不足15時只執行戰吼，不出現神造物選擇", () => {
     let state = mainState();
     state.players.P1.faction = "MACHINE";
     state.players.P1.hand = [];

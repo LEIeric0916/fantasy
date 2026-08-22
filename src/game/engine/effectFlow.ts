@@ -1,8 +1,8 @@
 export type EffectConnector = "COMMA" | "PERIOD" | "SEMICOLON";
 
 /**
- * 已确认的卡文流程：无合法指定目标时，逗号连接的同一效果链中止；
- * 句号或分号后的新效果段仍继续。卡牌资料解析时必须显式保存连接符。
+ * 已確認的卡文流程：無合法指定目標時，逗號連接的同一效果鏈中止；
+ * 句號或分號後的新效果段仍繼續。卡牌資料解析時必須顯式保存連接符。
  */
 export function continueAfterMissingLegalTarget(connector: EffectConnector): boolean {
   return connector !== "COMMA";

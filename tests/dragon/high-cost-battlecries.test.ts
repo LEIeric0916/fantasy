@@ -11,8 +11,8 @@ function addGraveDragons(state: ReturnType<typeof mainState>, count: number) {
   }
 }
 
-describe("赤焰的龙皇兵战吼", () => {
-  it("指定两个不同手下各4伤，并按实际消灭数抽牌与恢复", () => {
+describe("赤焰的龍皇兵戰吼", () => {
+  it("指定兩個不同手下各4傷，並按實際消滅數抽牌與恢復", () => {
     let state = mainState();
     state.players.P1.hand = [];
     state.players.P1.heroHp = 25;
@@ -30,19 +30,30 @@ describe("赤焰的龙皇兵战吼", () => {
     expect(state.players.P1.heroHp).toBe(26);
   });
 
-  it("不足两个合法目标时不能指定较少目标，战吼不造成伤害", () => {
+  it("不足兩個合法目標時可指定最多現有的合法目標", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const soldier = putCard(state, "P1", "DRAGON_010", "HAND", "insufficient");
     const target = putCard(state, "P2", "DRAGON_012", "MINION", "only");
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: soldier.instanceId }).state;
-    expect(state.pendingChoice).toBeUndefined();
-    expect(state.players.P2.minions.find((card) => card.instanceId === target.instanceId)?.currentHealth).toBe(12);
+    expect(state.pendingChoice).toMatchObject({ type: "EFFECT_CARDS", count: 1, minCount: 0 });
+    state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [target.instanceId] }).state;
+    expect(state.players.P2.minions.find((card) => card.instanceId === target.instanceId)?.currentHealth).toBe(8);
+  });
+
+  it("可選擇0名手下結束戰吼", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    const soldier = putCard(state, "P1", "DRAGON_010", "HAND", "choose-zero");
+    putCard(state, "P2", "DRAGON_012", "MINION", "available");
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: soldier.instanceId }).state;
+    state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [] }).state;
+    expect(state.players.P2.minions[0].currentHealth).toBe(12);
   });
 });
 
 describe("巴哈姆特", () => {
-  it("只按弃堆当前面板仍为龙族手下的数量减费", () => {
+  it("只按棄堆當前面板仍為龍族手下的數量減費", () => {
     const state = mainState();
     const bahamut = putCard(state, "P1", "DRAGON_012", "HAND", "cost");
     addGraveDragons(state, 2);
@@ -53,7 +64,7 @@ describe("巴哈姆特", () => {
     expect(bahamut.currentCost).toBe(18);
   });
 
-  it("消失两个不同敌方手下，不触发死亡区域；句号后独立造成12点玩家伤害", () => {
+  it("消失兩個不同敵方手下，不觸發死亡區域；句號後獨立造成12點玩家傷害", () => {
     let state = mainState();
     state.players.P1.hand = [];
     addGraveDragons(state, 12);
@@ -73,7 +84,7 @@ describe("巴哈姆特", () => {
     expect(state.players.P2.minions.some((card) => card.instanceId === remains.instanceId)).toBe(true);
   });
 
-  it("不足两个消失目标时，句号后的12点伤害仍执行", () => {
+  it("不足兩個消失目標時，句號後的12點傷害仍執行", () => {
     let state = mainState();
     state.players.P1.hand = [];
     addGraveDragons(state, 12);

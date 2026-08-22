@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("联盟前期卡", () => {
-  it("皇家兵团依次获得绝杰荣耀、抽1、检索同名牌并洗牌", () => {
+describe("聯盟前期卡", () => {
+  it("皇家兵團依次獲得絕杰榮耀、抽1、檢索同名牌並洗牌", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const searched = putCard(state, "P1", "ALLIANCE_001", "HAND", "deck-copy");
@@ -19,7 +19,7 @@ describe("联盟前期卡", () => {
     expect(state.players.P1.hand.some((card) => card.instanceId === searched.instanceId)).toBe(true);
   });
 
-  it("皇家匕首先召唤卫兵；协作15时自身获得冲锋与+2攻击", () => {
+  it("皇家匕首先召喚衛兵；協作15時自身獲得沖鋒與+2攻擊", () => {
     let state = mainState();
     state.players.P1.summonedThisGame = 14;
     const dagger = putCard(state, "P1", "ALLIANCE_002", "HAND", "dagger");
@@ -30,7 +30,7 @@ describe("联盟前期卡", () => {
     expect(played.keywords).toContain("CHARGE");
   });
 
-  it("贾维斯战吼召唤民兵触发自身光环，加上战吼抽牌合计抽2；每回合最多触发光环2次", () => {
+  it("賈維斯戰吼召喚民兵觸發自身光環，加上戰吼抽牌合計抽2；每回合最多觸發光環2次", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const jarvis = putCard(state, "P1", "ALLIANCE_003", "HAND", "jarvis");

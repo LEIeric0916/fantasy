@@ -5,8 +5,8 @@ import { beginTurn } from "../../src/game/engine/turnEngine";
 import { destroyMinion } from "../../src/game/engine/zoneEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("机械兵工厂与机械衍生手下", () => {
-  it("兵工厂入场及成长各召唤1名士兵，倒数结束后回收", () => {
+describe("機械兵工廠與機械衍生手下", () => {
+  it("兵工廠入場及成長各召喚1名士兵，倒數結束後回收", () => {
     let state = mainState();
     state.players.P1.faction = "MACHINE";
     const factory = putCard(state, "P1", "MACHINE_008", "HAND", "factory");
@@ -26,7 +26,7 @@ describe("机械兵工厂与机械衍生手下", () => {
     expect(state.players.P1.resources.recycleCharge).toBe(1);
   });
 
-  it("机械士兵死亡增加1充能并返回额外区", () => {
+  it("機械士兵死亡增加1充能並返回額外區", () => {
     const state = mainState();
     const soldier = putCard(state, "P1", "TOKEN_MACHINE_EMPIRE_SOLDIER", "MINION", "death");
     destroyMinion(state, soldier, "TEST");
@@ -35,7 +35,7 @@ describe("机械兵工厂与机械衍生手下", () => {
     expect(state.players.P1.extraDeck.some((card) => card.instanceId === soldier.instanceId)).toBe(true);
   });
 
-  it("机械毁灭者死亡增加1充能并仅恢复至最大生命", () => {
+  it("機械毀滅者死亡增加1充能並僅恢復至最大生命", () => {
     const state = mainState();
     state.players.P1.heroHp = 30;
     const destroyer = putCard(state, "P1", "TOKEN_MACHINE_DESTROYER", "MINION", "destroyer");
@@ -43,5 +43,26 @@ describe("机械兵工厂与机械衍生手下", () => {
     resolvePendingEffects(state);
     expect(state.players.P1.resources.recycleCharge).toBe(1);
     expect(state.players.P1.heroHp).toBe(30);
+  });
+
+  it("收割者與目標同時死亡時，殺意與死亡之聲都正常結算且不產生攻擊錯誤", () => {
+    let state = mainState();
+    state.players.P1.faction = "MACHINE";
+    const reaper = putCard(state, "P1", "TOKEN_MACHINE_EMPIRE_REAPER", "MINION", "reaper-mutual-kill");
+    const defender = putCard(state, "P2", "TOKEN_MACHINE_EMPIRE_REAPER", "MINION", "reaper-target");
+
+    const result = applyAction(state, {
+      type: "ATTACK",
+      playerId: "P1",
+      attackerId: reaper.instanceId,
+      target: { type: "MINION", instanceId: defender.instanceId },
+    });
+    state = result.state;
+
+    expect(result.error).toBeUndefined();
+    expect(state.pendingChoice).toBeUndefined();
+    expect(state.players.P1.resources.recycleCharge).toBe(3);
+    expect(state.players.P2.resources.recycleCharge).toBe(3);
+    expect(state.players.P1.extraDeck.some((card) => card.instanceId === reaper.instanceId)).toBe(true);
   });
 });

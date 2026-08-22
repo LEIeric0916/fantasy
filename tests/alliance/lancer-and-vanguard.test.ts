@@ -4,8 +4,8 @@ import { getLegalAttackTargets } from "../../src/game/engine/combatEngine";
 import { dealDamageToMinion } from "../../src/game/engine/damageEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("皇家圣骑枪卫与战争兵器先锋号", () => {
-  it("枪卫进场时联合3恢复2水晶，并召唤皇家亲卫队", () => {
+describe("皇家圣騎槍衛與戰爭兵器先鋒號", () => {
+  it("槍衛進場時聯合3恢復2水晶，並召喚皇家親衛隊", () => {
     let state = mainState();
     state.players.P1.hand = [];
     putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", "ally-1");
@@ -16,7 +16,7 @@ describe("皇家圣骑枪卫与战争兵器先锋号", () => {
     expect(state.players.P1.minions.some((card) => card.definitionId === "TOKEN_ALLIANCE_ROYAL_HONOR_GUARD")).toBe(true);
   });
 
-  it("皇家亲卫队使其他友方受到的效果伤害为0，但不保护自己", () => {
+  it("皇家親衛隊使其他友方受到的效果傷害為0，但不保護自己", () => {
     const state = mainState();
     const guard = putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_HONOR_GUARD", "MINION", "guard");
     const ally = putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", "ally");
@@ -24,7 +24,7 @@ describe("皇家圣骑枪卫与战争兵器先锋号", () => {
     expect(dealDamageToMinion(state, guard, 2, "effect", "EFFECT")).toBe(2);
   });
 
-  it("先锋号第5回合以上且已有2名友军时费用降至1；有其他人类军队时获得动态威慑", () => {
+  it("先鋒號第5回合以上且已有2名友軍時費用降至1；有其他人類軍隊時獲得動態威懾", () => {
     let state = mainState();
     state.turnNumber = 5;
     state.players.P1.hand = [];

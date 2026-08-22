@@ -5,6 +5,7 @@ import { addLog } from "../utils/gameLog";
 import { NotImplementedError } from "./errors";
 import { enqueueTriggeredEffects } from "./triggerEngine";
 import type { TimingContext } from "./simultaneousEngine";
+import { enqueueStateBasedEffectSummons } from "./effectSummonEngine";
 
 const zoneKey: Record<Zone, keyof Pick<PlayerState, "deck" | "hand" | "minions" | "fields" | "graveyard" | "removed" | "extraDeck">> = {
   DECK: "deck",
@@ -58,11 +59,15 @@ export function destroyCardOnField(state: GameState, card: CardInstance, reason 
   if (card.zone !== "MINION" && card.zone !== "FIELD") throw new Error(`${card.instanceId} is not on the field`);
   const triggeredKeyword = card.zone === "MINION" ? "DEATHRATTLE" : "LAST_WORDS";
   const effects = [];
-  if (card.zone === "MINION") effects.push({ type: "GAIN_NECROMANCY" as const, value: 1 });
+  if (card.zone === "MINION") {
+    state.players[card.controllerId].resources.necromancy += 1;
+    addLog(state, "RESOURCE", `${card.controllerId} 死靈數 +1`, { sourceInstanceId: card.instanceId, reason });
+    enqueueStateBasedEffectSummons(state, card.controllerId);
+  }
   if (!card.sealed && card.keywords.includes(triggeredKeyword)) {
     const cardEffects = definition.triggeredEffects?.[triggeredKeyword];
     if (!cardEffects) {
-      throw new NotImplementedError(`此阶段尚未实现该${triggeredKeyword === "DEATHRATTLE" ? "死亡之声" : "谢幕曲"}`, definition.id);
+      throw new NotImplementedError(`此階段尚未實現該${triggeredKeyword === "DEATHRATTLE" ? "死亡之聲" : "謝幕曲"}`, definition.id);
     }
     effects.push(...cardEffects);
   }
@@ -77,7 +82,7 @@ export function destroyCardOnField(state: GameState, card: CardInstance, reason 
     const deck = state.players[card.controllerId].deck;
     const returned = deck.pop();
     if (returned) deck.unshift(returned);
-    addLog(state, "ZONE", `${definition.name} 回收到牌组底部`, { instanceId: card.instanceId });
+    addLog(state, "ZONE", `${definition.name} 回收到牌組底部`, { instanceId: card.instanceId });
     return;
   }
   if (definition.generatedOnly) {

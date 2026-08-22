@@ -56,20 +56,20 @@ export function getLegalAttackTargets(state: GameState, attackerId: string): Att
 }
 
 export function resolveAttack(state: GameState, playerId: PlayerId, attackerId: string, target: AttackTarget): void {
-  if (state.phase !== "MAIN" || state.activePlayerId !== playerId) throw new InvalidActionError("目前不能攻击");
+  if (state.phase !== "MAIN" || state.activePlayerId !== playerId) throw new InvalidActionError("目前不能攻擊");
   const attacker = state.players[playerId].minions.find((card) => card.instanceId === attackerId);
-  if (!attacker) throw new InvalidActionError("攻击者不在我方手下区");
+  if (!attacker) throw new InvalidActionError("攻擊者不在我方手下區");
   const legal = getLegalAttackTargets(state, attackerId).some((candidate) =>
     candidate.type === target.type &&
     (candidate.type === "HERO" ? candidate.playerId === (target as { playerId: PlayerId }).playerId : candidate.instanceId === (target as { instanceId: string }).instanceId),
   );
-  if (!legal) throw new InvalidActionError("攻击目标不合法（请检查嘲讽与进场回合限制）");
+  if (!legal) throw new InvalidActionError("攻擊目標不合法（請檢查嘲諷與進場回合限制）");
   attacker.attacksUsedThisTurn += 1;
 
   if (target.type === "HERO") {
     const damage = attacker.currentAttack ?? 0;
     dealDamageToHero(state, target.playerId, damage, attacker.instanceId, "COMBAT");
-    addLog(state, "COMBAT", `${attacker.definitionId} 对 ${target.playerId} 造成 ${damage} 点伤害`);
+    addLog(state, "COMBAT", `${attacker.definitionId} 對 ${target.playerId} 造成 ${damage} 點傷害`);
     return;
   }
 
@@ -92,7 +92,7 @@ export function resolveAttack(state: GameState, playerId: PlayerId, attackerId: 
   const counterDamage = defender.sealed || hasActiveKeyword(defender, "CANNOT_COUNTERATTACK") ? 0 : defender.currentAttack ?? 0;
   const dealt = dealDamageToMinion(state, defender, attackDamage, attacker.instanceId, "COMBAT");
   const countered = dealDamageToMinion(state, attacker, counterDamage, defender.instanceId, "COMBAT");
-  addLog(state, "COMBAT", `${getCardDefinition(attacker.definitionId).name} 与 ${getCardDefinition(defender.definitionId).name} 交战`, {
+  addLog(state, "COMBAT", `${getCardDefinition(attacker.definitionId).name} 與 ${getCardDefinition(defender.definitionId).name} 交戰`, {
     attackerDamage: dealt,
     defenderDamage: countered,
   });

@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("审判者裁决", () => {
-  it("消灭指定目标；我方有原始费用7以上手下时，再对其余敌方手下造成5伤", () => {
+describe("審判者裁決", () => {
+  it("消滅指定目標；我方有原始費用7以上手下時，再對其余敵方手下造成5傷", () => {
     let state = mainState();
     state.players.P1.hand = [];
     putCard(state, "P1", "DRAGON_007", "MINION", "condition");
@@ -18,7 +18,7 @@ describe("审判者裁决", () => {
     expect(state.players.P1.extraDeck.some((card) => card.instanceId === spell.instanceId)).toBe(true);
   });
 
-  it("光纹手下不进入可指定清单", () => {
+  it("光紋手下不進入可指定清單", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const spell = putCard(state, "P1", "TOKEN_DRAGON_JUDGMENT", "HAND", "ward");
@@ -29,7 +29,7 @@ describe("审判者裁决", () => {
     expect((state.pendingChoice as { candidateInstanceIds: string[] }).candidateInstanceIds).not.toContain(ward.instanceId);
   });
 
-  it("庇护阻挡直接消灭，但不阻挡句号后的范围伤害", () => {
+  it("庇護阻擋直接消滅，但不阻擋句號後的范圍傷害", () => {
     let state = mainState();
     state.players.P1.hand = [];
     putCard(state, "P1", "DRAGON_007", "MINION", "condition");
@@ -40,6 +40,6 @@ describe("审判者裁决", () => {
     const after = state.players.P2.minions.find((card) => card.instanceId === sanctuary.instanceId)!;
     expect(after).toBeDefined();
     expect(after.keywords).not.toContain("DIVINE_SHIELD");
-    expect(state.log.some((entry) => entry.type === "PROTECTION" && entry.message.includes("阻挡效果直接消灭"))).toBe(true);
+    expect(state.log.some((entry) => entry.type === "PROTECTION" && entry.message.includes("阻擋效果直接消滅"))).toBe(true);
   });
 });

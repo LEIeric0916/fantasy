@@ -5,8 +5,8 @@ import { resolvePendingEffects } from "../../src/game/engine/effectEngine";
 import { destroyMinion } from "../../src/game/engine/zoneEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("绝杰荣耀与联盟绝杰", () => {
-  it("绝杰荣耀在协作20时费用为0，并以玩家整场记录排除已取得绝杰", () => {
+describe("絕杰榮耀與聯盟絕杰", () => {
+  it("絕杰榮耀在協作20時費用為0，並以玩家整場記錄排除已取得絕杰", () => {
     let state = mainState();
     state.players.P1.hand = [];
     state.players.P1.summonedThisGame = 20;
@@ -25,7 +25,7 @@ describe("绝杰荣耀与联盟绝杰", () => {
     expect(state.pendingChoice.options.map((option) => option.id)).not.toContain("TOKEN_ALLIANCE_HERO_AUGUSTIN");
   });
 
-  it("奥斯但丁死亡之声从额外区返回手牌", () => {
+  it("奧斯但丁死亡之聲從額外區返回手牌", () => {
     const state = mainState();
     const hero = putCard(state, "P1", "TOKEN_ALLIANCE_HERO_AUGUSTIN", "MINION", "return");
     destroyMinion(state, hero, "TEST");
@@ -34,7 +34,7 @@ describe("绝杰荣耀与联盟绝杰", () => {
     expect(state.players.P1.extraDeck.some((card) => card.instanceId === hero.instanceId)).toBe(false);
   });
 
-  it("瓦伦泰回合结束永久赋予场上手下伤害上限4，并给予玩家圣盾", () => {
+  it("瓦倫泰回合結束永久賦予場上手下傷害上限4，並給予玩家圣盾", () => {
     let state = mainState();
     putCard(state, "P1", "TOKEN_ALLIANCE_HERO_VALENTINE", "MINION", "valentine");
     const ally = putCard(state, "P1", "TOKEN_MACHINE_DESTROYER", "MINION", "ally");
@@ -45,7 +45,7 @@ describe("绝杰荣耀与联盟绝杰", () => {
     expect(dealDamageToHero(state, "P1", 2, "after")).toBe(2);
   });
 
-  it("空袭选择完成后返回额外区且仍作为法术使用", () => {
+  it("空襲選擇完成後返回額外區且仍作為法術使用", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const airstrike = putCard(state, "P1", "TOKEN_ALLIANCE_AIRSTRIKE", "HAND", "airstrike");

@@ -3,8 +3,8 @@ import { applyAction } from "../../src/game/engine/gameEngine";
 import { beginTurn } from "../../src/game/engine/turnEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("机械帝国游骑兵与机械收集者", () => {
-  it("游骑兵检索同名牌后洗牌，并在充能足够时发动机械术1召唤制造舱", () => {
+describe("機械帝國游騎兵與機械收集者", () => {
+  it("游騎兵檢索同名牌後洗牌，並在充能足夠時發動機械術1召喚制造艙", () => {
     let state = mainState();
     state.players.P1.faction = "MACHINE";
     state.players.P1.resources.recycleCharge = 1;
@@ -24,7 +24,7 @@ describe("机械帝国游骑兵与机械收集者", () => {
     expect(state.players.P1.resources.recycleCharge).toBe(0);
   });
 
-  it("机械术效果无法召唤时不消耗充能", () => {
+  it("機械術效果無法召喚時不消耗充能", () => {
     let state = mainState();
     state.players.P1.faction = "MACHINE";
     state.players.P1.resources.recycleCharge = 1;
@@ -37,7 +37,7 @@ describe("机械帝国游骑兵与机械收集者", () => {
     expect(state.players.P1.fields).toHaveLength(6);
   });
 
-  it("机械收集者入场加充能，成长抽牌，倒数结束后回收至牌组底", () => {
+  it("機械收集者入場加充能，成長抽牌，倒數結束後回收至牌組底", () => {
     let state = mainState();
     state.players.P1.faction = "MACHINE";
     const collector = putCard(state, "P1", "MACHINE_005", "HAND", "collector");

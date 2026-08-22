@@ -46,6 +46,9 @@ export interface PlayerState {
   nextMachineCostReduction: number;
   heroDamageNullifiers: number;
   nextMinionTemporaryCostReduction: number;
+  nextLowCostDragonZeroMaxCost: number | null;
+  nextHighCostDragonReductionMinCost: number | null;
+  nextHighCostDragonReduction: number;
   heroDivineShield: boolean;
 }
 
@@ -57,8 +60,17 @@ export interface GameLogEntry {
   data?: Record<string, unknown>;
 }
 
+export interface EffectNotice {
+  id: number;
+  playerId: PlayerId;
+  sourceInstanceId: string;
+  sourceName: string;
+  reason: string;
+}
+
 export type PendingChoice =
   | { type: "HAND_LIMIT"; playerId: PlayerId; count: number }
+  | { type: "EFFECT_SUMMON_CONFIRM"; playerId: PlayerId; sourceInstanceId: string; remainingEffects: EffectDefinition[] }
   | { type: "TRIGGER_ORDER"; playerId: PlayerId; timingId: string; instanceIds: string[] }
   | { type: "COUNTDOWN_ORDER"; playerId: PlayerId; instanceIds: string[] }
   | {
@@ -81,6 +93,7 @@ export type PendingChoice =
         | { type: "DISCARD_HAND" }
         | { type: "DAMAGE_MINION"; value: number }
         | { type: "REPEAT_DAMAGE_MINION"; value: number; remainingHits: number }
+        | { type: "REPEAT_DAMAGE_MINION_OR_HERO"; value: number; remainingHits: number; heroHitsRemaining: number }
         | { type: "DAMAGE_MINIONS_REWARD_KILLS"; value: number; drawPerKill: number; healPerKill: number }
         | { type: "DESTROY_MINION" }
         | { type: "DESTROY_MINIONS" }
@@ -91,7 +104,7 @@ export type PendingChoice =
         | { type: "GRANT_MINION_KEYWORD"; keyword: import("../cards/cardTypes").Keyword }
         | { type: "RETURN_HAND_TO_DECK_MACHINE_DISCOUNT"; reductionPerCard: number }
         | { type: "SET_CARD_COST_ZERO" }
-        | { type: "RETURN_MINION_DRAW_BY_COST"; threshold: number; low: number; high: number }
+        | { type: "RETURN_HAND_MINION_TO_DECK_SHUFFLE_DRAW_BY_COST"; threshold: number; low: number; high: number }
         | { type: "SEARCH_DECK" }
         | { type: "DISCOVER_TO_HAND"; temporaryCostReduction?: number; discardFromSelected?: number }
         | { type: "SUMMON_EFFECT_COPY"; definitionId: string }
@@ -126,6 +139,7 @@ export interface GameState {
   pendingEffects: PendingEffect[];
   pendingChoice?: PendingChoice;
   log: GameLogEntry[];
+  effectNotices: EffectNotice[];
   winner?: PlayerId;
   loseReason?: "HP_ZERO" | "DECK_OUT" | "DOOMSDAY_BOOK";
   rngSeed: number;
@@ -145,6 +159,6 @@ export const DEFAULT_RULES_CONFIG: RulesConfig = {
   handLimitAtEnd: 10,
   normalMaxMana: 10,
   minCardCost: 0,
-  fieldLimits: { DRAGON: null, UNDEAD: null, MACHINE: 6, ALLIANCE: null, NEUTRAL: null },
+  fieldLimits: { DRAGON: 7, UNDEAD: 7, MACHINE: 6, ALLIANCE: 7, NEUTRAL: 7 },
   discoverRemainderPolicy: "RETURN_KEEP_ORDER",
 };

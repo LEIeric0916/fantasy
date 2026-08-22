@@ -4,8 +4,8 @@ import { reviveMinion } from "../../src/game/engine/reviveEngine";
 import { destroyMinion } from "../../src/game/engine/zoneEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("迅疾黑暗骑士 乌比斯", () => {
-  it("死亡之声召唤两名不朽者之灵", () => {
+describe("迅疾黑暗騎士 烏比斯", () => {
+  it("死亡之聲召喚兩名不朽者之靈", () => {
     const state = mainState();
     const ubis = putCard(state, "P1", "UNDEAD_003", "MINION", "death");
     destroyMinion(state, ubis, "TEST");
@@ -16,7 +16,7 @@ describe("迅疾黑暗骑士 乌比斯", () => {
     ]);
   });
 
-  it("从弃堆复活时清除伤害并触发 +2/+0", () => {
+  it("從棄堆復活時清除傷害並觸發 +2/+0", () => {
     const state = mainState();
     const ubis = putCard(state, "P1", "UNDEAD_003", "MINION", "revive");
     ubis.currentHealth = 0;

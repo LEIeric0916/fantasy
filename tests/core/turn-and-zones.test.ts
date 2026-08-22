@@ -1,18 +1,33 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { drawCard } from "../../src/game/engine/turnEngine";
 import { createInitialGame } from "../../src/game/state/createInitialGame";
 import { mainState, putCard } from "../helpers";
 
-describe("换牌与回合", () => {
-  it("换牌 0 张不需要实验配置", () => {
+describe("換牌與回合", () => {
+  it("未指定種子時，每場對局使用新的隨機牌組與起始手牌順序", () => {
+    const random = vi.spyOn(Math, "random")
+      .mockReturnValueOnce(0.1)
+      .mockReturnValueOnce(0.9);
+    const first = createInitialGame();
+    const second = createInitialGame();
+    random.mockRestore();
+    const order = (state: typeof first, playerId: "P1" | "P2") => [
+      ...state.players[playerId].hand,
+      ...state.players[playerId].deck,
+    ].map((card) => card.instanceId);
+    expect(order(first, "P1")).not.toEqual(order(second, "P1"));
+    expect(order(first, "P2")).not.toEqual(order(second, "P2"));
+  });
+
+  it("換牌 0 張不需要實驗配置", () => {
     const state = createInitialGame({ shuffle: false });
     const result = applyAction(state, { type: "MULLIGAN", playerId: "P1", instanceIds: [] });
     expect(result.error).toBeUndefined();
     expect(result.state.players.P1.mulliganDone).toBe(true);
   });
 
-  it("先抽等量替换牌，再将换出牌加入牌库并洗牌", () => {
+  it("先抽等量替換牌，再將換出牌加入牌庫並洗牌", () => {
     let state = createInitialGame({ shuffle: false });
     const returnedId = state.players.P1.hand[0].instanceId;
     state = applyAction(state, { type: "MULLIGAN", playerId: "P1", instanceIds: [returnedId] }).state;
@@ -29,7 +44,7 @@ describe("换牌与回合", () => {
     expect(state.log.filter((entry) => entry.type === "PHASE").slice(-4).map((entry) => entry.message)).toEqual(["DRAW", "COUNTDOWN", "GROWTH", "MAIN"]);
   });
 
-  it("后攻第一次正常抽牌抽 2 并获得幸運幣", () => {
+  it("後攻第一次正常抽牌抽 2 並獲得幸運幣", () => {
     let state = createInitialGame({ shuffle: false });
     state = applyAction(state, { type: "MULLIGAN", playerId: "P1", instanceIds: [] }).state;
     state = applyAction(state, { type: "MULLIGAN", playerId: "P2", instanceIds: [] }).state;
@@ -44,18 +59,18 @@ describe("换牌与回合", () => {
     expect(state.players.P1.hand.length).toBe(p1BeforeSecondTurn + 1);
   });
 
-  it("换牌只能选择 0～4 张", () => {
+  it("換牌只能選擇 0～4 張", () => {
     const state = createInitialGame({ shuffle: false });
     const fifth = state.players.P1.deck.pop()!;
     fifth.zone = "HAND";
     state.players.P1.hand.push(fifth);
     const result = applyAction(state, { type: "MULLIGAN", playerId: "P1", instanceIds: state.players.P1.hand.map((card) => card.instanceId) });
-    expect(result.error).toMatchObject({ code: "INVALID_ACTION", message: "换牌只能选择 0～4 张起始手牌" });
+    expect(result.error).toMatchObject({ code: "INVALID_ACTION", message: "換牌只能選擇 0～4 張起始手牌" });
   });
 });
 
-describe("抽牌与手牌上限", () => {
-  it("回合中可保留第 11 张牌，回合末才要求选择弃牌", () => {
+describe("抽牌與手牌上限", () => {
+  it("回合中可保留第 11 張牌，回合末才要求選擇棄牌", () => {
     let state = mainState();
     while (state.players.P1.hand.length < 10) drawCard(state, "P1", "TEST");
     drawCard(state, "P1", "TEST");
@@ -69,7 +84,7 @@ describe("抽牌与手牌上限", () => {
     expect(state.players.P1.graveyard.some((card) => card.instanceId === discardId)).toBe(true);
   });
 
-  it("空牌库再次抽牌立即败北且没有疲劳伤害", () => {
+  it("空牌庫再次抽牌立即敗北且沒有疲勞傷害", () => {
     const state = mainState();
     state.players.P1.deck = [];
     const hp = state.players.P1.heroHp;

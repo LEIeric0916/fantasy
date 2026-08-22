@@ -4,8 +4,8 @@ import { resolvePendingEffects } from "../../src/game/engine/effectEngine";
 import { destroyMinion } from "../../src/game/engine/zoneEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("机械神造物 安迪米翁", () => {
-  it("战吼开始按神器数锁定次数，每次重新指定且可连续指定仍存活目标", () => {
+describe("機械神造物 安迪米翁", () => {
+  it("戰吼開始按神器數鎖定次數，每次重新指定且可連續指定仍存活目標", () => {
     let state = mainState();
     state.players.P1.faction = "MACHINE";
     state.players.P1.hand = [];
@@ -23,7 +23,7 @@ describe("机械神造物 安迪米翁", () => {
     expect(state.players.P2.minions).toHaveLength(0);
   });
 
-  it("死亡之声开始结算时按仍在场神器数增加回收充能", () => {
+  it("死亡之聲開始結算時按仍在場神器數增加回收充能", () => {
     const state = mainState();
     putCard(state, "P1", "TOKEN_MACHINE_GEAR", "FIELD", "one");
     putCard(state, "P1", "TOKEN_MACHINE_ARTIFACT_BOX", "FIELD", "two");

@@ -4,8 +4,8 @@ import { resolvePendingEffects } from "../../src/game/engine/effectEngine";
 import { destroyMinion } from "../../src/game/engine/zoneEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("亡灵指定与延后触发", () => {
-  it("沉默者先由玩家弃牌，再指定敌方手下造成伤害", () => {
+describe("亡靈指定與延後觸發", () => {
+  it("沉默者先由玩家棄牌，再指定敵方手下造成傷害", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const silencer = putCard(state, "P1", "UNDEAD_002", "HAND", "play");
@@ -24,7 +24,7 @@ describe("亡灵指定与延后触发", () => {
     expect(state.pendingChoice).toBeUndefined();
   });
 
-  it("沉默者无手牌可弃时，逗号后的伤害不执行", () => {
+  it("沉默者無手牌可棄時，逗號後的傷害不執行", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const silencer = putCard(state, "P1", "UNDEAD_002", "HAND", "only-card");
@@ -37,7 +37,7 @@ describe("亡灵指定与延后触发", () => {
     expect(result.state.players.P2.minions[0].currentHealth).toBe(hp);
   });
 
-  it("沉默者死亡之声抽两张牌", () => {
+  it("沉默者死亡之聲抽兩張牌", () => {
     const state = mainState();
     const silencer = putCard(state, "P1", "UNDEAD_002", "MINION", "deathrattle");
     const deckBefore = state.players.P1.deck.length;
@@ -46,7 +46,7 @@ describe("亡灵指定与延后触发", () => {
     expect(state.players.P1.deck).toHaveLength(deckBefore - 2);
   });
 
-  it("追忆者完整结算战吼后，才执行被弃追忆者的触发效果", () => {
+  it("追憶者完整結算戰吼後，才執行被棄追憶者的觸發效果", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const played = putCard(state, "P1", "UNDEAD_008", "HAND", "played");

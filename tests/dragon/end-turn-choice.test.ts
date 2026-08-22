@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("神威焰龙回合结束二选一", () => {
-  it("最大水晶10以上时，选择画面直接显示5伤并对敌方全体与玩家造成5伤", () => {
+describe("神威焰龍回合結束二選一", () => {
+  it("最大水晶10以上時，選擇畫面直接顯示5傷並對敵方全體與玩家造成5傷", () => {
     let state = mainState();
     const dragon = putCard(state, "P1", "DRAGON_005", "MINION", "damage-choice");
     const enemy = putCard(state, "P2", "DRAGON_012", "MINION", "enemy");
@@ -11,7 +11,7 @@ describe("神威焰龙回合结束二选一", () => {
     expect(state.phase).toBe("END");
     expect(state.pendingChoice).toMatchObject({ type: "EFFECT_OPTION", sourceInstanceId: dragon.instanceId });
     const choice = state.pendingChoice as Extract<typeof state.pendingChoice, { type: "EFFECT_OPTION" }>;
-    expect(choice.options.find((option) => option.id === "DAMAGE")?.label).toContain("5 点伤害");
+    expect(choice.options.find((option) => option.id === "DAMAGE")?.label).toContain("5 點傷害");
 
     state = applyAction(state, { type: "SELECT_EFFECT_OPTION", playerId: "P1", optionId: "DAMAGE" }).state;
     expect(state.players.P2.minions.find((card) => card.instanceId === enemy.instanceId)?.currentHealth).toBe(7);
@@ -20,7 +20,7 @@ describe("神威焰龙回合结束二选一", () => {
     expect(state.phase).toBe("MAIN");
   });
 
-  it("最大水晶未达10时，防御选项获得嘲讽、+0/+5并恢复1HP", () => {
+  it("最大水晶未達10時，防御選項獲得嘲諷、+0/+5並恢復1HP", () => {
     let state = mainState();
     state.players.P1.maxMana = 9;
     state.players.P1.heroHp = 25;
@@ -34,7 +34,7 @@ describe("神威焰龙回合结束二选一", () => {
     expect(state.players.P1.heroHp).toBe(26);
   });
 
-  it("最大水晶10以上时，防御选项直接使用+0/+7并恢复3HP", () => {
+  it("最大水晶10以上時，防御選項直接使用+0/+7並恢復3HP", () => {
     let state = mainState();
     state.players.P1.heroHp = 20;
     const dragon = putCard(state, "P1", "DRAGON_005", "MINION", "defend-boosted");

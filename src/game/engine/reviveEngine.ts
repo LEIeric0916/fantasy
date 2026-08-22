@@ -16,13 +16,13 @@ export function reviveMinion(
   card: CardInstance,
   cause: ReviveCause = "CARD_EFFECT",
 ): boolean {
-  if (card.zone !== "GRAVEYARD" || card.ownerId !== playerId) throw new InvalidActionError("复活目标不在我方弃堆");
+  if (card.zone !== "GRAVEYARD" || card.ownerId !== playerId) throw new InvalidActionError("復活目標不在我方棄堆");
   if (state.players[playerId].minions.length >= state.rulesConfig.minionLimit) {
-    addLog(state, "ACTION", `${card.definitionId} 复活失败：手下区已满`, { instanceId: card.instanceId });
+    addLog(state, "ACTION", `${card.definitionId} 復活失敗：手下區已滿`, { instanceId: card.instanceId });
     return false;
   }
   const definition = getCardDefinition(card.definitionId);
-  if (definition.cardType !== "MINION" || card.maxHealth === null) throw new InvalidActionError("复活目标不是具有合法面板的手下");
+  if (definition.cardType !== "MINION" || card.maxHealth === null) throw new InvalidActionError("復活目標不是具有合法面板的手下");
   moveCard(state, card, "MINION", cause, playerId);
   card.currentHealth = card.maxHealth;
   card.damageTaken = 0;
@@ -32,7 +32,7 @@ export function reviveMinion(
   recordMinionSummoned(state, playerId, card);
   applyFriendlyEnterAuras(state, playerId, card);
   enqueueFriendlySummonAuras(state, playerId, card);
-  addLog(state, "ZONE", `${definition.name} 被复活`, { instanceId: card.instanceId, cause });
+  addLog(state, "ZONE", `${definition.name} 被復活`, { instanceId: card.instanceId, cause });
 
   if (cause === "NECRO_REVIVE") {
     enqueueBattlecryAfterSummon(state, card, "NECRO_REVIVE:BATTLECRY");

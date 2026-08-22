@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("联盟后期主牌", () => {
-  it("皇家战士按本回合召唤次数每次减2；检索主牌并在协作10时召唤衍生皇家战士", () => {
+describe("聯盟後期主牌", () => {
+  it("皇家戰士按本回合召喚次數每次減2；檢索主牌並在協作10時召喚衍生皇家戰士", () => {
     let state = mainState();
     state.players.P1.hand = [];
     state.players.P1.summonedThisTurn = 2;
@@ -19,7 +19,7 @@ describe("联盟后期主牌", () => {
     expect(state.players.P1.minions.some((card) => card.definitionId === "TOKEN_ALLIANCE_ROYAL_WARRIOR")).toBe(true);
   });
 
-  it("爆袭莱恩在战吼开始记录敌方数量，伤害离场不改变自身-X/-X", () => {
+  it("爆襲萊恩在戰吼開始記錄敵方數量，傷害離場不改變自身-X/-X", () => {
     let state = mainState();
     state.players.P1.hand = [];
     for (let index = 0; index < 3; index += 1) putCard(state, "P2", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", `enemy-${index}`);
@@ -32,7 +32,7 @@ describe("联盟后期主牌", () => {
     expect(played.currentHealth).toBe(4);
   });
 
-  it("加拉德必须指定3个不同目标；协作15伤害为句号式独立效果", () => {
+  it("加拉德必須指定3個不同目標；協作15傷害為句號式獨立效果", () => {
     let state = mainState();
     state.players.P1.hand = [];
     state.players.P1.summonedThisGame = 14;

@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("炎火之龙", () => {
-  it("由玩家指定手牌法术，复制发动效果但原法术留在手牌", () => {
+describe("炎火之龍", () => {
+  it("由玩家指定手牌法術，復制發動效果但原法術留在手牌", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const fireDragon = putCard(state, "P1", "DRAGON_008", "HAND", "copy");
@@ -16,7 +16,7 @@ describe("炎火之龙", () => {
     expect(state.players.P2.graveyard.some((card) => card.instanceId === enemy.instanceId)).toBe(true);
   });
 
-  it("复制发动不视为使用法术，因此不触发魔导战龙效果召唤", () => {
+  it("復制發動不視為使用法術，因此不觸發魔導戰龍效果召喚", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const fireDragon = putCard(state, "P1", "DRAGON_008", "HAND", "source");

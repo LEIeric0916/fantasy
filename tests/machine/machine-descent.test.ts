@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("机械降神术", () => {
-  it("可选择1张返回后洗牌抽1，下一张机械手下减2并消耗减费", () => {
+describe("機械降神術", () => {
+  it("可選擇1張返回後洗牌抽1，下一張機械手下減2並消耗減費", () => {
     let state = mainState();
     state.players.P1.faction = "MACHINE";
     state.players.P1.hand = [];
@@ -23,7 +23,7 @@ describe("机械降神术", () => {
     expect(state.players.P1.nextMachineCostReduction).toBe(0);
   });
 
-  it("选择0张仍洗牌抽1，且下一张机械手下没有减费", () => {
+  it("選擇0張仍洗牌抽1，且下一張機械手下沒有減費", () => {
     let state = mainState();
     state.players.P1.faction = "MACHINE";
     state.players.P1.hand = [];

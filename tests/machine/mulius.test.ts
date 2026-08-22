@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { applyAction } from "../../src/game/engine/gameEngine";
+import { refreshHandCosts } from "../../src/game/engine/costEngine";
 import { mainState, putCard } from "../helpers";
 
-describe("机械神皇机 慕留斯", () => {
-  it("费用按神器立场数降低；战吼开始锁定同一X用于伤害与召唤", () => {
+describe("機械神皇機 慕留斯", () => {
+  it("費用按神器立場數降低；戰吼開始鎖定同一X用於傷害與召喚", () => {
     let state = mainState();
     state.players.P1.faction = "MACHINE";
     state.players.P1.hand = [];
@@ -17,5 +18,15 @@ describe("机械神皇机 慕留斯", () => {
     expect(state.players.P2.heroHp).toBe(27);
     expect(state.players.P2.minions.find((card) => card.instanceId === enemy.instanceId)?.currentHealth).toBe(4);
     expect(state.players.P1.minions.filter((card) => card.definitionId === "TOKEN_MACHINE_EMPIRE_SOLDIER")).toHaveLength(3);
+  });
+
+  it("機械手下不會被慕留斯誤算成神器立場", () => {
+    const state = mainState();
+    state.players.P1.faction = "MACHINE";
+    state.players.P1.hand = [];
+    putCard(state, "P1", "TOKEN_MACHINE_EMPIRE_SOLDIER", "MINION", "machine-only");
+    const mulius = putCard(state, "P1", "MACHINE_014", "HAND", "mulius-no-artifact");
+    refreshHandCosts(state);
+    expect(mulius.currentCost).toBe(10);
   });
 });

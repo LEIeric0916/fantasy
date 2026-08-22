@@ -28,12 +28,12 @@ export function drawCard(state: GameState, playerId: PlayerId, reason = "NORMAL_
     state.phase = "GAME_OVER";
     state.winner = opponentOf(playerId);
     state.loseReason = "DECK_OUT";
-    addLog(state, "RESULT", `${playerId} 牌库为空且需要抽牌，立即败北`, { reason: "DECK_OUT" });
+    addLog(state, "RESULT", `${playerId} 牌庫為空且需要抽牌，立即敗北`, { reason: "DECK_OUT" });
     return undefined;
   }
   card.zone = "HAND";
   player.hand.push(card);
-  addLog(state, "ZONE", `${playerId} 抽 1 张牌`, { instanceId: card.instanceId, reason });
+  addLog(state, "ZONE", `${playerId} 抽 1 張牌`, { instanceId: card.instanceId, reason });
   return card;
 }
 
@@ -43,7 +43,7 @@ function grantCoin(state: GameState, playerId: PlayerId): void {
   const coin = createCardInstance(getCardDefinition("TOKEN_COIN"), playerId, "HAND", `${playerId}-TOKEN_COIN-${state.turnNumber}`);
   player.hand.push(coin);
   player.coinGranted = true;
-  addLog(state, "ZONE", `${playerId} 获得幸運幣`, { instanceId: coin.instanceId, reason: "SECOND_PLAYER_BONUS" });
+  addLog(state, "ZONE", `${playerId} 獲得幸運幣`, { instanceId: coin.instanceId, reason: "SECOND_PLAYER_BONUS" });
 }
 
 export function beginTurn(state: GameState): void {
@@ -57,7 +57,7 @@ export function beginTurn(state: GameState): void {
   for (const minion of player.minions) minion.attacksUsedThisTurn = 0;
   if (player.maxMana < state.rulesConfig.normalMaxMana) player.maxMana += 1;
   player.mana = player.maxMana;
-  addLog(state, "RESOURCE", `${player.id} 水晶恢复为 ${player.mana}/${player.maxMana}`);
+  addLog(state, "RESOURCE", `${player.id} 水晶恢復為 ${player.mana}/${player.maxMana}`);
 
   state.phase = "DRAW";
   addLog(state, "PHASE", "DRAW");
@@ -111,14 +111,14 @@ export function continueAfterGrowthEffects(state: GameState): void {
 }
 
 export function performMulligan(state: GameState, playerId: PlayerId, instanceIds: string[]): void {
-  if (state.phase !== "MULLIGAN") throw new InvalidActionError("目前不是换牌阶段");
+  if (state.phase !== "MULLIGAN") throw new InvalidActionError("目前不是換牌階段");
   const player = state.players[playerId];
-  if (player.mulliganDone) throw new InvalidActionError(`${playerId} 已完成换牌`);
-  if (instanceIds.length > 4) throw new InvalidActionError("换牌只能选择 0～4 张起始手牌");
-  if (new Set(instanceIds).size !== instanceIds.length) throw new InvalidActionError("换牌实例不可重复");
+  if (player.mulliganDone) throw new InvalidActionError(`${playerId} 已完成換牌`);
+  if (instanceIds.length > 4) throw new InvalidActionError("換牌只能選擇 0～4 張起始手牌");
+  if (new Set(instanceIds).size !== instanceIds.length) throw new InvalidActionError("換牌實例不可重復");
   const selected = instanceIds.map((id) => {
     const card = player.hand.find((candidate) => candidate.instanceId === id);
-    if (!card) throw new InvalidActionError("只能选择自己的手牌换牌");
+    if (!card) throw new InvalidActionError("只能選擇自己的手牌換牌");
     return card;
   });
   for (let count = 0; count < selected.length; count += 1) drawCard(state, playerId, "MULLIGAN_REPLACEMENT");
@@ -126,14 +126,14 @@ export function performMulligan(state: GameState, playerId: PlayerId, instanceId
   const shuffled = shuffleSeeded(player.deck, state.rngSeed);
   player.deck = shuffled.value;
   state.rngSeed = shuffled.seed;
-  addLog(state, "RNG", `${playerId} 将换出牌加入牌组并洗牌`, { count: selected.length, resultingSeed: state.rngSeed });
+  addLog(state, "RNG", `${playerId} 將換出牌加入牌組並洗牌`, { count: selected.length, resultingSeed: state.rngSeed });
   player.mulliganDone = true;
-  addLog(state, "ACTION", `${playerId} 完成换牌`, { count: selected.length });
+  addLog(state, "ACTION", `${playerId} 完成換牌`, { count: selected.length });
   if (state.players.P1.mulliganDone && state.players.P2.mulliganDone) beginTurn(state);
 }
 
 export function requestEndTurn(state: GameState, playerId: PlayerId): void {
-  if (state.phase !== "MAIN" || state.activePlayerId !== playerId) throw new InvalidActionError("目前不能结束此玩家的回合");
+  if (state.phase !== "MAIN" || state.activePlayerId !== playerId) throw new InvalidActionError("目前不能結束此玩家的回合");
   state.phase = "END";
   addLog(state, "PHASE", "END");
   state.endTurnEffectsPending = true;
@@ -157,7 +157,7 @@ export function continueAfterEndTurnEffects(state: GameState): void {
   const excess = state.players[playerId].hand.length - state.rulesConfig.handLimitAtEnd;
   if (excess > 0) {
     state.pendingChoice = { type: "HAND_LIMIT", playerId, count: excess };
-    addLog(state, "ACTION", `${playerId} 必须选择弃掉 ${excess} 张手牌`);
+    addLog(state, "ACTION", `${playerId} 必須選擇棄掉 ${excess} 張手牌`);
     return;
   }
   finishTurn(state);
@@ -166,15 +166,15 @@ export function continueAfterEndTurnEffects(state: GameState): void {
 export function discardForHandLimit(state: GameState, playerId: PlayerId, instanceIds: string[]): void {
   const choice = state.pendingChoice;
   if (state.phase !== "HAND_LIMIT" || !choice || choice.type !== "HAND_LIMIT" || choice.playerId !== playerId) {
-    throw new InvalidActionError("目前没有此弃牌选择");
+    throw new InvalidActionError("目前沒有此棄牌選擇");
   }
   if (instanceIds.length !== choice.count || new Set(instanceIds).size !== instanceIds.length) {
-    throw new InvalidActionError(`必须选择恰好 ${choice.count} 张不同的手牌`);
+    throw new InvalidActionError(`必須選擇恰好 ${choice.count} 張不同的手牌`);
   }
   const player = state.players[playerId];
   const selected = instanceIds.map((id) => {
     const card = player.hand.find((candidate) => candidate.instanceId === id);
-    if (!card) throw new InvalidActionError("只能弃掉自己的手牌");
+    if (!card) throw new InvalidActionError("只能棄掉自己的手牌");
     return card;
   });
   for (const card of selected) moveCard(state, card, "GRAVEYARD", "HAND_LIMIT_DISCARD");
