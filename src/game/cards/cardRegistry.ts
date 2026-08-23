@@ -202,18 +202,19 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
       effects: [{ type: "DAMAGE_ALL_ENEMY_MINIONS", value: 5 }],
     },
   ],
-  TOKEN_UNDEAD_BOOK_IMMORTAL: [{ type: "VANISH_OLD_SAME_FIELD_AND_DRAW" }],
-  TOKEN_UNDEAD_BOOK_PLAGUE: [{ type: "VANISH_OLD_SAME_FIELD_AND_DRAW" }],
+  TOKEN_UNDEAD_BOOK_IMMORTAL: [{ type: "VANISH_OLD_SAME_FIELD_AND_DRAW", silentIfNone: true }],
+  TOKEN_UNDEAD_BOOK_PLAGUE: [{ type: "VANISH_OLD_SAME_FIELD_AND_DRAW", silentIfNone: true }],
   TOKEN_UNDEAD_BOOK_REVENGE: [
-    { type: "VANISH_OLD_SAME_FIELD_AND_DRAW" },
+    { type: "VANISH_OLD_SAME_FIELD_AND_DRAW", silentIfNone: true },
     { type: "SEGMENT_BREAK" },
     { type: "GAIN_NECROMANCY", value: 5 },
   ],
   TOKEN_UNDEAD_BOOK_DOOM_PRELUDE: [{
     type: "CONDITIONAL",
-    condition: { type: "FRIENDLY_SAME_FIELD_COUNT_AT_LEAST", value: 4 },
+    condition: { type: "FRIENDLY_SAME_FIELD_COUNT_AT_LEAST", value: 3 },
+    silentOnFailure: true,
     effects: [
-      { type: "VANISH_OTHER_SAME_FIELDS", count: 3 },
+      { type: "VANISH_OTHER_SAME_FIELDS", count: 2 },
       { type: "DRAW", value: 2 },
       { type: "TRANSFORM_SELF_FIELD", definitionId: "TOKEN_UNDEAD_DOOMSDAY_BOOK" },
     ],
@@ -517,6 +518,7 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
     END_TURN: [{
       type: "CONDITIONAL",
       condition: { type: "HERO_HP_BELOW", value: 10 },
+      silentOnFailure: true,
       effects: [{ type: "TRANSFORM_SELF_FIELD", definitionId: "TOKEN_UNDEAD_DOOMSDAY_BOOK" }],
     }],
   },
@@ -583,7 +585,7 @@ const alternatePlays: Record<string, CardDefinition["alternatePlay"]> = {
 };
 
 const effectSummons: Record<string, CardDefinition["effectSummon"]> = {
-  DRAGON_004: { event: "SPELL_PLAYED_COST_AT_LEAST", value: 5 },
+  DRAGON_004: { event: "SPELL_PLAYED_ORIGINAL_COST_AT_LEAST", value: 5 },
   DRAGON_010: { event: "START_TURN_MAX_MANA_AT_LEAST", value: 8 },
   UNDEAD_010: { event: "NECROMANCY_AT_LEAST", value: 10 },
   MACHINE_011: { event: "RECYCLE_CHARGE_AT_LEAST", value: 6 },
@@ -601,7 +603,7 @@ const transformAuras: Record<string, CardDefinition["transformAura"]> = {
   TOKEN_UNDEAD_BOOK_PLAGUE: {
     transformedDefinitionId: "TOKEN_UNDEAD_GENERIC",
     counter: "plagueMarks",
-    threshold: 7,
+    threshold: 6,
     transformSelfDefinitionId: "TOKEN_UNDEAD_DOOMSDAY_BOOK",
   },
 };
@@ -720,7 +722,7 @@ export function validateCardData(): CardDataIssue[] {
       || card.triggeredEffects?.ON_SELF_COMBAT_START?.length
       || card.triggeredEffects?.END_TURN?.length,
     );
-    if (card.keywords.includes("AURA") && !hasAuraImplementation) {
+    if ((card.keywords.includes("AURA") || card.effectsText.includes("光環")) && !hasAuraImplementation) {
       issues.push({ code: "MISSING_EFFECT_IMPLEMENTATION", cardId: card.id, message: "光環只有文字，尚未連接持續或觸發效果" });
     }
   }

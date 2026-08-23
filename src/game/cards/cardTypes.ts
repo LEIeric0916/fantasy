@@ -86,7 +86,7 @@ export type EffectDefinition =
   | { type: "TRANSFORM_ENEMY_MINIONS"; count: number; definitionId: string; maxHealth?: number }
   | { type: "TRANSFORM_UP_TO_ENEMY_MINIONS"; maxCount: number; definitionId: string; maxHealth?: number }
   | { type: "REVIVE_FRIENDLY_GRAVE_MINION"; maxOriginalCost?: number; minOriginalCost?: number }
-  | { type: "VANISH_OLD_SAME_FIELD_AND_DRAW" }
+  | { type: "VANISH_OLD_SAME_FIELD_AND_DRAW"; silentIfNone?: boolean }
   | { type: "VANISH_OTHER_SAME_FIELDS"; count: number }
   | { type: "TRANSFORM_SELF_FIELD"; definitionId: string }
   | { type: "DAMAGE_ENEMY_HERO"; value: number }
@@ -126,7 +126,7 @@ export type EffectDefinition =
   | { type: "SET_HAND_CARD_COST_ZERO"; count: number; cardType?: CardType; subtype?: string }
   | { type: "NECRO_REVIVE_SELF"; value: number }
   | { type: "SEGMENT_BREAK" }
-  | { type: "CONDITIONAL"; condition: ConditionDefinition; effects: EffectDefinition[] }
+  | { type: "CONDITIONAL"; condition: ConditionDefinition; effects: EffectDefinition[]; silentOnFailure?: boolean }
   | { type: "RULE_UNDEFINED"; ruleId: string };
 
 export interface CardDefinition {
@@ -158,7 +158,7 @@ export interface CardDefinition {
     | { type: "TURN_SUMMONED_DRAGON_COST_AT_LEAST"; threshold: number; reduction: number };
   alternatePlay?: { cost: number; effects: EffectDefinition[] };
   effectSummon?:
-    | { event: "SPELL_PLAYED_COST_AT_LEAST"; value: number }
+    | { event: "SPELL_PLAYED_ORIGINAL_COST_AT_LEAST"; value: number }
     | { event: "START_TURN_MAX_MANA_AT_LEAST"; value: number }
     | { event: "NECROMANCY_AT_LEAST"; value: number }
     | { event: "RECYCLE_CHARGE_AT_LEAST"; value: number };

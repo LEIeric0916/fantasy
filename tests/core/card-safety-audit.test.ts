@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardDefinitions, cardRegistry } from "../../src/game/cards/cardRegistry";
+import { cardDefinitions, cardRegistry, validateCardData } from "../../src/game/cards/cardRegistry";
 import type { CardDefinition, EffectDefinition } from "../../src/game/cards/cardTypes";
 
 function rootEffects(card: CardDefinition): EffectDefinition[] {
@@ -47,6 +47,16 @@ function collectCardReferences(value: unknown, key = ""): string[] {
 }
 
 describe("全卡牌卡死風險靜態稽核", () => {
+  it("所有卡面宣告光環的卡牌都有 AURA 關鍵字與可執行機制", () => {
+    const auraCards = cardDefinitions.filter((card) => card.effectsText.includes("光環"));
+    expect(auraCards.length).toBeGreaterThan(0);
+    expect(auraCards.every((card) => card.keywords.includes("AURA"))).toBe(true);
+    const missingAuraIds = new Set(validateCardData()
+      .filter((issue) => issue.code === "MISSING_EFFECT_IMPLEMENTATION" && issue.message.includes("光環"))
+      .map((issue) => issue.cardId));
+    expect(auraCards.filter((card) => missingAuraIds.has(card.id))).toEqual([]);
+  });
+
   it("所有效果引用的卡牌定義都存在", () => {
     for (const card of cardDefinitions) {
       for (const reference of collectCardReferences(card)) {

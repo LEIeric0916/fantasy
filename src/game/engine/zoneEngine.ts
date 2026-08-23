@@ -81,7 +81,8 @@ export function destroyCardOnField(state: GameState, card: CardInstance, reason 
     if (card.keywords.includes("NECRO_REVIVE_5")) effects.push({ type: "NECRO_REVIVE_SELF" as const, value: 5 });
   }
   if (!card.sealed && card.keywords.includes("RECYCLE")) effects.push({ type: "GAIN_RECYCLE_CHARGE" as const, value: 1 });
-  if (effects.length > 0) enqueueTriggeredEffects(state, card, effects, `${reason}:${triggeredKeyword}`, timingContext, true);
+  // 同時離場一律依場上原順序自動進入結算隊列，不要求玩家排列棄堆順序。
+  if (effects.length > 0) enqueueTriggeredEffects(state, card, effects, `${reason}:${triggeredKeyword}`, timingContext, true, true);
   if (!card.sealed && card.keywords.includes("RECYCLE")) {
     moveCard(state, card, "DECK", `${reason}:RECYCLE`);
     const deck = state.players[card.controllerId].deck;

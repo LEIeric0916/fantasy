@@ -139,7 +139,7 @@
       "attack": 4,
       "health": 12,
       "deckCount": 2,
-      "keywords": ["DISCIPLINE", "HEADHUNT", "SANCTUARY", "RECYCLE", "CAN_ONLY_ATTACK_HERO", "CANNOT_COUNTERATTACK"],
+      "keywords": ["DISCIPLINE", "HEADHUNT", "SANCTUARY", "RECYCLE", "AURA", "CAN_ONLY_ATTACK_HERO", "CANNOT_COUNTERATTACK"],
       "effectsText": "減費5：第5回合以上且聯合3時。取首：攻擊時無視嘲諷。只能攻擊玩家，不能反擊。光環：我方場上有其他人類・軍隊手下時，獲得威懾。回收。",
       "generatedOnly": false,
       "notes": "最後修正確認反擊為規則反擊；此卡被手下攻擊時不會以攻擊力造成規則反擊傷害。"

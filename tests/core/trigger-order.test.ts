@@ -56,7 +56,7 @@ describe("連鎖觸發結算隊列", () => {
     expect(triggerIndex).toBeLessThan(drawIndex);
   });
 
-  it("同一玩家的同一時機觸發暫停，並依玩家選擇的順序處理", () => {
+  it("同一玩家的手下同時死亡時依場上順序自動結算，不詢問進棄堆順序", () => {
     let state = mainState();
     const first = putCard(state, "P2", "TOKEN_ALLIANCE_REVOLUTIONARY_SOLDIER", "MINION", "batch-first");
     const second = putCard(state, "P2", "TOKEN_ALLIANCE_REVOLUTIONARY_SOLDIER", "MINION", "batch-second");
@@ -64,18 +64,6 @@ describe("連鎖觸發結算隊列", () => {
     const deckBefore = state.players.P2.deck.length;
 
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: spell.instanceId }).state;
-    expect(state.pendingChoice).toMatchObject({
-      type: "TRIGGER_ORDER",
-      playerId: "P2",
-      instanceIds: [first.instanceId, second.instanceId],
-    });
-    expect(state.players.P2.deck).toHaveLength(deckBefore);
-
-    state = applyAction(state, {
-      type: "SELECT_TRIGGER_ORDER",
-      playerId: "P2",
-      instanceIds: [second.instanceId, first.instanceId],
-    }).state;
     expect(state.pendingChoice).toBeUndefined();
     expect(state.pendingEffects).toEqual([]);
     expect(state.players.P2.deck).toHaveLength(deckBefore - 2);
@@ -83,7 +71,7 @@ describe("連鎖觸發結算隊列", () => {
       .filter((entry) => entry.message.includes("結算延後觸發效果"))
       .slice(-2)
       .map((entry) => entry.data?.sourceInstanceId);
-    expect(resolved).toEqual([second.instanceId, first.instanceId]);
+    expect(resolved).toEqual([first.instanceId, second.instanceId]);
   });
 
   it("雙方同一時機各自成批，當前回合玩家整批先處理", () => {

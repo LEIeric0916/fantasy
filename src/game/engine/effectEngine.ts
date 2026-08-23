@@ -407,6 +407,8 @@ function resolveEffectList(
           const destination = getCardDefinition(old.definitionId).generatedOnly ? "EXTRA_DECK" : "REMOVED";
           moveCard(state, old, destination, "VANISH_OLD_SAME_FIELD");
           drawCard(state, playerId, `EFFECT:${source.definitionId}:REPLACE_OLD`);
+        } else if (!effect.silentIfNone) {
+          notifyEffectSkipped(state, playerId, source, "我方場上沒有其他同名立場");
         }
         break;
       }
@@ -1113,7 +1115,7 @@ function resolveEffectList(
         break;
       case "CONDITIONAL":
         if (!conditionMatches(state, playerId, source, effect.condition)) {
-          notifyEffectSkipped(state, playerId, source, conditionFailureReason(effect.condition));
+          if (!effect.silentOnFailure) notifyEffectSkipped(state, playerId, source, conditionFailureReason(effect.condition));
         } else if (!resolveEffectList(state, playerId, source, effect.effects)) return false;
         break;
       case "RULE_UNDEFINED":
@@ -1136,9 +1138,10 @@ export function resolvePendingEffects(state: GameState): void {
       for (const controllerId of controllerOrder) {
         const group = batch.filter((effect) => effect.controllerId === controllerId);
         if (group.length === 0 || group.every((effect) => effect.orderConfirmed)) continue;
-        const sourceInstanceIds = [...new Set(group.map((effect) => effect.sourceInstanceId))];
+        const unresolvedGroup = group.filter((effect) => !effect.orderConfirmed);
+        const sourceInstanceIds = [...new Set(unresolvedGroup.map((effect) => effect.sourceInstanceId))];
         if (sourceInstanceIds.length === 1) {
-          for (const effect of group) effect.orderConfirmed = true;
+          for (const effect of unresolvedGroup) effect.orderConfirmed = true;
           continue;
         }
         state.pendingChoice = {

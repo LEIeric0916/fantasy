@@ -11,6 +11,7 @@ interface Props {
   dropTarget?: boolean;
   draggable?: boolean;
   handSummary?: boolean;
+  entering?: boolean;
   onClick?: () => void;
   onInspect?: () => void;
   onDragStart?: () => void;
@@ -27,6 +28,7 @@ export function CardView({
   dropTarget,
   draggable,
   handSummary,
+  entering,
   onClick,
   onInspect,
   onDragStart,
@@ -38,7 +40,9 @@ export function CardView({
   const longPressTriggered = useRef(false);
   const previousStats = useRef({ attack: card.currentAttack, health: card.currentHealth });
   const [statChange, setStatChange] = useState<{ attack?: number; health?: number; key: number }>();
+  const [entranceActive, setEntranceActive] = useState(Boolean(entering));
   const plagueMarks = card.counters.plagueMarks;
+  const plagueThreshold = definition.transformAura?.counter === "plagueMarks" ? definition.transformAura.threshold : 6;
   const boardStatuses = card.zone === "MINION" || card.zone === "FIELD" ? [
     ...(card.sealed ? [{ key: "sealed", label: "封印" }] : []),
     ...(card.keywords.includes("DIVINE_SHIELD") && !card.sealed ? [{ key: "divine-shield", label: "聖盾術" }] : []),
@@ -46,6 +50,7 @@ export function CardView({
     ...(card.keywords.includes("DETERRENCE") && !card.sealed ? [{ key: "deterrence", label: "威懾" }] : []),
     ...(card.keywords.includes("WARD") && !card.sealed ? [{ key: "ward", label: "光紋" }] : []),
     ...(card.keywords.includes("DISCIPLINE") && !card.sealed ? [{ key: "discipline", label: "紀律" }] : []),
+    ...(card.keywords.includes("AURA") && !card.sealed ? [{ key: "aura", label: "光環" }] : []),
     ...(card.keywords.includes("SANCTUARY") && !card.sealed ? [{ key: "sanctuary", label: "庇護", description: "不會被卡牌效果直接消滅；仍會受到傷害與消失" }] : []),
     ...(card.keywords.includes("INVINCIBLE") && !card.sealed ? [{ key: "invincible", label: "無敵" }] : []),
     ...(card.counters.damageCap !== undefined ? [{ key: "damage-cap", label: `減傷≤${card.counters.damageCap}` }] : []),
@@ -64,6 +69,12 @@ export function CardView({
     return () => clearTimeout(timer);
   }, [card.currentAttack, card.currentHealth]);
 
+  useEffect(() => {
+    if (!entranceActive) return;
+    const timer = setTimeout(() => setEntranceActive(false), 720);
+    return () => clearTimeout(timer);
+  }, [entranceActive]);
+
   function clearLongPress() {
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
     longPressTimer.current = undefined;
@@ -81,7 +92,7 @@ export function CardView({
 
   return (
     <article
-      className={`card ${statusClasses} ${handSummary ? "hand-card" : ""} ${selected ? "selected" : ""} ${playable ? "playable" : ""} ${actionable ? "actionable" : ""} ${dropTarget ? "drop-target" : ""}`}
+      className={`card ${statusClasses} ${handSummary ? "hand-card" : ""} ${entranceActive ? "minion-entering" : ""} ${selected ? "selected" : ""} ${playable ? "playable" : ""} ${actionable ? "actionable" : ""} ${dropTarget ? "drop-target" : ""}`}
       draggable={draggable}
       onDragStart={(event) => {
         clearLongPress();
@@ -108,7 +119,7 @@ export function CardView({
       onContextMenu={(event) => event.preventDefault()}
     >
       {boardStatuses.length > 0 && <span className="status-strip" aria-label={`狀態：${boardStatuses.map((status) => status.label).join("、")}`}>{boardStatuses.map((status) => <small className={`status-badge ${status.key}`} title={status.description} key={status.key}>{status.label}</small>)}</span>}
-      {plagueMarks !== undefined && <span className="counter-badge plague-counter" aria-label={`瘟疫標記 ${plagueMarks}`}><small>瘟疫</small><strong>{plagueMarks}</strong><small>/ 7</small></span>}
+      {plagueMarks !== undefined && <span className="counter-badge plague-counter" aria-label={`瘟疫標記 ${plagueMarks}`}><small>瘟疫</small><strong>{plagueMarks}</strong><small>/ {plagueThreshold}</small></span>}
       <button className="card-surface" disabled={disabled} onClick={() => {
         if (longPressTriggered.current) {
           longPressTriggered.current = false;

@@ -59,9 +59,9 @@
       "health": 6,
       "deckCount": 3,
       "keywords": ["RUSH", "TAUNT", "EFFECT_SUMMON"],
-      "effectsText": "效果召喚：我方使用消耗5以上的法術時。",
+      "effectsText": "效果召喚：我方使用原始費用5以上的法術時。",
       "generatedOnly": false,
-      "notes": "炎火之龍複製並發動法術效果不視為使用法術，因此不觸發此效果召喚。"
+      "notes": "以法術原始費用判斷，因此減費後的龍的誕生仍可觸發。炎火之龍複製並發動法術效果不視為使用法術，因此不觸發此效果召喚。"
     },
     {
       "id": "DRAGON_005",

@@ -135,7 +135,8 @@ function playCard(state: GameState, playerId: PlayerId, instanceId: string): voi
     resolveEffects(state, playerId, card, definition.effects ?? []);
     return;
   }
-  enqueueSpellPlayedEffectSummons(state, playerId, card.currentCost);
+  if (definition.originalCost === null) throw new RuleUndefinedError("NULL_CARD_COST", "法術原始費用為 null，不能判斷效果召喚", definition.id);
+  enqueueSpellPlayedEffectSummons(state, playerId, definition.originalCost);
   resolveEffects(state, playerId, card, definition.effects ?? [], false);
   moveCard(state, card, definition.generatedOnly ? "EXTRA_DECK" : "GRAVEYARD", definition.generatedOnly ? "GENERATED_SPELL_LEAVES" : "PLAY_SPELL");
   if (!state.pendingChoice) resolvePendingEffects(state);
@@ -232,16 +233,21 @@ function executeMutable(state: GameState, action: GameAction): void {
       if (state.phase === "GROWTH" && state.growthEffectsPending && !state.pendingChoice && state.pendingEffects.length === 0) {
         continueAfterGrowthEffects(state);
       }
+      if (state.phase === "COUNTDOWN" && !state.pendingChoice && state.pendingEffects.length === 0) continueAfterCountdown(state);
       return;
     }
     case "SELECT_EFFECT_OPTION": {
       selectEffectOption(state, action.playerId, action.optionId);
+      if (state.phase === "DRAW" && state.startTurnEffectsPending && !state.pendingChoice && state.pendingEffects.length === 0) {
+        continueAfterStartTurnEffects(state);
+      }
       if (state.phase === "END" && state.endTurnEffectsPending && !state.pendingChoice && state.pendingEffects.length === 0) {
         continueAfterEndTurnEffects(state);
       }
       if (state.phase === "GROWTH" && state.growthEffectsPending && !state.pendingChoice && state.pendingEffects.length === 0) {
         continueAfterGrowthEffects(state);
       }
+      if (state.phase === "COUNTDOWN" && !state.pendingChoice && state.pendingEffects.length === 0) continueAfterCountdown(state);
       return;
     }
     case "CONFIRM_EFFECT_SUMMON": {
@@ -249,6 +255,7 @@ function executeMutable(state: GameState, action: GameAction): void {
       if (state.phase === "DRAW" && state.startTurnEffectsPending && !state.pendingChoice && state.pendingEffects.length === 0) continueAfterStartTurnEffects(state);
       if (state.phase === "END" && state.endTurnEffectsPending && !state.pendingChoice && state.pendingEffects.length === 0) continueAfterEndTurnEffects(state);
       if (state.phase === "GROWTH" && state.growthEffectsPending && !state.pendingChoice && state.pendingEffects.length === 0) continueAfterGrowthEffects(state);
+      if (state.phase === "COUNTDOWN" && !state.pendingChoice && state.pendingEffects.length === 0) continueAfterCountdown(state);
       return;
     }
     case "DEBUG_SUMMON": {

@@ -3,13 +3,60 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
-import { GameBoard } from "../../src/ui/GameBoard";
+import { describeAiAction, GameBoard } from "../../src/ui/GameBoard";
 import { moveCard } from "../../src/game/engine/zoneEngine";
 import { mainState, putCard } from "../helpers";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 describe("效果未發動介面提示", () => {
+  it("對戰紀錄與 AI 行動提示使用卡牌名稱", () => {
+    const state = mainState();
+    state.players.P2.hand = [];
+    const spell = putCard(state, "P2", "DRAGON_013", "HAND", "ai-spell-notice");
+    state.log.push({ index: state.log.length, turn: 1, type: "ACTION", message: "DRAGON_013 的效果開始結算" });
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
+    expect(container.querySelector(".log")?.textContent).toContain("炎龍召喚");
+    expect(container.querySelector(".log")?.textContent).not.toContain("DRAGON_013");
+    expect(describeAiAction(state, { type: "PLAY_CARD", playerId: "P2", instanceId: spell.instanceId })).toBe("AI 施放法術「炎龍召喚」");
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  it("手下卡牌首次進入手下區時播放進場動畫並在結束後移除動畫類別", () => {
+    vi.useFakeTimers();
+    const state = mainState();
+    const minion = putCard(state, "P1", "UNDEAD_003", "MINION", "entrance-animation");
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
+    expect(container.querySelector(`[data-instance-id="${minion.instanceId}"]`)?.classList.contains("minion-entering")).toBe(true);
+    act(() => vi.advanceTimersByTime(750));
+    expect(container.querySelector(`[data-instance-id="${minion.instanceId}"]`)?.classList.contains("minion-entering")).toBe(false);
+    act(() => root.unmount());
+    container.remove();
+    vi.useRealTimers();
+  });
+
+  it("皇家親衛隊在場上明確顯示光環標示", () => {
+    const state = mainState();
+    const guard = putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_HONOR_GUARD", "MINION", "aura-badge");
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
+    const rendered = container.querySelector(`[data-instance-id="${guard.instanceId}"]`);
+    expect(rendered?.classList.contains("status-aura")).toBe(true);
+    expect(rendered?.textContent).toContain("光環");
+    act(() => root.unmount());
+    container.remove();
+  });
+
+
   it("直接向玩家顯示卡牌名稱與未發動原因", () => {
     const state = mainState();
     state.effectNotices = [{
@@ -158,7 +205,7 @@ describe("效果未發動介面提示", () => {
     document.body.append(container);
     const root = createRoot(container);
     act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
-    expect(container.querySelector('[aria-label="瘟疫標記 4"]')?.textContent).toContain("4/ 7");
+    expect(container.querySelector('[aria-label="瘟疫標記 4"]')?.textContent).toContain("4/ 6");
     const plagueZone = container.querySelector(`[data-instance-id="${plague.instanceId}"]`)?.closest(".field-zone");
     expect(plagueZone?.querySelectorAll(".slot")).toHaveLength(6);
     expect(container.querySelectorAll(".player-panel")).toHaveLength(2);
@@ -167,7 +214,7 @@ describe("效果未發動介面提示", () => {
     expect(health.classList.contains("critical")).toBe(true);
     const inspect = container.querySelector<HTMLButtonElement>('[aria-label="檢視 黑暗之書 瘟疫典錄 卡牌資訊"]')!;
     act(() => inspect.click());
-    expect(container.querySelector(".modal-plague-counter")?.textContent).toContain("瘟疫標記 4 / 7");
+    expect(container.querySelector(".modal-plague-counter")?.textContent).toContain("瘟疫標記 4 / 6");
     act(() => root.unmount());
     container.remove();
   });

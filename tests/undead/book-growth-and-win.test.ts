@@ -25,6 +25,7 @@ describe("黑暗之書成長與末日勝利", () => {
     const equal = putCard(equalState, "P1", "TOKEN_UNDEAD_BOOK_REVENGE", "FIELD", "equal");
     equalState = applyAction(equalState, { type: "END_TURN", playerId: "P1" }).state;
     expect(equalState.players.P1.fields.find((card) => card.instanceId === equal.instanceId)?.definitionId).toBe("TOKEN_UNDEAD_BOOK_REVENGE");
+    expect(equalState.effectNotices).toEqual([]);
   });
 
   it("場上出現第4張末日之書時立即獲勝", () => {

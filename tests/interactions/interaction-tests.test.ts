@@ -336,17 +336,17 @@ describe("F. 黑暗之書與末日之書", () => {
     equal = applyAction(equal, { type: "END_TURN", playerId: "P1" }).state;
     expect(equal.players.P1.fields[0].definitionId).toBe("TOKEN_UNDEAD_BOOK_REVENGE");
   });
-  it("F06｜末日序曲四張結算", () => {
+  it("F06｜末日序曲三張結算", () => {
     const state = mainState();
     const deckSize = state.players.P1.deck.length;
     const ids: string[] = [];
-    for (let index = 0; index < 4; index += 1) {
+    for (let index = 0; index < 3; index += 1) {
       summonGeneratedField(state, "P1", "TOKEN_UNDEAD_BOOK_DOOM_PRELUDE");
       ids.push(state.players.P1.fields.at(-1)!.instanceId);
       resolvePendingEffects(state);
     }
     expect(state.players.P1.fields).toHaveLength(1);
-    expect(state.players.P1.fields[0]).toMatchObject({ instanceId: ids[3], definitionId: "TOKEN_UNDEAD_DOOMSDAY_BOOK" });
+    expect(state.players.P1.fields[0]).toMatchObject({ instanceId: ids[2], definitionId: "TOKEN_UNDEAD_DOOMSDAY_BOOK" });
     expect(state.players.P1.deck).toHaveLength(deckSize - 2);
   });
   it("F07｜四本末日特殊勝利", () => {

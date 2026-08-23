@@ -41,13 +41,13 @@ export function enqueueStateBasedEffectSummons(state: GameState, playerId: Playe
   enqueueGroups(state, playerId, sources, `EFFECT_SUMMON:STATE_BASED:${state.turnNumber}:${state.log.length}`);
 }
 
-export function enqueueSpellPlayedEffectSummons(state: GameState, playerId: PlayerId, paidCost: number): void {
+export function enqueueSpellPlayedEffectSummons(state: GameState, playerId: PlayerId, originalCost: number): void {
   const player = state.players[playerId];
   if (player.minions.length >= state.rulesConfig.minionLimit) return;
   const sources = player.hand.filter((card) => {
     const rule = getCardDefinition(card.definitionId).effectSummon;
     return !player.effectSummonUsedThisTurn.includes(card.definitionId)
-      && rule?.event === "SPELL_PLAYED_COST_AT_LEAST" && paidCost >= rule.value;
+      && rule?.event === "SPELL_PLAYED_ORIGINAL_COST_AT_LEAST" && originalCost >= rule.value;
   });
   enqueueGroups(state, playerId, sources, `EFFECT_SUMMON:SPELL_PLAYED:${player.cardsPlayedThisTurn}`);
 }

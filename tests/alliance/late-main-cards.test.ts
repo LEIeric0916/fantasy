@@ -44,6 +44,7 @@ describe("聯盟後期主牌", () => {
     expect(state.pendingChoice).toMatchObject({ type: "EFFECT_CARDS", count: 3 });
     state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [first.instanceId, second.instanceId, third.instanceId] }).state;
     expect(state.players.P2.minions).toHaveLength(0);
-    expect(state.players.P2.heroHp).toBe(26);
+    // 三名毀滅者的死亡之聲現在依場上順序自動結算，各恢復 1 HP。
+    expect(state.players.P2.heroHp).toBe(29);
   });
 });

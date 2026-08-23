@@ -20,6 +20,15 @@ describe("黑暗魔人 瑞瑟特", () => {
 });
 
 describe("黑暗之書選擇與入場", () => {
+  it("第一張不朽典錄進場時不提示尚無舊同名卡", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    const source = putCard(state, "P1", "UNDEAD_006", "HAND", "silent-immortal-book");
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: source.instanceId }).state;
+    state = applyAction(state, { type: "SELECT_EFFECT_OPTION", playerId: "P1", optionId: "TOKEN_UNDEAD_BOOK_IMMORTAL" }).state;
+    expect(state.effectNotices).toEqual([]);
+  });
+
   it("達克斯特由玩家選擇書種；復仇典錄入場使死靈數+5", () => {
     let state = mainState();
     state.players.P1.hand = [];

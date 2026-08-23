@@ -56,7 +56,7 @@ describe("隨機 AI 自動對局", () => {
       expect(playerId).toBeDefined();
       const decision = chooseRandomAction(state, playerId!, aiSeed);
       aiSeed = decision.seed;
-      expect(decision.action, `第 ${steps} 步沒有合法行動`).toBeDefined();
+      expect(decision.action, `第 ${steps} 步沒有合法行動：${JSON.stringify({ phase: state.phase, activePlayerId: state.activePlayerId, pendingChoice: state.pendingChoice, pendingEffects: state.pendingEffects })}`).toBeDefined();
       const result = applyAction(state, decision.action!);
       expect(result.error, `第 ${steps} 步 ${JSON.stringify(decision.action)}`).toBeUndefined();
       state = result.state;

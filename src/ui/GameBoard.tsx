@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { chooseAiAction, type AiDifficulty } from "../game/ai/aiPolicy";
 import { getActingPlayerId } from "../game/ai/legalActionEngine";
-import { getCardDefinition, isCardImplemented } from "../game/cards/cardRegistry";
+import { cardDefinitions, getCardDefinition, isCardImplemented } from "../game/cards/cardRegistry";
 import type { CardInstance, PlayerId } from "../game/cards/cardTypes";
 import { getLegalAttackTargets } from "../game/engine/combatEngine";
 import { refreshHandCosts } from "../game/engine/costEngine";
@@ -10,6 +10,27 @@ import type { GameState } from "../game/state/GameState";
 import { CardView } from "./CardView";
 
 const AI_ACTION_DELAY_MS = 1_200;
+
+export function formatLogMessage(message: string): string {
+  return cardDefinitions.reduce((formatted, definition) => formatted.replaceAll(definition.id, definition.name), message);
+}
+
+export function describeAiAction(state: GameState, action: GameAction): string {
+  if (action.type === "PLAY_CARD" || action.type === "PLAY_ALTERNATE") {
+    const card = state.players[action.playerId].hand.find((candidate) => candidate.instanceId === action.instanceId);
+    const name = card ? getCardDefinition(card.definitionId).name : "未知卡牌";
+    if (action.type === "PLAY_ALTERNATE") return `AI 使用「${name}」的轉費效果`;
+    const type = card ? getCardDefinition(card.definitionId).cardType : undefined;
+    return type === "SPELL" ? `AI 施放法術「${name}」` : `AI 打出「${name}」`;
+  }
+  if (action.type === "ACTIVATE_FIELD") {
+    const card = state.players[action.playerId].fields.find((candidate) => candidate.instanceId === action.instanceId);
+    return `AI 發動「${card ? getCardDefinition(card.definitionId).name : "立場"}」`;
+  }
+  if (action.type === "ATTACK") return "AI 發動攻擊";
+  if (action.type === "END_TURN") return "AI 結束回合";
+  return "AI 正在處理效果";
+}
 
 interface Props { initialState: GameState; onRestart: () => void; aiPlayerId?: PlayerId; aiDifficulty?: AiDifficulty }
 
@@ -20,6 +41,7 @@ export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = 
     return readyState;
   });
   const [message, setMessage] = useState("");
+  const [aiAnnouncement, setAiAnnouncement] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [attackerId, setAttackerId] = useState<string>();
   const [inspectedCard, setInspectedCard] = useState<CardInstance>();
@@ -64,6 +86,7 @@ export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = 
         return;
       }
       aiStepCount.current += 1;
+      setAiAnnouncement(describeAiAction(state, decision.action));
       setSelected([]);
       setAttackerId(undefined);
       setMessage("");
@@ -108,6 +131,7 @@ export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = 
     const activePlayerChanged = result.state.activePlayerId !== state.activePlayerId;
     setState(result.state);
     setMessage(result.error ? `${result.error.code}：${result.error.message}` : "");
+    setAiAnnouncement("");
     if (!result.error) {
       setSelected([]);
       setAttackerId(undefined);
@@ -154,6 +178,7 @@ export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = 
         <div><p className="eyebrow">TURN {state.turnNumber} · {state.phase}</p><h1>戰記 <span>規則驗證臺</span></h1></div>
         <div className="actions"><button className="quiet" onClick={onRestart}>重新開始</button>{aiActing && <span className="ai-thinking">AI 思考中…</span>}{!aiActing && state.activePlayerId === active.id && state.phase === "MAIN" && !state.pendingChoice && <button onClick={() => dispatch({ type: "END_TURN", playerId: active.id })}>結束回合</button>}</div>
       </header>
+      {aiAnnouncement && <p className="ai-action-notice" role="status" aria-live="polite">{aiAnnouncement}</p>}
       {state.phase === "GAME_OVER" && <section className="result"><strong>{state.winner} 獲勝</strong><span>{state.loseReason}</span></section>}
       {message && <p className="error">{message}</p>}
       {state.effectNotices.length > 0 && <section className="effect-notices" role="status" aria-live="polite">
@@ -274,7 +299,7 @@ export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = 
           const resourceName = activated.resource === "NECROMANCY" ? "死靈術" : "機械術";
           return <button className="quiet field-action" key={card.instanceId} onClick={() => dispatch({ type: "ACTIVATE_FIELD", playerId: active.id, instanceId: card.instanceId })}>發動 {definition.name}（{resourceName} {activated.cost}）</button>;
         })}
-        <details className="log"><summary>Game Log · {state.log.length}</summary>{[...state.log].reverse().map((entry) => <div key={entry.index}><time>#{entry.index} T{entry.turn}</time><strong>{entry.type}</strong><span>{entry.message}</span></div>)}</details>
+        <details className="log"><summary>Game Log · {state.log.length}</summary>{[...state.log].reverse().map((entry) => <div key={entry.index}><time>#{entry.index} T{entry.turn}</time><strong>{entry.type}</strong><span>{formatLogMessage(entry.message)}</span></div>)}</details>
         <details><summary>Zone 檢視</summary><pre>{JSON.stringify({ active: { graveyard: active.graveyard.map((c) => c.definitionId), removed: active.removed.map((c) => c.definitionId), extraDeck: active.extraDeck.map((c) => c.definitionId) }, opponent: { graveyard: opponent.graveyard.map((c) => c.definitionId), removed: opponent.removed.map((c) => c.definitionId), extraDeck: opponent.extraDeck.map((c) => c.definitionId) } }, null, 2)}</pre></details>
         {state.phase === "MAIN" && <details className="debug"><summary>Debug 召喚</summary><p>序列化 Debug Action，僅用於驗證召喚、戰斗及關鍵詞。</p><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: active.id, definitionId: "TOKEN_DRAGON_HELLFIRE" })}>我方：地獄炎龍</button><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: active.id, definitionId: "TOKEN_UNDEAD_SPIRIT" })}>我方：不朽者之靈</button><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: opponentId, definitionId: "TOKEN_ALLIANCE_ROYAL_WARRIOR" })}>對手：皇家戰士</button></details>}
       </section>
@@ -309,6 +334,7 @@ function Zone({ title, cards, compact, kind = "MINION", slotCount = 7, legal, se
   return <section className={`${compact ? "compact-zone" : ""} ${kind === "FIELD" ? "field-zone" : "minion-zone"}`}><h2>{title} <small>{cards.length}</small></h2><div className="zone" style={{ gridTemplateColumns: columns }}>{Array.from({ length: leadingSlots }, (_, index) => <span className="slot" data-position="leading" key={`leading-${index}`} />)}{cards.map((card) => <CardView
     key={card.instanceId}
     card={card}
+    entering={kind === "MINION"}
     selected={selected?.(card.instanceId)}
     actionable={actionable?.(card.instanceId)}
     draggable={draggable?.(card.instanceId)}
@@ -358,7 +384,7 @@ function CardDetailModal({ card, onClose }: { card: CardInstance; onClose: () =>
         {definition.cardType === "MINION" && <><span>攻擊 <strong>{card.currentAttack ?? "?"}</strong></span><span>生命 <strong>{card.currentHealth ?? "?"}</strong></span></>}
       </div>
       <p className="card-modal-keywords"><strong>關鍵字：</strong>{card.keywords.join("、") || "無"}</p>
-      {card.counters.plagueMarks !== undefined && <p className="modal-plague-counter">瘟疫標記 <strong>{card.counters.plagueMarks}</strong> / 7</p>}
+      {card.counters.plagueMarks !== undefined && <p className="modal-plague-counter">瘟疫標記 <strong>{card.counters.plagueMarks}</strong> / {definition.transformAura?.threshold ?? 6}</p>}
       <p className="card-modal-effect">{definition.effectsText || "無卡牌效果"}</p>
     </section>
   </div>;

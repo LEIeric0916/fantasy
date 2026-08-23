@@ -4,6 +4,21 @@ import { beginTurn } from "../../src/game/engine/turnEngine";
 import { mainState, putCard } from "../helpers";
 
 describe("效果召喚", () => {
+  it("龍的誕生減費至4後仍以原始費用6觸發魔導戰龍", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    state.players.P1.mana = 4;
+    putCard(state, "P2", "UNDEAD_001", "MINION", "discount-one");
+    putCard(state, "P2", "UNDEAD_001", "MINION", "discount-two");
+    const warDragon = putCard(state, "P1", "DRAGON_004", "HAND", "original-cost-trigger");
+    const spell = putCard(state, "P1", "DRAGON_014", "HAND", "discounted-birth");
+
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: spell.instanceId }).state;
+    expect(state.pendingChoice).toMatchObject({ type: "EFFECT_SUMMON_CONFIRM", sourceInstanceId: warDragon.instanceId });
+    state = applyAction(state, { type: "CONFIRM_EFFECT_SUMMON", playerId: "P1" }).state;
+    expect(state.players.P1.minions.some((card) => card.instanceId === warDragon.instanceId)).toBe(true);
+  });
+
   it("使用費用5以上法術並完整結算後，從手牌強制召喚魔導戰龍", () => {
     let state = mainState();
     state.players.P1.hand = [];
