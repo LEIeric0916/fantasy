@@ -44,7 +44,7 @@
       "health": 1,
       "deckCount": 3,
       "keywords": ["CHARGE", "DEATHRATTLE", "ON_REVIVE"],
-      "effectsText": "死亡之聲：召喚2名「不朽者之靈」。復活：此手下從棄堆被任何方式復活到場上時，+2/+0。",
+      "effectsText": "死亡之聲：召喚2名「不朽者之靈」。復活：此手下從棄堆被任何方式復活到場上時，+2/+0；離場時還原此加成。",
       "generatedOnly": false,
       "notes": ""
     },

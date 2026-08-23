@@ -185,6 +185,18 @@ function resolveEffectList(
         source.currentAttack += effect.value;
         addLog(state, "RESOURCE", `${source.definitionId} +${effect.value}/+0`, { instanceId: source.instanceId });
         break;
+      case "MODIFY_SELF_ATTACK_UNTIL_LEAVES":
+        if (hasActiveKeyword(source, "DISCIPLINE") || hasActiveKeyword(source, "INVINCIBLE")) {
+          addLog(state, "PROTECTION", `${source.definitionId} 的紀律阻擋自身攻擊改值`, { instanceId: source.instanceId });
+          break;
+        }
+        if (source.currentAttack === null) {
+          throw new RuleUndefinedError("NULL_MINION_STATS", "手下攻擊為 null，不能改值", source.definitionId);
+        }
+        source.currentAttack += effect.value;
+        source.counters.leaveAttackBonus = (source.counters.leaveAttackBonus ?? 0) + effect.value;
+        addLog(state, "RESOURCE", `${source.definitionId} +${effect.value}/+0（離場時還原）`, { instanceId: source.instanceId });
+        break;
       case "MODIFY_SELF_STATS":
         if (hasActiveKeyword(source, "DISCIPLINE") || hasActiveKeyword(source, "INVINCIBLE")) {
           addLog(state, "PROTECTION", `${source.definitionId} 的紀律阻擋自身面板改值`, { instanceId: source.instanceId });

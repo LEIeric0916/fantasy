@@ -59,6 +59,7 @@ export type EffectDefinition =
   | { type: "HEAL_HERO"; value: number }
   | { type: "MODIFY_SELF_HEALTH"; value: number }
   | { type: "MODIFY_SELF_ATTACK"; value: number }
+  | { type: "MODIFY_SELF_ATTACK_UNTIL_LEAVES"; value: number }
   | { type: "MODIFY_SELF_STATS"; attack: number; health: number }
   | { type: "INCREASE_MAX_MANA"; value: number }
   | { type: "SUMMON"; definitionId: string; count: number }

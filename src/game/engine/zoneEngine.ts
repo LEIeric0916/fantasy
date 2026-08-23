@@ -42,6 +42,11 @@ export function moveCard(
   const from = card.zone;
   card.zone = destination;
   if ((from === "MINION" || from === "FIELD") && destination !== "MINION" && destination !== "FIELD") {
+    const leaveAttackBonus = card.counters.leaveAttackBonus ?? 0;
+    if (leaveAttackBonus !== 0 && card.currentAttack !== null) {
+      card.currentAttack -= leaveAttackBonus;
+      delete card.counters.leaveAttackBonus;
+    }
     card.sealed = false;
   }
   card.controllerId = destinationPlayerId;

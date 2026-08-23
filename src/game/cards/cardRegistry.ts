@@ -477,7 +477,7 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
   },
   UNDEAD_003: {
     DEATHRATTLE: [{ type: "SUMMON", definitionId: "TOKEN_UNDEAD_SPIRIT", count: 2 }],
-    ON_REVIVE: [{ type: "MODIFY_SELF_ATTACK", value: 2 }],
+    ON_REVIVE: [{ type: "MODIFY_SELF_ATTACK_UNTIL_LEAVES", value: 2 }],
   },
   UNDEAD_004: {
     DEATHRATTLE: [{ type: "SUMMON_FIELD", definitionId: "TOKEN_UNDEAD_BOOK_DOOM_PRELUDE", count: 1 }],

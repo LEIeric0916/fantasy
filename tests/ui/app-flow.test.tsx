@@ -2,7 +2,7 @@
 
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../../src/app/App";
 
 describe("瀏覽器入口流程", () => {
@@ -20,6 +20,7 @@ describe("瀏覽器入口流程", () => {
   afterEach(() => {
     act(() => root.unmount());
     container.remove();
+    vi.useRealTimers();
   });
 
   function button(name: string): HTMLButtonElement {
@@ -58,5 +59,32 @@ describe("瀏覽器入口流程", () => {
     expect(container.textContent).toContain("P2 · ALLIANCE");
     expect(container.textContent).toContain("手牌4");
     expect(container.textContent).toContain("牌庫31");
+  });
+
+  it("可選擇隨機 AI 模式，由 P2 自動完成換牌並維持 P1 視角", () => {
+    vi.useFakeTimers();
+    const mode = container.querySelector<HTMLSelectElement>('select[aria-label="對戰模式"]')!;
+    act(() => {
+      mode.value = "RANDOM_AI";
+      mode.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    click(button("建立對局"));
+    expect(container.textContent).toContain("MULLIGAN · P1");
+    click(button("確認換牌（0）"));
+    expect(container.textContent).toContain("AI 正在選擇起始手牌");
+    act(() => vi.advanceTimersByTime(1_300));
+    expect(container.textContent).toContain("TURN 1 · MAIN");
+    expect(container.textContent).toContain("目前玩家P1");
+    expect(container.textContent).toContain("對手玩家P2");
+  });
+
+  it("提供簡單、普通與困難三種 AI 難度", () => {
+    const mode = container.querySelector<HTMLSelectElement>('select[aria-label="對戰模式"]')!;
+    expect([...mode.options].map((option) => option.value)).toEqual([
+      "LOCAL",
+      "RANDOM_AI",
+      "HEURISTIC_AI",
+      "SEARCH_AI",
+    ]);
   });
 });

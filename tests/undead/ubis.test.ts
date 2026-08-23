@@ -27,4 +27,22 @@ describe("迅疾黑暗騎士 烏比斯", () => {
     resolvePendingEffects(state);
     expect(ubis).toMatchObject({ zone: "MINION", currentAttack: 3, currentHealth: 1, damageTaken: 0, attacksUsedThisTurn: 0 });
   });
+
+  it("復活獲得的攻擊力會在離場時還原，下一次復活不會重複累積", () => {
+    const state = mainState();
+    const ubis = putCard(state, "P1", "UNDEAD_003", "MINION", "reset-revive-bonus");
+    destroyMinion(state, ubis, "FIRST_DEATH");
+    resolvePendingEffects(state);
+    expect(reviveMinion(state, "P1", ubis)).toBe(true);
+    resolvePendingEffects(state);
+    expect(ubis.currentAttack).toBe(3);
+
+    destroyMinion(state, ubis, "SECOND_DEATH");
+    expect(ubis.currentAttack).toBe(1);
+    expect(ubis.counters.leaveAttackBonus).toBeUndefined();
+    resolvePendingEffects(state);
+    expect(reviveMinion(state, "P1", ubis)).toBe(true);
+    resolvePendingEffects(state);
+    expect(ubis.currentAttack).toBe(3);
+  });
 });

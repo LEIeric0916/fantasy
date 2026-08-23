@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { chooseAiAction, type AiDifficulty } from "../game/ai/aiPolicy";
+import { getActingPlayerId } from "../game/ai/legalActionEngine";
 import { getCardDefinition, isCardImplemented } from "../game/cards/cardRegistry";
 import type { CardInstance, PlayerId } from "../game/cards/cardTypes";
 import { getLegalAttackTargets } from "../game/engine/combatEngine";
@@ -7,9 +9,11 @@ import { applyAction, type GameAction } from "../game/engine/gameEngine";
 import type { GameState } from "../game/state/GameState";
 import { CardView } from "./CardView";
 
-interface Props { initialState: GameState; onRestart: () => void }
+const AI_ACTION_DELAY_MS = 1_200;
 
-export function GameBoard({ initialState, onRestart }: Props) {
+interface Props { initialState: GameState; onRestart: () => void; aiPlayerId?: PlayerId; aiDifficulty?: AiDifficulty }
+
+export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = "RANDOM" }: Props) {
   const [state, setState] = useState(() => {
     const readyState = structuredClone(initialState);
     refreshHandCosts(readyState);
@@ -21,8 +25,13 @@ export function GameBoard({ initialState, onRestart }: Props) {
   const [inspectedCard, setInspectedCard] = useState<CardInstance>();
   const [viewedGraveyardPlayerId, setViewedGraveyardPlayerId] = useState<PlayerId>();
   const [privacyGate, setPrivacyGate] = useState(false);
-  const active = state.players[state.activePlayerId];
-  const opponentId: PlayerId = state.activePlayerId === "P1" ? "P2" : "P1";
+  const aiSeed = useRef((initialState.rngSeed ^ 0xa17a17) >>> 0);
+  const aiStepCount = useRef(0);
+  const actingPlayerId = getActingPlayerId(state);
+  const aiActing = Boolean(aiPlayerId && actingPlayerId === aiPlayerId);
+  const perspectivePlayerId: PlayerId = aiPlayerId ? (aiPlayerId === "P1" ? "P2" : "P1") : state.activePlayerId;
+  const active = state.players[perspectivePlayerId];
+  const opponentId: PlayerId = perspectivePlayerId === "P1" ? "P2" : "P1";
   const opponent = state.players[opponentId];
   const activeFieldSlots = state.rulesConfig.fieldLimits[active.faction] ?? 7;
   const opponentFieldSlots = state.rulesConfig.fieldLimits[opponent.faction] ?? 7;
@@ -36,8 +45,35 @@ export function GameBoard({ initialState, onRestart }: Props) {
   };
   const legalTargets = useMemo(() => attackerId ? getLegalAttackTargets(state, attackerId) : [], [state, attackerId]);
 
+  useEffect(() => {
+    if (!aiPlayerId || !aiActing || state.phase === "GAME_OVER") return;
+    const timer = window.setTimeout(() => {
+      if (aiStepCount.current >= 5000) {
+        setMessage("AI_ERROR：AI 對局超過安全行動上限，已停止自動操作");
+        return;
+      }
+      const decision = chooseAiAction(state, aiPlayerId, aiSeed.current, aiDifficulty);
+      aiSeed.current = decision.seed;
+      if (!decision.action) {
+        setMessage("AI_ERROR：AI 目前沒有合法行動");
+        return;
+      }
+      const result = applyAction(state, decision.action);
+      if (result.error) {
+        setMessage(`AI_${result.error.code}：${result.error.message}`);
+        return;
+      }
+      aiStepCount.current += 1;
+      setSelected([]);
+      setAttackerId(undefined);
+      setMessage("");
+      setState(result.state);
+    }, AI_ACTION_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [aiActing, aiDifficulty, aiPlayerId, state]);
+
   function canPlay(card: CardInstance): boolean {
-    if (state.phase !== "MAIN" || state.pendingChoice || card.currentCost === null || card.currentCost > active.mana) return false;
+    if (aiActing || state.activePlayerId !== active.id || state.phase !== "MAIN" || state.pendingChoice || card.currentCost === null || card.currentCost > active.mana) return false;
     const definition = getCardDefinition(card.definitionId);
     if (!isCardImplemented(definition)) return false;
     if (definition.cardType === "MINION" && active.minions.length >= state.rulesConfig.minionLimit) return false;
@@ -50,11 +86,11 @@ export function GameBoard({ initialState, onRestart }: Props) {
 
   function canUseAlternate(card: CardInstance): boolean {
     const alternate = getCardDefinition(card.definitionId).alternatePlay;
-    return Boolean(state.phase === "MAIN" && !state.pendingChoice && alternate && active.mana >= alternate.cost);
+    return Boolean(!aiActing && state.activePlayerId === active.id && state.phase === "MAIN" && !state.pendingChoice && alternate && active.mana >= alternate.cost);
   }
 
   function canActivateField(card: CardInstance): boolean {
-    if (state.phase !== "MAIN" || state.pendingChoice || card.sealed) return false;
+    if (aiActing || state.activePlayerId !== active.id || state.phase !== "MAIN" || state.pendingChoice || card.sealed) return false;
     const activated = getCardDefinition(card.definitionId).activatedEffect;
     if (!activated) return false;
     const available = activated.resource === "NECROMANCY"
@@ -64,7 +100,7 @@ export function GameBoard({ initialState, onRestart }: Props) {
   }
 
   function canAttack(card: CardInstance): boolean {
-    return !state.pendingChoice && getLegalAttackTargets(state, card.instanceId).length > 0;
+    return !aiActing && !state.pendingChoice && getLegalAttackTargets(state, card.instanceId).length > 0;
   }
 
   function dispatch(action: GameAction, gateAfter = false) {
@@ -75,11 +111,14 @@ export function GameBoard({ initialState, onRestart }: Props) {
     if (!result.error) {
       setSelected([]);
       setAttackerId(undefined);
-      if (gateAfter || activePlayerChanged) setPrivacyGate(true);
+      if (!aiPlayerId && (gateAfter || activePlayerChanged)) setPrivacyGate(true);
     }
   }
 
   const mulliganPlayer: PlayerId = !state.players.P1.mulliganDone ? "P1" : "P2";
+  if (state.phase === "MULLIGAN" && aiActing) {
+    return <main className="privacy"><h1>AI 正在選擇起始手牌</h1><p>{aiDifficulty === "RANDOM" ? "簡單" : aiDifficulty === "HEURISTIC" ? "普通" : "困難"} AI · {aiPlayerId}</p></main>;
+  }
   if (privacyGate) {
     return <main className="privacy"><h1>請交給 {state.phase === "MULLIGAN" ? mulliganPlayer : state.activePlayerId}</h1><button onClick={() => setPrivacyGate(false)}>已交接，顯示畫面</button></main>;
   }
@@ -100,20 +139,20 @@ export function GameBoard({ initialState, onRestart }: Props) {
 
   function isLegalMinion(id: string) { return legalTargets.some((target) => target.type === "MINION" && target.instanceId === id); }
   const heroLegal = legalTargets.some((target) => target.type === "HERO" && target.playerId === opponentId);
-  const handLimitChoice = state.pendingChoice?.type === "HAND_LIMIT" ? state.pendingChoice : undefined;
+  const handLimitChoice = !aiActing && state.pendingChoice?.type === "HAND_LIMIT" ? state.pendingChoice : undefined;
   const handLimit = Boolean(handLimitChoice);
-  const orderChoice = state.pendingChoice?.type === "TRIGGER_ORDER" || state.pendingChoice?.type === "COUNTDOWN_ORDER"
+  const orderChoice = !aiActing && (state.pendingChoice?.type === "TRIGGER_ORDER" || state.pendingChoice?.type === "COUNTDOWN_ORDER")
     ? state.pendingChoice
     : undefined;
-  const effectChoice = state.pendingChoice?.type === "EFFECT_CARDS" ? state.pendingChoice : undefined;
-  const optionChoice = state.pendingChoice?.type === "EFFECT_OPTION" ? state.pendingChoice : undefined;
-  const effectSummonConfirm = state.pendingChoice?.type === "EFFECT_SUMMON_CONFIRM" ? state.pendingChoice : undefined;
+  const effectChoice = !aiActing && state.pendingChoice?.type === "EFFECT_CARDS" ? state.pendingChoice : undefined;
+  const optionChoice = !aiActing && state.pendingChoice?.type === "EFFECT_OPTION" ? state.pendingChoice : undefined;
+  const effectSummonConfirm = !aiActing && state.pendingChoice?.type === "EFFECT_SUMMON_CONFIRM" ? state.pendingChoice : undefined;
 
   return (
     <main className="game-board">
       <header className="game-header">
         <div><p className="eyebrow">TURN {state.turnNumber} · {state.phase}</p><h1>戰記 <span>規則驗證臺</span></h1></div>
-        <div className="actions"><button className="quiet" onClick={onRestart}>重新開始</button>{state.phase === "MAIN" && !state.pendingChoice && <button onClick={() => dispatch({ type: "END_TURN", playerId: state.activePlayerId })}>結束回合</button>}</div>
+        <div className="actions"><button className="quiet" onClick={onRestart}>重新開始</button>{aiActing && <span className="ai-thinking">AI 思考中…</span>}{!aiActing && state.activePlayerId === active.id && state.phase === "MAIN" && !state.pendingChoice && <button onClick={() => dispatch({ type: "END_TURN", playerId: active.id })}>結束回合</button>}</div>
       </header>
       {state.phase === "GAME_OVER" && <section className="result"><strong>{state.winner} 獲勝</strong><span>{state.loseReason}</span></section>}
       {message && <p className="error">{message}</p>}
@@ -197,7 +236,7 @@ export function GameBoard({ initialState, onRestart }: Props) {
             onInspect={setInspectedCard}
             onDragStart={setAttackerId}
             onDragEnd={() => setAttackerId(undefined)}
-            onCard={(id) => setAttackerId(id === attackerId ? undefined : id)}
+            onCard={(id) => { if (!aiActing && state.activePlayerId === active.id && canAttack(active.minions.find((card) => card.instanceId === id)!)) setAttackerId(id === attackerId ? undefined : id); }}
           />
           <Zone compact kind="FIELD" slotCount={activeFieldSlots} title={`我方立場區 · ${activeFieldSlots} 格`} cards={active.fields} onInspect={setInspectedCard} />
           <section className="player-panel">
@@ -217,11 +256,11 @@ export function GameBoard({ initialState, onRestart }: Props) {
           selected={selected.includes(card.instanceId)}
           playable={canPlay(card) || canUseAlternate(card)}
           onInspect={() => setInspectedCard(card)}
-          onClick={() => handLimit ? setSelected((items) => items.includes(card.instanceId) ? items.filter((id) => id !== card.instanceId) : [...items, card.instanceId]) : !state.pendingChoice && dispatch({ type: "PLAY_CARD", playerId: active.id, instanceId: card.instanceId })}
+          onClick={() => handLimit ? setSelected((items) => items.includes(card.instanceId) ? items.filter((id) => id !== card.instanceId) : [...items, card.instanceId]) : !aiActing && state.activePlayerId === active.id && !state.pendingChoice && dispatch({ type: "PLAY_CARD", playerId: active.id, instanceId: card.instanceId })}
         />)}</section>
       </section>
-      {!state.pendingChoice && state.phase === "MAIN" && active.hand.some((card) => getCardDefinition(card.definitionId).alternatePlay) && <section className="actions">
-        {active.hand.filter((card) => getCardDefinition(card.definitionId).alternatePlay).map((card) => {
+      {!state.pendingChoice && state.phase === "MAIN" && active.hand.some(canUseAlternate) && <section className="actions">
+        {active.hand.filter(canUseAlternate).map((card) => {
           const definition = getCardDefinition(card.definitionId);
           return <button className="quiet" key={card.instanceId} onClick={() => dispatch({ type: "PLAY_ALTERNATE", playerId: active.id, instanceId: card.instanceId })}>轉費 {definition.alternatePlay!.cost}：{definition.name}</button>;
         })}

@@ -8,6 +8,7 @@
 - `docs/development-spec.md`：瀏覽器 MVP 開發規格
 - `docs/interaction-tests.md`：已確認的特殊互動與驗收案例
 - `docs/project-architecture.md`：規則、卡牌資料、引擎、UI、測試與未來 AI 對戰的運作導覽
+- `docs/ai-mode.md`：隨機 AI、合法行動產生器、自動對局與後續策略 AI 的說明
 - `docs/engine-bilingual-guide.md`：12 個主要遊戲引擎的英文程式名稱、中文翻譯與執行流程
 - `data/dragon-cards.json`：龍族主牌（40 張）
 - `data/undead-cards.json`：不朽者主牌（40 張）

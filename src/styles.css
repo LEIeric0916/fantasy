@@ -13,6 +13,7 @@ h1 span, h2 small { color: #99a5ae; font-family: Inter, sans-serif; font-size: .
 h2 { margin: 1.1rem 0 .5rem; font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; color: #aeb9c1; }
 .eyebrow { color: #d7ff55; font-size: .75rem; letter-spacing: .18em; margin-bottom: .25rem; }
 .actions { display: flex; gap: .5rem; }
+.ai-thinking { align-self: center; padding: .38rem .65rem; border: 1px solid #72c7ff; border-radius: 999px; color: #bceaff; background: #102b3b; font-size: .72rem; font-weight: 800; }
 .notice, .error { padding: .8rem 1rem; border-left: 3px solid #d7ff55; background: #1b2228; }
 .error { border-color: #ff6e63; color: #ffc0bb; }
 .effect-notices { margin-bottom: 1rem; padding: .8rem 1rem; border: 1px solid #d99a45; border-left-width: 4px; background: #2b2116; color: #ffd9a3; }
