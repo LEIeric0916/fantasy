@@ -103,8 +103,18 @@ export function resolveAttack(state: GameState, playerId: PlayerId, attackerId: 
   if (defenderDead) destroyMinion(state, defender, "COMBAT_DEATH", timingContext);
   if (defenderDead) {
     for (const aura of combatKillAuras) {
-      const effects = getCardDefinition(aura.definitionId).triggeredEffects?.ON_FRIENDLY_COMBAT_KILL;
-      if (effects) enqueueTriggeredEffects(state, aura, effects, "AURA:FRIENDLY_COMBAT_KILL", timingContext, true);
+      const definition = getCardDefinition(aura.definitionId);
+      const effects = definition.triggeredEffects?.ON_FRIENDLY_COMBAT_KILL;
+      if (!effects) continue;
+      if (aura.counters.friendlyCombatKillTriggerTurn !== state.turnNumber) {
+        aura.counters.friendlyCombatKillTriggerTurn = state.turnNumber;
+        aura.counters.friendlyCombatKillTriggerUses = 0;
+      }
+      const triggerUses = aura.counters.friendlyCombatKillTriggerUses ?? 0;
+      const triggerLimit = definition.maxFriendlyCombatKillTriggersPerTurn ?? Number.POSITIVE_INFINITY;
+      if (triggerUses >= triggerLimit) continue;
+      aura.counters.friendlyCombatKillTriggerUses = triggerUses + 1;
+      enqueueTriggeredEffects(state, aura, effects, "AURA:FRIENDLY_COMBAT_KILL", timingContext, true);
     }
     if (attackerKillEffects) enqueueTriggeredEffects(state, attacker, attackerKillEffects, "ON_KILL", timingContext, true);
   }

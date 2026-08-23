@@ -146,6 +146,7 @@ export interface CardDefinition {
   initialCounters?: Record<string, number>;
   effects?: EffectDefinition[];
   triggeredEffects?: Partial<Record<"DEATHRATTLE" | "LAST_WORDS" | "ON_DISCARD" | "ON_REVIVE" | "END_TURN" | "GROWTH" | "ON_FRIENDLY_COMBAT_KILL" | "ON_SELF_COMBAT_START" | "ON_KILL", EffectDefinition[]>>;
+  maxFriendlyCombatKillTriggersPerTurn?: number;
   dynamicCost?:
     | { type: "ENEMY_MINION_COUNT" }
     | { type: "FRIENDLY_GRAVE_DRAGON_COUNT" }

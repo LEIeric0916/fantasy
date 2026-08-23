@@ -42,4 +42,37 @@ describe("悼念的騎士 卡戎", () => {
     expect(state.players.P2.heroHp).toBe(28);
     expect(state.players.P1.minions.some((card) => card.instanceId === charon.instanceId)).toBe(true);
   });
+
+  it("每張卡戎的光環每回合最多造成3次效果傷害，新回合重置", () => {
+    let state = mainState();
+    const charon = putCard(state, "P1", "UNDEAD_010", "MINION", "limited-aura");
+    const attackers = Array.from({ length: 4 }, (_, index) =>
+      putCard(state, "P1", "DRAGON_012", "MINION", `attacker-${index}`));
+    const defenders = Array.from({ length: 4 }, (_, index) =>
+      putCard(state, "P2", "UNDEAD_001", "MINION", `defender-${index}`));
+
+    for (let index = 0; index < 4; index += 1) {
+      state = applyAction(state, {
+        type: "ATTACK",
+        playerId: "P1",
+        attackerId: attackers[index].instanceId,
+        target: { type: "MINION", instanceId: defenders[index].instanceId },
+      }).state;
+    }
+
+    expect(state.players.P2.heroHp).toBe(24);
+    expect(state.players.P1.minions.find((card) => card.instanceId === charon.instanceId)?.counters.friendlyCombatKillTriggerUses).toBe(3);
+
+    state.turnNumber += 1;
+    const nextAttacker = putCard(state, "P1", "DRAGON_012", "MINION", "next-turn-attacker");
+    const nextDefender = putCard(state, "P2", "UNDEAD_001", "MINION", "next-turn-defender");
+    state = applyAction(state, {
+      type: "ATTACK",
+      playerId: "P1",
+      attackerId: nextAttacker.instanceId,
+      target: { type: "MINION", instanceId: nextDefender.instanceId },
+    }).state;
+
+    expect(state.players.P2.heroHp).toBe(22);
+  });
 });

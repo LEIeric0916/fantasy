@@ -6,7 +6,7 @@ import { InvalidActionError, NotImplementedError, RuleUndefinedError } from "./e
 import { createCardInstance } from "../state/CardInstance";
 import { searchDeckCard } from "./searchEngine";
 import { hasActiveKeyword } from "../keywords/keywordRules";
-import { grantTemporaryCostReduction } from "./costEngine";
+import { grantTemporaryCostReduction, refreshHandCosts } from "./costEngine";
 import { shuffleSeeded } from "../utils/rng";
 import { summonFromHandByEffect, summonGeneratedField, summonGeneratedMinion } from "./summonEngine";
 import { drawCard, opponentOf } from "./turnEngine";
@@ -96,6 +96,9 @@ function conditionMatches(
 function canExecuteEffect(state: GameState, playerId: PlayerId, source: CardInstance, effect: EffectDefinition): boolean {
   switch (effect.type) {
     case "DRAW": return state.players[playerId].deck.length > 0;
+    case "RESTORE_MANA":
+    case "RESTORE_MANA_VALUE":
+      return state.players[playerId].mana < state.players[playerId].maxMana;
     case "SUMMON": return state.players[playerId].minions.length < state.rulesConfig.minionLimit;
     case "SUMMON_FIELD": {
       const limit = state.rulesConfig.fieldLimits[state.players[playerId].faction];
@@ -968,8 +971,9 @@ function resolveEffectList(
         break;
       case "GRANT_NEXT_HIGH_COST_DRAGON_REDUCTION":
         state.players[playerId].nextHighCostDragonReductionMinCost = effect.minOriginalCost;
-        state.players[playerId].nextHighCostDragonReduction = effect.value;
-        addLog(state, "RESOURCE", `${playerId} 下一張原始費用${effect.minOriginalCost}以上的龍族手下費用-${effect.value}`, { source: source.instanceId });
+        state.players[playerId].nextHighCostDragonReduction += effect.value;
+        refreshHandCosts(state);
+        addLog(state, "RESOURCE", `${playerId} 下一張原始費用${effect.minOriginalCost}以上的龍族手下累計費用-${state.players[playerId].nextHighCostDragonReduction}`, { source: source.instanceId });
         break;
       case "GRANT_ALL_FRIENDLY_DAMAGE_CAP":
         for (const target of state.players[playerId].minions) grantDamageCap(target, effect.value);

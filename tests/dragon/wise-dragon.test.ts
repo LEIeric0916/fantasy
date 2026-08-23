@@ -18,6 +18,24 @@ describe("睿智神龍伊爾多斯", () => {
     expect(wise.currentCost).toBe(0);
   });
 
+  it("實際打出龍族手下後會立即重算手中的減費", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    const wise = putCard(state, "P1", "DRAGON_011", "HAND", "discount-after-actions");
+    const dragons = Array.from({ length: 4 }, (_, index) =>
+      putCard(state, "P1", "TOKEN_DRAGON_HELLFIRE", "HAND", `summoned-dragon-${index}`));
+
+    for (const dragon of dragons) {
+      state.players.P1.mana = 10;
+      const result = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: dragon.instanceId });
+      expect(result.error).toBeUndefined();
+      state = result.state;
+    }
+
+    expect(state.players.P1.summonedDragonOriginalCostThisTurn).toBe(20);
+    expect(state.players.P1.hand.find((card) => card.instanceId === wise.instanceId)?.currentCost).toBe(0);
+  });
+
   it("回合開始重置本回合龍族原始費用合計", () => {
     const state = mainState();
     summonGeneratedMinion(state, "P1", "TOKEN_DRAGON_HELLFIRE");
@@ -53,5 +71,21 @@ describe("睿智神龍伊爾多斯", () => {
     resolvePendingEffects(state);
     refreshCardCost(state, "P1", expensive);
     expect(expensive.currentCost).toBe(5);
+  });
+
+  it("死亡之聲結算後立即更新手牌費用，且多次發動會累加", () => {
+    const state = mainState();
+    const firstWise = putCard(state, "P1", "DRAGON_011", "MINION", "wise-death-first");
+    const secondWise = putCard(state, "P1", "DRAGON_011", "MINION", "wise-death-second");
+    const expensive = putCard(state, "P1", "DRAGON_011", "HAND", "wise-stacked-discount-target");
+
+    destroyMinion(state, firstWise, "TEST");
+    resolvePendingEffects(state);
+    expect(expensive.currentCost).toBe(5);
+
+    destroyMinion(state, secondWise, "TEST");
+    resolvePendingEffects(state);
+    expect(state.players.P1.nextHighCostDragonReduction).toBe(10);
+    expect(expensive.currentCost).toBe(0);
   });
 });

@@ -31,7 +31,14 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
   MACHINE_004: [
     { type: "SEARCH_DECK", definitionId: "MACHINE_004" },
     { type: "SEGMENT_BREAK" },
-    { type: "MECHANICAL_TECHNIQUE", cost: 1, effects: [{ type: "SUMMON_FIELD", definitionId: "TOKEN_MACHINE_SOLDIER_BAY", count: 1 }] },
+    {
+      type: "MECHANICAL_TECHNIQUE",
+      cost: 1,
+      effects: [
+        { type: "SUMMON_FIELD", definitionId: "TOKEN_MACHINE_SOLDIER_BAY", count: 1 },
+        { type: "RESTORE_MANA_VALUE", value: 1 },
+      ],
+    },
   ],
   MACHINE_005: [{ type: "GAIN_RECYCLE_CHARGE", value: 1 }],
   MACHINE_006: [
@@ -633,6 +640,10 @@ const fieldWinConditions: Record<string, CardDefinition["fieldWinCondition"]> = 
   TOKEN_UNDEAD_DOOMSDAY_BOOK: { count: 4, loseReason: "DOOMSDAY_BOOK" },
 };
 
+const maxFriendlyCombatKillTriggersPerTurn: Record<string, number> = {
+  UNDEAD_010: 3,
+};
+
 const rawFiles = [dragonData, undeadData, machineData, allianceData, tokenData] as unknown as CardFile[];
 
 export const cardDefinitions: CardDefinition[] = rawFiles.flatMap((file) =>
@@ -655,6 +666,7 @@ export const cardDefinitions: CardDefinition[] = rawFiles.flatMap((file) =>
     enterFieldEffects: enterFieldEffects[card.id],
     effects: implementedEffects[card.id],
     triggeredEffects: implementedTriggeredEffects[card.id],
+    maxFriendlyCombatKillTriggersPerTurn: maxFriendlyCombatKillTriggersPerTurn[card.id],
   })),
 );
 

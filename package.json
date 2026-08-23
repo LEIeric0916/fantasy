@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-project.ps1 dev",
+    "build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-project.ps1 build",
+    "test": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-project.ps1 test run",
+    "test:watch": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-project.ps1 test",
     "check": "npm run test && npm run build"
   },
   "dependencies": {

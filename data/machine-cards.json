@@ -59,7 +59,7 @@
       "health": 1,
       "deckCount": 3,
       "keywords": ["RUSH", "BATTLECRY", "DEATHRATTLE"],
-      "effectsText": "戰吼：檢索1張「機械帝國遊騎兵」。機械術1：召喚1個「機械士兵製造艙」。死亡之聲：回收充能+1。",
+      "effectsText": "戰吼：檢索1張「機械帝國遊騎兵」。機械術1：召喚1個「機械士兵製造艙」，恢復1水晶。死亡之聲：回收充能+1。",
       "generatedOnly": false,
       "notes": "早期原文一度寫「機械製造艙」，整理後統一對應「機械士兵製造艙」。"
     },
