@@ -40,5 +40,6 @@ describe("哈洛德與焰騎士長", () => {
     state = applyAction(state, { type: "END_TURN", playerId: "P1" }).state;
     expect(state.players.P1.minions.every((card) => card.keywords.includes("DIVINE_SHIELD"))).toBe(true);
     expect(state.players.P2.heroHp).toBe(26);
+    expect(state.effectNotices).toEqual([]);
   });
 });

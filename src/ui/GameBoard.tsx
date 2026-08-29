@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { chooseAiAction, type AiDifficulty } from "../game/ai/aiPolicy";
 import { getActingPlayerId } from "../game/ai/legalActionEngine";
 import { cardDefinitions, getCardDefinition, isCardImplemented } from "../game/cards/cardRegistry";
+import { getCardKeywordText } from "../game/cards/keywordText";
 import type { CardInstance, PlayerId } from "../game/cards/cardTypes";
 import { getLegalAttackTargets } from "../game/engine/combatEngine";
 import { refreshHandCosts } from "../game/engine/costEngine";
@@ -9,7 +10,23 @@ import { applyAction, type GameAction } from "../game/engine/gameEngine";
 import type { GameState } from "../game/state/GameState";
 import { CardView } from "./CardView";
 
-const AI_ACTION_DELAY_MS = 1_200;
+const AI_ACTION_DELAY_MS = 2_000;
+const ACTION_ANIMATION_MS = 900;
+
+type ActionAnimation = {
+  key: number;
+  type: "PLAY" | "ATTACK";
+  playerId: PlayerId;
+  label: string;
+  from: { x: number; y: number };
+  to: { x: number; y: number };
+};
+
+type ActionAnimationLabel = Omit<ActionAnimation, "key" | "from" | "to">;
+
+function opponentOf(playerId: PlayerId): PlayerId {
+  return playerId === "P1" ? "P2" : "P1";
+}
 
 export function formatLogMessage(message: string): string {
   return cardDefinitions.reduce((formatted, definition) => formatted.replaceAll(definition.id, definition.name), message);
@@ -19,22 +36,51 @@ export function describeAiAction(state: GameState, action: GameAction): string {
   if (action.type === "PLAY_CARD" || action.type === "PLAY_ALTERNATE") {
     const card = state.players[action.playerId].hand.find((candidate) => candidate.instanceId === action.instanceId);
     const name = card ? getCardDefinition(card.definitionId).name : "未知卡牌";
-    if (action.type === "PLAY_ALTERNATE") return `AI 使用「${name}」的轉費效果`;
+    if (action.type === "PLAY_ALTERNATE") return `${action.playerId} AI 使用「${name}」的轉費效果`;
     const type = card ? getCardDefinition(card.definitionId).cardType : undefined;
-    return type === "SPELL" ? `AI 施放法術「${name}」` : `AI 打出「${name}」`;
+    return type === "SPELL" ? `${action.playerId} AI 施放法術「${name}」` : `${action.playerId} AI 打出「${name}」`;
   }
   if (action.type === "ACTIVATE_FIELD") {
     const card = state.players[action.playerId].fields.find((candidate) => candidate.instanceId === action.instanceId);
-    return `AI 發動「${card ? getCardDefinition(card.definitionId).name : "立場"}」`;
+    return `${action.playerId} AI 發動「${card ? getCardDefinition(card.definitionId).name : "立場"}」`;
   }
-  if (action.type === "ATTACK") return "AI 發動攻擊";
-  if (action.type === "END_TURN") return "AI 結束回合";
-  return "AI 正在處理效果";
+  if (action.type === "ATTACK") return `${action.playerId} AI 發動攻擊`;
+  if (action.type === "END_TURN") return `${action.playerId} AI 結束回合`;
+  return `${action.playerId} AI 正在處理效果`;
 }
 
-interface Props { initialState: GameState; onRestart: () => void; aiPlayerId?: PlayerId; aiDifficulty?: AiDifficulty }
+function describeActionAnimation(state: GameState, action: GameAction): ActionAnimationLabel | undefined {
+  if (action.type === "PLAY_CARD" || action.type === "PLAY_ALTERNATE") {
+    const card = state.players[action.playerId].hand.find((candidate) => candidate.instanceId === action.instanceId);
+    const name = card ? getCardDefinition(card.definitionId).name : "未知卡牌";
+    return { type: "PLAY", playerId: action.playerId, label: name };
+  }
+  if (action.type === "ATTACK") {
+    const attacker = state.players[action.playerId].minions.find((candidate) => candidate.instanceId === action.attackerId);
+    const attackerName = attacker ? getCardDefinition(attacker.definitionId).name : "手下";
+    let targetName: string;
+    if (action.target.type === "HERO") {
+      targetName = `${action.target.playerId} 玩家`;
+    } else {
+      const targetInstanceId = action.target.instanceId;
+      const target = (["P1", "P2"] as const).flatMap((playerId) => state.players[playerId].minions).find((candidate) => candidate.instanceId === targetInstanceId);
+      targetName = target ? getCardDefinition(target.definitionId).name : "目標";
+    }
+    return { type: "ATTACK", playerId: action.playerId, label: `${attackerName} → ${targetName}` };
+  }
+  return undefined;
+}
 
-export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = "RANDOM" }: Props) {
+interface Props {
+  initialState: GameState;
+  onRestart: () => void;
+  aiPlayerId?: PlayerId;
+  aiDifficulty?: AiDifficulty;
+  aiPlayers?: Partial<Record<PlayerId, AiDifficulty>>;
+  spectatorViewMode?: "FOLLOW_ACTION" | "FIXED";
+}
+
+export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = "RANDOM", aiPlayers, spectatorViewMode = "FOLLOW_ACTION" }: Props) {
   const [state, setState] = useState(() => {
     const readyState = structuredClone(initialState);
     refreshHandCosts(readyState);
@@ -47,11 +93,23 @@ export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = 
   const [inspectedCard, setInspectedCard] = useState<CardInstance>();
   const [viewedGraveyardPlayerId, setViewedGraveyardPlayerId] = useState<PlayerId>();
   const [privacyGate, setPrivacyGate] = useState(false);
+  const [aiPaused, setAiPaused] = useState(false);
+  const [fixedSpectatorPlayerId, setFixedSpectatorPlayerId] = useState<PlayerId>("P1");
+  const [draggedHandCardId, setDraggedHandCardId] = useState<string>();
+  const [actionAnimation, setActionAnimation] = useState<ActionAnimation>();
   const aiSeed = useRef((initialState.rngSeed ^ 0xa17a17) >>> 0);
   const aiStepCount = useRef(0);
   const actingPlayerId = getActingPlayerId(state);
-  const aiActing = Boolean(aiPlayerId && actingPlayerId === aiPlayerId);
-  const perspectivePlayerId: PlayerId = aiPlayerId ? (aiPlayerId === "P1" ? "P2" : "P1") : state.activePlayerId;
+  const aiDifficulties: Partial<Record<PlayerId, AiDifficulty>> = aiPlayers ?? (aiPlayerId ? { [aiPlayerId]: aiDifficulty } : {});
+  const actingAiDifficulty = actingPlayerId ? aiDifficulties[actingPlayerId] : undefined;
+  const aiActing = Boolean(actingPlayerId && actingAiDifficulty);
+  const aiVsAi = Boolean(aiDifficulties.P1 && aiDifficulties.P2);
+  const fixedSpectatorView = aiVsAi && spectatorViewMode === "FIXED";
+  const perspectivePlayerId: PlayerId = aiVsAi
+    ? fixedSpectatorView ? fixedSpectatorPlayerId : (actingPlayerId ?? state.activePlayerId)
+    : aiPlayerId
+      ? (aiPlayerId === "P1" ? "P2" : "P1")
+      : state.activePlayerId;
   const active = state.players[perspectivePlayerId];
   const opponentId: PlayerId = perspectivePlayerId === "P1" ? "P2" : "P1";
   const opponent = state.players[opponentId];
@@ -67,14 +125,65 @@ export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = 
   };
   const legalTargets = useMemo(() => attackerId ? getLegalAttackTargets(state, attackerId) : [], [state, attackerId]);
 
+  function centerOfElement(element: Element | null): { x: number; y: number } | undefined {
+    if (!element) return undefined;
+    const rect = element.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  }
+
+  function centerOfSelector(selector: string): { x: number; y: number } | undefined {
+    return centerOfElement(document.querySelector(selector));
+  }
+
+  function playerSideSelector(playerId: PlayerId): ".active-side" | ".opponent-side" {
+    return playerId === perspectivePlayerId ? ".active-side" : ".opponent-side";
+  }
+
+  function fallbackCenter(playerId: PlayerId): { x: number; y: number } {
+    return centerOfSelector(playerSideSelector(playerId)) ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+  }
+
+  function actionEndpoints(action: GameAction): { from: { x: number; y: number }; to: { x: number; y: number } } | undefined {
+    if (action.type === "PLAY_CARD" || action.type === "PLAY_ALTERNATE") {
+      const card = state.players[action.playerId].hand.find((candidate) => candidate.instanceId === action.instanceId);
+      const definition = card ? getCardDefinition(card.definitionId) : undefined;
+      const side = playerSideSelector(action.playerId);
+      const zoneSelector = definition?.cardType === "FIELD" ? `${side} .field-zone` : definition?.cardType === "MINION" ? `${side} .minion-zone` : side;
+      return {
+        from: centerOfSelector(`[data-instance-id="${action.instanceId}"]`) ?? fallbackCenter(action.playerId),
+        to: centerOfSelector(zoneSelector) ?? fallbackCenter(action.playerId),
+      };
+    }
+    if (action.type === "ATTACK") {
+      const from = centerOfSelector(`[data-instance-id="${action.attackerId}"]`) ?? fallbackCenter(action.playerId);
+      if (action.target.type === "HERO") {
+        return { from, to: centerOfSelector(`${playerSideSelector(action.target.playerId)} .player-panel`) ?? fallbackCenter(action.target.playerId) };
+      }
+      return { from, to: centerOfSelector(`[data-instance-id="${action.target.instanceId}"]`) ?? fallbackCenter(opponentOf(action.playerId)) };
+    }
+    return undefined;
+  }
+
+  function showActionAnimation(action: GameAction) {
+    const label = describeActionAnimation(state, action);
+    const endpoints = actionEndpoints(action);
+    if (label && endpoints) setActionAnimation({ ...label, ...endpoints, key: Date.now() });
+  }
+
   useEffect(() => {
-    if (!aiPlayerId || !aiActing || state.phase === "GAME_OVER") return;
+    if (!actionAnimation) return;
+    const timer = window.setTimeout(() => setActionAnimation(undefined), ACTION_ANIMATION_MS);
+    return () => window.clearTimeout(timer);
+  }, [actionAnimation]);
+
+  useEffect(() => {
+    if (aiPaused || !actingPlayerId || !actingAiDifficulty || !aiActing || state.phase === "GAME_OVER") return;
     const timer = window.setTimeout(() => {
       if (aiStepCount.current >= 5000) {
         setMessage("AI_ERROR：AI 對局超過安全行動上限，已停止自動操作");
         return;
       }
-      const decision = chooseAiAction(state, aiPlayerId, aiSeed.current, aiDifficulty);
+      const decision = chooseAiAction(state, actingPlayerId, aiSeed.current, actingAiDifficulty);
       aiSeed.current = decision.seed;
       if (!decision.action) {
         setMessage("AI_ERROR：AI 目前沒有合法行動");
@@ -87,13 +196,14 @@ export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = 
       }
       aiStepCount.current += 1;
       setAiAnnouncement(describeAiAction(state, decision.action));
+      showActionAnimation(decision.action);
       setSelected([]);
       setAttackerId(undefined);
       setMessage("");
       setState(result.state);
     }, AI_ACTION_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [aiActing, aiDifficulty, aiPlayerId, state]);
+  }, [actingAiDifficulty, actingPlayerId, aiActing, aiPaused, state]);
 
   function canPlay(card: CardInstance): boolean {
     if (aiActing || state.activePlayerId !== active.id || state.phase !== "MAIN" || state.pendingChoice || card.currentCost === null || card.currentCost > active.mana) return false;
@@ -126,6 +236,18 @@ export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = 
     return !aiActing && !state.pendingChoice && getLegalAttackTargets(state, card.instanceId).length > 0;
   }
 
+  function playDraggedHandCard() {
+    if (!draggedHandCardId) return;
+    const card = active.hand.find((candidate) => candidate.instanceId === draggedHandCardId);
+    setDraggedHandCardId(undefined);
+    if (!card) return;
+    if (canPlay(card)) {
+      dispatch({ type: "PLAY_CARD", playerId: active.id, instanceId: card.instanceId });
+      return;
+    }
+    if (canUseAlternate(card)) dispatch({ type: "PLAY_ALTERNATE", playerId: active.id, instanceId: card.instanceId });
+  }
+
   function dispatch(action: GameAction, gateAfter = false) {
     const result = applyAction(state, action);
     const activePlayerChanged = result.state.activePlayerId !== state.activePlayerId;
@@ -133,15 +255,23 @@ export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = 
     setMessage(result.error ? `${result.error.code}：${result.error.message}` : "");
     setAiAnnouncement("");
     if (!result.error) {
+      showActionAnimation(action);
       setSelected([]);
       setAttackerId(undefined);
-      if (!aiPlayerId && (gateAfter || activePlayerChanged)) setPrivacyGate(true);
+      if (Object.keys(aiDifficulties).length === 0 && (gateAfter || activePlayerChanged)) setPrivacyGate(true);
     }
   }
 
   const mulliganPlayer: PlayerId = !state.players.P1.mulliganDone ? "P1" : "P2";
+  const toggleFixedSpectator = () => setFixedSpectatorPlayerId((playerId) => playerId === "P1" ? "P2" : "P1");
   if (state.phase === "MULLIGAN" && aiActing) {
-    return <main className="privacy"><h1>AI 正在選擇起始手牌</h1><p>{aiDifficulty === "RANDOM" ? "簡單" : aiDifficulty === "HEURISTIC" ? "普通" : "困難"} AI · {aiPlayerId}</p></main>;
+    return <main className="privacy">
+      <h1>{aiPaused ? "AI 已暫停" : "AI 正在選擇起始手牌"}</h1>
+      <p>{actingAiDifficulty === "RANDOM" ? "簡單" : actingAiDifficulty === "HEURISTIC" ? "普通" : "困難"} AI · {actingPlayerId}</p>
+      {fixedSpectatorView && <p>目前固定視角：{fixedSpectatorPlayerId}</p>}
+      {fixedSpectatorView && <button className="quiet" onClick={toggleFixedSpectator}>切換到{fixedSpectatorPlayerId === "P1" ? "P2" : "P1"}視角</button>}
+      <button onClick={() => setAiPaused((paused) => !paused)}>{aiPaused ? "開始AI" : "暫停AI"}</button>
+    </main>;
   }
   if (privacyGate) {
     return <main className="privacy"><h1>請交給 {state.phase === "MULLIGAN" ? mulliganPlayer : state.activePlayerId}</h1><button onClick={() => setPrivacyGate(false)}>已交接，顯示畫面</button></main>;
@@ -171,13 +301,27 @@ export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = 
   const effectChoice = !aiActing && state.pendingChoice?.type === "EFFECT_CARDS" ? state.pendingChoice : undefined;
   const optionChoice = !aiActing && state.pendingChoice?.type === "EFFECT_OPTION" ? state.pendingChoice : undefined;
   const effectSummonConfirm = !aiActing && state.pendingChoice?.type === "EFFECT_SUMMON_CONFIRM" ? state.pendingChoice : undefined;
+  const actionLineStyle: CSSProperties | undefined = actionAnimation ? {
+    left: actionAnimation.from.x,
+    top: actionAnimation.from.y,
+    width: Math.hypot(actionAnimation.to.x - actionAnimation.from.x, actionAnimation.to.y - actionAnimation.from.y),
+    transform: `rotate(${Math.atan2(actionAnimation.to.y - actionAnimation.from.y, actionAnimation.to.x - actionAnimation.from.x)}rad)`,
+  } : undefined;
+  const actionLabelStyle: CSSProperties | undefined = actionAnimation ? {
+    left: (actionAnimation.from.x + actionAnimation.to.x) / 2,
+    top: (actionAnimation.from.y + actionAnimation.to.y) / 2,
+  } : undefined;
 
   return (
     <main className="game-board">
       <header className="game-header">
         <div><p className="eyebrow">TURN {state.turnNumber} · {state.phase}</p><h1>戰記 <span>規則驗證臺</span></h1></div>
-        <div className="actions"><button className="quiet" onClick={onRestart}>重新開始</button>{aiActing && <span className="ai-thinking">AI 思考中…</span>}{!aiActing && state.activePlayerId === active.id && state.phase === "MAIN" && !state.pendingChoice && <button onClick={() => dispatch({ type: "END_TURN", playerId: active.id })}>結束回合</button>}</div>
+        <div className="actions"><button className="quiet" onClick={onRestart}>重新開始</button>{fixedSpectatorView && <button className="quiet" onClick={toggleFixedSpectator}>切換到{fixedSpectatorPlayerId === "P1" ? "P2" : "P1"}視角</button>}{Object.keys(aiDifficulties).length > 0 && <button className="quiet" onClick={() => setAiPaused((paused) => !paused)}>{aiPaused ? "開始AI" : "暫停AI"}</button>}{fixedSpectatorView && <span className="ai-thinking">固定視角：{fixedSpectatorPlayerId}</span>}{aiActing && <span className="ai-thinking">{aiPaused ? "AI 已暫停" : "AI 思考中…"}</span>}{!aiActing && state.activePlayerId === active.id && state.phase === "MAIN" && !state.pendingChoice && <button onClick={() => dispatch({ type: "END_TURN", playerId: active.id })}>結束回合</button>}</div>
       </header>
+      {actionAnimation && <div className={`action-animation ${actionAnimation.type === "PLAY" ? "play-animation" : "attack-animation"}`} role="status" aria-live="polite">
+        <span className="action-trajectory" style={actionLineStyle} aria-hidden="true"><i /></span>
+        <span className="action-card-label" style={actionLabelStyle}>{actionAnimation.playerId} · {actionAnimation.label}</span>
+      </div>}
       {aiAnnouncement && <p className="ai-action-notice" role="status" aria-live="polite">{aiAnnouncement}</p>}
       {state.phase === "GAME_OVER" && <section className="result"><strong>{state.winner} 獲勝</strong><span>{state.loseReason}</span></section>}
       {message && <p className="error">{message}</p>}
@@ -250,7 +394,19 @@ export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = 
           />
         </div>
         <div className="board-divider"><span>拖曳可行動手下至敵方手下或玩家區域以攻擊</span></div>
-        <div className="board-side active-side">
+        <div
+          className={`board-side active-side ${draggedHandCardId ? "hand-play-drop-zone" : ""}`}
+          onDragOver={(event) => {
+            if (!draggedHandCardId) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "move";
+          }}
+          onDrop={(event) => {
+            if (!draggedHandCardId) return;
+            event.preventDefault();
+            playDraggedHandCard();
+          }}
+        >
           <Zone
             compact
             title="我方手下區 · 7 格"
@@ -273,15 +429,18 @@ export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = 
       </section>
 
       <section className="hand-panel">
-        <h2>我方手牌 <small>{active.hand.length} 張</small><span>發光邊框表示本回合可出牌</span></h2>
+        <h2>我方手牌 <small>{active.hand.length} 張</small><span>拖曳發光手牌到我方場地即可出牌；點擊卡牌只會查看詳細</span></h2>
         <section className="hand">{active.hand.map((card) => <CardView
           key={card.instanceId}
           card={card}
           handSummary
           selected={selected.includes(card.instanceId)}
           playable={canPlay(card) || canUseAlternate(card)}
+          draggable={!handLimit && (canPlay(card) || canUseAlternate(card))}
           onInspect={() => setInspectedCard(card)}
-          onClick={() => handLimit ? setSelected((items) => items.includes(card.instanceId) ? items.filter((id) => id !== card.instanceId) : [...items, card.instanceId]) : !aiActing && state.activePlayerId === active.id && !state.pendingChoice && dispatch({ type: "PLAY_CARD", playerId: active.id, instanceId: card.instanceId })}
+          onDragStart={() => setDraggedHandCardId(card.instanceId)}
+          onDragEnd={() => setDraggedHandCardId(undefined)}
+          onClick={() => handLimit ? setSelected((items) => items.includes(card.instanceId) ? items.filter((id) => id !== card.instanceId) : [...items, card.instanceId]) : setInspectedCard(card)}
         />)}</section>
       </section>
       {!state.pendingChoice && state.phase === "MAIN" && active.hand.some(canUseAlternate) && <section className="actions">
@@ -374,6 +533,7 @@ function GraveyardModal({ playerId, cards, onInspect, onClose }: { playerId: Pla
 
 function CardDetailModal({ card, onClose }: { card: CardInstance; onClose: () => void }) {
   const definition = getCardDefinition(card.definitionId);
+  const keywordText = getCardKeywordText(card);
   return <div className="card-modal-backdrop" role="presentation" onClick={onClose}>
     <section className="card-modal" role="dialog" aria-modal="true" aria-label={`${definition.name} 卡牌資訊`} onClick={(event) => event.stopPropagation()}>
       <button className="modal-close" onClick={onClose} aria-label="關閉卡牌資訊">×</button>
@@ -383,9 +543,16 @@ function CardDetailModal({ card, onClose }: { card: CardInstance; onClose: () =>
         <span>費用 <strong>{card.currentCost ?? definition.originalCost ?? "?"}</strong></span>
         {definition.cardType === "MINION" && <><span>攻擊 <strong>{card.currentAttack ?? "?"}</strong></span><span>生命 <strong>{card.currentHealth ?? "?"}</strong></span></>}
       </div>
-      <p className="card-modal-keywords"><strong>關鍵字：</strong>{card.keywords.join("、") || "無"}</p>
       {card.counters.plagueMarks !== undefined && <p className="modal-plague-counter">瘟疫標記 <strong>{card.counters.plagueMarks}</strong> / {definition.transformAura?.threshold ?? 6}</p>}
-      <p className="card-modal-effect">{definition.effectsText || "無卡牌效果"}</p>
+      <div className="card-modal-effect">
+        <strong>效果：</strong>
+        <div className="effect-keyword-list">
+          {card.sealed && <span className="effect-keyword sealed">封印中</span>}
+          {card.keywords.map((keyword, index) => <span className={`effect-keyword keyword-${keyword.toLowerCase().replaceAll("_", "-")}`} key={`${keyword}-${index}`}>{keywordText[index].label}</span>)}
+        </div>
+        {definition.effectsText && <p className="printed-effect">{definition.effectsText}</p>}
+        {keywordText.length === 0 && !definition.effectsText && <p>無卡牌效果</p>}
+      </div>
     </section>
   </div>;
 }

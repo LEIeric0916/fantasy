@@ -80,7 +80,7 @@ export type EffectDefinition =
   | { type: "REPEAT_DAMAGE_ENEMY_MINION_OR_HERO"; count: number; value: number; heroMaxHits: number }
   | { type: "DESTROY_TARGET_ENEMY_MINION" }
   | { type: "DESTROY_UP_TO_ENEMY_MINIONS"; maxCount: number }
-  | { type: "DESTROY_DISTINCT_ENEMY_MINIONS"; count: number }
+  | { type: "DESTROY_DISTINCT_ENEMY_MINIONS"; count: number; minCount?: number }
   | { type: "DESTROY_ALL_ENEMY_MINIONS" }
   | { type: "VANISH_ENEMY_MINIONS"; count: number }
   | { type: "TRANSFORM_ENEMY_MINIONS"; count: number; definitionId: string; maxHealth?: number }
@@ -120,8 +120,9 @@ export type EffectDefinition =
   | { type: "CHOOSE_ONE"; prompt: string; options: { id: string; label: string; effects: EffectDefinition[] }[] }
   | { type: "HEROIC_GLORY"; heroDefinitionIds: string[]; historyKey: string }
   | { type: "CHOOSE_UNACQUIRED_GENERATED_TO_HAND"; definitionIds: string[]; historyKey: string }
-  | { type: "RECORD_CHOICE_ADD_GENERATED_TO_HAND"; definitionId: string; historyKey: string }
+  | { type: "RECORD_CHOICE_ADD_GENERATED_TO_HAND"; definitionId: string; historyKey: string; fixedCost?: number }
   | { type: "MECHANICAL_TECHNIQUE"; cost: number; effects: EffectDefinition[] }
+  | { type: "NECROMANCY"; cost: number; effects: EffectDefinition[]; silentIfInsufficient?: boolean }
   | { type: "RETURN_HAND_TO_DECK_MACHINE_DISCOUNT"; maxCount: number; reductionPerCard: number }
   | { type: "SET_HAND_CARD_COST_ZERO"; count: number; cardType?: CardType; subtype?: string }
   | { type: "NECRO_REVIVE_SELF"; value: number }

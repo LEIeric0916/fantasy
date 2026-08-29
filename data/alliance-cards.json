@@ -20,7 +20,7 @@
       "health": 2,
       "deckCount": 3,
       "keywords": ["TAUNT", "BATTLECRY"],
-      "effectsText": "戰吼：新增1張「絕傑榮耀」到手牌；抽1張牌；檢索1張「皇家兵團」到手牌。",
+      "effectsText": "嘲諷。戰吼：新增1張「絕傑榮耀」到手牌；檢索1張「皇家兵團」到手牌。",
       "generatedOnly": false,
       "notes": "名稱已由舊寫法「榮耀絕傑」統一為「絕傑榮耀」。"
     },
@@ -124,10 +124,10 @@
       "attack": 3,
       "health": 3,
       "deckCount": 3,
-      "keywords": ["WARD", "BATTLECRY"],
-      "effectsText": "戰吼：召喚1名「皇家親衛隊」。聯合3：恢復2水晶。",
+      "keywords": ["WARD", "BATTLECRY", "AURA"],
+      "effectsText": "光紋。戰吼：召喚1名「皇家親衛隊」。光環：回合結束時，給予對手1手下與對手玩家2點傷害。",
       "generatedOnly": false,
-      "notes": "恢復2水晶不增加最大值。"
+      "notes": "已移除聯合3恢復2水晶。"
     },
     {
       "id": "ALLIANCE_009",
@@ -140,7 +140,7 @@
       "health": 12,
       "deckCount": 2,
       "keywords": ["DISCIPLINE", "HEADHUNT", "SANCTUARY", "RECYCLE", "AURA", "CAN_ONLY_ATTACK_HERO", "CANNOT_COUNTERATTACK"],
-      "effectsText": "減費5：第5回合以上且聯合3時。取首：攻擊時無視嘲諷。只能攻擊玩家，不能反擊。光環：我方場上有其他人類・軍隊手下時，獲得威懾。回收。",
+      "effectsText": "減費5：第5回合以上且我方場上手下數量至少3名時。取首：攻擊時無視嘲諷。只能攻擊玩家，不能反擊。光環：我方場上有其他人類・軍隊手下時，獲得威懾。回收。",
       "generatedOnly": false,
       "notes": "最後修正確認反擊為規則反擊；此卡被手下攻擊時不會以攻擊力造成規則反擊傷害。"
     },
@@ -150,7 +150,7 @@
       "faction": "ALLIANCE",
       "cardType": "MINION",
       "subtype": ["HUMAN", "ARMY"],
-      "originalCost": 7,
+      "originalCost": 9,
       "attack": 5,
       "health": 5,
       "deckCount": 3,
@@ -185,9 +185,9 @@
       "health": 8,
       "deckCount": 3,
       "keywords": ["CHARGE", "TAUNT", "BATTLECRY", "DEATHRATTLE"],
-      "effectsText": "戰吼：消滅對手3手下。協作15：給予對手玩家4點傷害。死亡之聲：召喚2名「皇家聖騎兵」。",
+      "effectsText": "戰吼：消滅對手最多3手下。協作15：給予對手玩家4點傷害。死亡之聲：召喚2名「皇家聖騎兵」。",
       "generatedOnly": false,
-      "notes": "最後修正確認：消滅對手3手下，須指定3個不同CardInstance；協作15為句號式獨立效果。"
+      "notes": "最後修正確認：消滅對手最多3手下，可指定0～3個不同CardInstance；協作15為句號式獨立效果。"
     }
   ]
 }

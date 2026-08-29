@@ -104,8 +104,8 @@
       "attack": 0,
       "health": 2,
       "deckCount": 0,
-      "keywords": ["DISCIPLINE"],
-      "effectsText": "回合結束時，回收充能+1，我方場上所有機械・軍隊手下獲得聖盾術。",
+      "keywords": ["DISCIPLINE", "AURA"],
+      "effectsText": "光環：回合結束時，回收充能+1，我方場上所有機械・軍隊手下獲得聖盾術。",
       "generatedOnly": true,
       "notes": "最後修正確認費用為2。機械衍生牌不進棄堆。"
     },
@@ -391,9 +391,9 @@
       "health": null,
       "deckCount": 0,
       "keywords": ["WARD", "SANCTUARY", "ENTER_FIELD", "GROWTH"],
-      "effectsText": "入場曲：若我方場上有其他同名卡，使舊同名卡消失並抽1張。生長：召喚1名衍生「不朽者」。死靈術20：消耗20死靈數，將此卡轉變為「末日之書」。",
+      "effectsText": "入場曲：若我方場上有其他同名卡，使舊同名卡消失並抽1張。生長：召喚1名衍生「不朽者」；死靈術20：消耗20死靈數，將此卡轉變為「末日之書」。",
       "generatedOnly": true,
-      "notes": "最後修正確認費用為2。轉為末日後仍可再次生成新的同種書。"
+      "notes": "費用為2。死靈術20屬於生長效果，只在我方生長階段檢查並自動發動；轉為末日後仍可再次生成新的同種書。"
     },
     {
       "id": "TOKEN_UNDEAD_BOOK_PLAGUE",
@@ -450,8 +450,8 @@
       "attack": null,
       "health": null,
       "deckCount": 0,
-      "keywords": ["INVINCIBLE"],
-      "effectsText": "若我方場上有4張「末日之書」，我方立即勝利。",
+      "keywords": ["INVINCIBLE", "ENTER_FIELD"],
+      "effectsText": "入場曲：召喚1名「末日騎士」。若我方場上有4張「末日之書」，我方立即勝利。",
       "generatedOnly": true,
       "notes": "通常由黑暗之書轉變而來；最後修正確認費用為2。"
     },
@@ -467,7 +467,7 @@
       "health": null,
       "deckCount": 0,
       "keywords": [],
-      "effectsText": "二選一發動：①消滅對手1手下；②抽2張牌。再從「革命絕傑 奧斯但丁」「皇家騎士 絕傑狄翁」「共和絕傑 瓦倫泰」三選一加入手牌；若已發動過，則拿另外一張。協作20：使此卡消耗為0。",
+      "effectsText": "二選一發動：①消滅對手1手下；②抽2張牌。再從「革命絕傑 奧斯但丁」「皇家騎士 絕傑狄翁」「共和絕傑 瓦倫泰」三選一加入手牌；若已發動過，則拿另外一張。協作20：因此效果加入手牌的絕傑消耗為0。",
       "generatedOnly": true,
       "notes": "名稱已統一為絕傑榮耀。最後修正確認為玩家整場對局共享記錄；已取得者從後續候選排除，三種都取得後再次發動將無合法絕杰可選。"
     },
@@ -497,7 +497,7 @@
       "health": 3,
       "deckCount": 0,
       "keywords": ["CHARGE", "LETHAL", "DIVINE_SHIELD"],
-      "effectsText": "攻擊時給予對手所有手下7點傷害；協作15：恢復6點水晶。",
+      "effectsText": "衝鋒，致命，聖盾術。攻擊時給予對手所有手下7點傷害；協作15：恢復3點水晶。",
       "generatedOnly": true,
       "notes": "聯盟衍生牌不進棄堆。"
     },
@@ -583,8 +583,8 @@
       "cardType": "MINION",
       "subtype": ["HUMAN", "ARMY"],
       "originalCost": 4,
-      "attack": 4,
-      "health": 4,
+      "attack": 3,
+      "health": 5,
       "deckCount": 0,
       "keywords": ["TAUNT", "SANCTUARY", "DISCIPLINE", "RUSH", "AURA", "CANNOT_ATTACK_HERO"],
       "effectsText": "不能攻擊玩家。光環：我方其他手下因能力受到的傷害為0。",

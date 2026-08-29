@@ -310,10 +310,15 @@ describe("F. 黑暗之書與末日之書", () => {
   it("F03｜不朽典錄", () => {
     const state = mainState();
     state.players.P1.resources.necromancy = 23;
-    const book = putCard(state, "P1", "TOKEN_UNDEAD_BOOK_IMMORTAL", "FIELD", "activate");
-    const result = applyAction(state, { type: "ACTIVATE_FIELD", playerId: "P1", instanceId: book.instanceId });
-    expect(result.state.players.P1.resources.necromancy).toBe(3);
-    expect(result.state.players.P1.fields[0].definitionId).toBe("TOKEN_UNDEAD_DOOMSDAY_BOOK");
+    const book = putCard(state, "P1", "TOKEN_UNDEAD_BOOK_IMMORTAL", "FIELD", "growth-necromancy");
+    const rejected = applyAction(state, { type: "ACTIVATE_FIELD", playerId: "P1", instanceId: book.instanceId });
+    expect(rejected.error?.message).toContain("沒有可主動發動的效果");
+    expect(rejected.state.players.P1.resources.necromancy).toBe(23);
+
+    state.phase = "END";
+    beginTurn(state);
+    expect(state.players.P1.resources.necromancy).toBe(3);
+    expect(state.players.P1.fields[0].definitionId).toBe("TOKEN_UNDEAD_DOOMSDAY_BOOK");
   });
   it("F04｜瘟疫典錄標記", () => {
     let state = mainState();

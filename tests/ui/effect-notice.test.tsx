@@ -21,7 +21,7 @@ describe("效果未發動介面提示", () => {
     act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
     expect(container.querySelector(".log")?.textContent).toContain("炎龍召喚");
     expect(container.querySelector(".log")?.textContent).not.toContain("DRAGON_013");
-    expect(describeAiAction(state, { type: "PLAY_CARD", playerId: "P2", instanceId: spell.instanceId })).toBe("AI 施放法術「炎龍召喚」");
+    expect(describeAiAction(state, { type: "PLAY_CARD", playerId: "P2", instanceId: spell.instanceId })).toBe("P2 AI 施放法術「炎龍召喚」");
     act(() => root.unmount());
     container.remove();
   });
@@ -159,6 +159,49 @@ describe("效果未發動介面提示", () => {
     act(() => defenderElement.dispatchEvent(drop));
     expect(container.querySelector(`[data-instance-id="${defender.instanceId}"]`)).toBeNull();
     expect(container.textContent).toContain("交戰");
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  it("手牌點擊只開啟詳細資訊，不會直接打出", () => {
+    const state = mainState();
+    state.players.P1.hand = [];
+    const playable = putCard(state, "P1", "DRAGON_001", "HAND", "click-inspect-only");
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
+    const cardSurface = container.querySelector<HTMLElement>(`[data-instance-id="${playable.instanceId}"] .card-surface`)!;
+    act(() => cardSurface.click());
+    expect(container.querySelector('[role="dialog"]')?.textContent).toContain("聖印白龍");
+    expect(container.querySelector(`.hand-panel [data-instance-id="${playable.instanceId}"]`)).not.toBeNull();
+    expect(container.querySelector(`.active-side .minion-zone [data-instance-id="${playable.instanceId}"]`)).toBeNull();
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  it("拖曳可出牌手牌時我方場地發光，放開後才打出", () => {
+    const state = mainState();
+    state.players.P1.hand = [];
+    const playable = putCard(state, "P1", "DRAGON_001", "HAND", "drag-play-card");
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
+    const handCard = container.querySelector<HTMLElement>(`.hand-panel [data-instance-id="${playable.instanceId}"]`)!;
+    expect(handCard.classList.contains("playable")).toBe(true);
+    expect(handCard.getAttribute("draggable")).toBe("true");
+    const dataTransfer = { effectAllowed: "none", dropEffect: "none", setData: () => undefined };
+    const dragStart = new Event("dragstart", { bubbles: true });
+    Object.defineProperty(dragStart, "dataTransfer", { value: dataTransfer });
+    act(() => handCard.dispatchEvent(dragStart));
+    const activeSide = container.querySelector<HTMLElement>(".active-side")!;
+    expect(activeSide.classList.contains("hand-play-drop-zone")).toBe(true);
+    const drop = new Event("drop", { bubbles: true });
+    Object.defineProperty(drop, "dataTransfer", { value: dataTransfer });
+    act(() => activeSide.dispatchEvent(drop));
+    expect(container.querySelector(`.hand-panel [data-instance-id="${playable.instanceId}"]`)).toBeNull();
+    expect(container.querySelector(`.active-side .minion-zone [data-instance-id="${playable.instanceId}"]`)).not.toBeNull();
     act(() => root.unmount());
     container.remove();
   });
@@ -301,7 +344,7 @@ describe("效果未發動介面提示", () => {
     container.remove();
   });
 
-  it("不朽典錄只在死靈術足夠時於底部工具列顯示發動按鈕", () => {
+  it("不朽典錄的死靈術屬於生長效果，主要階段不顯示發動按鈕", () => {
     const state = mainState();
     putCard(state, "P1", "TOKEN_UNDEAD_BOOK_IMMORTAL", "FIELD", "immortal-book-action");
     state.players.P1.resources.necromancy = 19;
@@ -317,7 +360,7 @@ describe("效果未發動介面提示", () => {
     const readyRoot = createRoot(container);
     act(() => readyRoot.render(<GameBoard initialState={state} onRestart={() => undefined} />));
     const action = [...container.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.includes("發動 黑暗之書 不朽典錄"));
-    expect(action?.closest(".utility-bar")).not.toBeNull();
+    expect(action).toBeUndefined();
     expect(container.querySelector(".board-actions")).toBeNull();
     act(() => readyRoot.unmount());
     container.remove();

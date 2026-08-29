@@ -44,8 +44,11 @@ function projectedHeroDamage(attacker: PlayerState, defender: PlayerState): numb
 
 function threatPenalty(player: PlayerState, opponent: PlayerState): number {
   const incoming = projectedHeroDamage(opponent, player);
+  const nextTurnDevelopment = Math.min(opponent.hand.length, Math.max(1, Math.floor((opponent.maxMana + 1) / 2)));
+  const boardDeficit = Math.max(0, opponent.minions.length - player.minions.length);
+  const futurePressure = nextTurnDevelopment * (opponent.maxMana >= 6 ? 2.1 : 1.1) + boardDeficit * 2.6;
   if (incoming >= player.heroHp) return 300 + (incoming - player.heroHp) * 12;
-  return incoming * (player.heroHp <= 15 ? 4 : 1.4);
+  return incoming * (player.heroHp <= 15 ? 4 : 1.4) + futurePressure;
 }
 
 function publicPlayerValue(player: PlayerState, opponent: PlayerState): number {

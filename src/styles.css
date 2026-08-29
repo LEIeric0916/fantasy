@@ -57,9 +57,18 @@ h2 { margin: 1.1rem 0 .5rem; font-size: .78rem; letter-spacing: .12em; text-tran
 .attack-drag-indicator { position: fixed; z-index: 35; left: 50%; top: 50%; display: flex; align-items: center; gap: .55rem; padding: .48rem .8rem; border: 2px solid #ff5148; border-radius: 999px; background: #3b0d0de8; color: #fff0ee; box-shadow: 0 0 18px #ff3b30aa; transform: translate(-50%, -50%); pointer-events: none; }
 .attack-drag-indicator span { color: #ff5a50; font-size: 2rem; line-height: .7; animation: attack-arrow .65s ease-in-out infinite alternate; }
 .attack-drag-indicator b { font-size: .78rem; letter-spacing: .08em; }
+.action-animation { position: fixed; z-index: 34; inset: 0; pointer-events: none; animation: action-layer-fade .9s ease-out both; }
+.action-trajectory { position: fixed; height: 0; transform-origin: 0 50%; }
+.action-trajectory::before { content: ""; position: absolute; left: 0; top: 50%; width: 100%; height: 4px; border-radius: 999px; background: linear-gradient(90deg, transparent, #ffbf69 22%, #fff1bf 72%, transparent); box-shadow: 0 0 12px #ffbf69, 0 0 28px #ff9f4366; transform: translateY(-50%) scaleX(0); transform-origin: 0 50%; animation: trajectory-draw .9s ease-out both; }
+.action-trajectory i { position: absolute; left: 0; top: 50%; width: 18px; height: 18px; border-top: 5px solid #fff1bf; border-right: 5px solid #fff1bf; filter: drop-shadow(0 0 10px #ffbf69); transform: translate(-50%, -50%) rotate(45deg); animation: trajectory-head .9s ease-out both; }
+.attack-animation .action-trajectory::before { background: linear-gradient(90deg, transparent, #ff5148 18%, #ffd0cc 72%, transparent); box-shadow: 0 0 12px #ff5148, 0 0 28px #ff514866; }
+.attack-animation .action-trajectory i { border-color: #ffd0cc; filter: drop-shadow(0 0 10px #ff5148); }
+.action-card-label { position: fixed; padding: .45rem .75rem; border: 1px solid #72c7ff; border-radius: 999px; background: #101923ee; color: #e9f8ff; font-size: .88rem; font-weight: 900; box-shadow: 0 0 18px #45bfff77; transform: translate(-50%, -50%); animation: action-label-pop .9s ease-out both; }
 .board-side { min-height: 0; display: grid; grid-template-rows: minmax(66px, .78fr) minmax(96px, 1.22fr); gap: .35rem .55rem; align-items: stretch; }
 .opponent-side { grid-template-columns: minmax(0, 1fr) minmax(176px, 14%); grid-template-areas: "field player" "minion player"; perspective: 1100px; }
 .active-side { grid-template-columns: minmax(0, 1fr) minmax(176px, 14%); grid-template-rows: minmax(96px, 1.22fr) minmax(66px, .78fr); grid-template-areas: "minion player" "field player"; perspective: 1100px; }
+.active-side.hand-play-drop-zone { position: relative; border-radius: 14px; outline: 2px solid #ffbf69; outline-offset: -2px; box-shadow: inset 0 0 28px #ff9f4366, 0 0 18px #ffbf6966; background: radial-gradient(circle at center, #ffbf691f, transparent 64%); }
+.active-side.hand-play-drop-zone::after { content: "放開以打出卡牌"; position: absolute; z-index: 12; left: 50%; top: 50%; padding: .55rem .9rem; border: 1px solid #ffbf69; border-radius: 999px; background: #17100be8; color: #ffe4bd; font-size: .82rem; font-weight: 900; letter-spacing: .08em; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 18px #ff9f4388; }
 .compact-zone { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; }
 .field-zone { grid-area: field; }
 .minion-zone { grid-area: minion; }
@@ -147,10 +156,17 @@ summary { cursor: pointer; font-weight: 700; }
 .card-modal-stats { display: flex; gap: .65rem; margin-bottom: 1rem; }
 .card-modal-stats span { min-width: 5.5rem; padding: .55rem .75rem; border: 1px solid #596873; background: #111418; }
 .card-modal-stats strong { display: block; color: #d7ff55; font-size: 1.55rem; }
-.card-modal-keywords { color: #bfc9d0; font-size: 1rem; }
 .modal-plague-counter { display: inline-flex; align-items: baseline; gap: .35rem; padding: .55rem .8rem; border: 1px solid #cf73ff; background: #35104b; color: #f0c8ff; font-size: 1.1rem; }
 .modal-plague-counter strong { font-size: 1.8rem; }
 .card-modal-effect { margin: 0; padding: 1rem; border-left: 4px solid #72c7ff; background: #10161b; color: #f2f6f8; font-size: clamp(1.15rem, 2.2vw, 1.45rem); line-height: 1.65; }
+.effect-keyword-list { display: flex; flex-wrap: wrap; gap: .45rem; margin: .55rem 0 .85rem; }
+.effect-keyword { display: inline-flex; align-items: center; min-height: 1.9rem; padding: .15rem .65rem; border: 1px solid #74828c; border-radius: 999px; background: #29333a; color: #f5f8fa; font-size: .92rem; font-weight: 800; line-height: 1.2; }
+.effect-keyword.keyword-rush, .effect-keyword.keyword-charge, .effect-keyword.keyword-lethal, .effect-keyword.keyword-windfury, .effect-keyword.keyword-on-kill, .effect-keyword.keyword-headhunt, .effect-keyword.keyword-can-only-attack-hero, .effect-keyword.keyword-cannot-attack-hero { border-color: #ff8b71; background: #54251c; color: #ffd6cc; }
+.effect-keyword.keyword-taunt, .effect-keyword.keyword-divine-shield, .effect-keyword.keyword-stealth, .effect-keyword.keyword-deterrence, .effect-keyword.keyword-ward, .effect-keyword.keyword-discipline, .effect-keyword.keyword-sanctuary, .effect-keyword.keyword-invincible, .effect-keyword.keyword-immune-effect-damage, .effect-keyword.keyword-cannot-counterattack { border-color: #66c8ff; background: #173c53; color: #d2f1ff; }
+.effect-keyword.keyword-battlecry, .effect-keyword.keyword-deathrattle, .effect-keyword.keyword-enter-field, .effect-keyword.keyword-last-words, .effect-keyword.keyword-aura, .effect-keyword.keyword-countdown, .effect-keyword.keyword-growth, .effect-keyword.keyword-on-revive, .effect-keyword.keyword-on-discard { border-color: #ffc74f; background: #533c0d; color: #ffeab5; }
+.effect-keyword.keyword-discover, .effect-keyword.keyword-effect-summon, .effect-keyword.keyword-alt-cost, .effect-keyword.keyword-recycle, .effect-keyword.keyword-necro-revive-4, .effect-keyword.keyword-necro-revive-5 { border-color: #75dda0; background: #173f2a; color: #d0ffe2; }
+.effect-keyword.sealed { border-color: #ff6684; background: #531725; color: #ffd0da; }
+.printed-effect { margin: 0; padding-top: .75rem; border-top: 1px solid #34434d; }
 .graveyard-modal { position: relative; width: min(620px, 94vw); max-height: 86vh; overflow: auto; padding: 1.25rem; border: 2px solid #8d9aa4; border-radius: 12px; background: linear-gradient(145deg, #26313a, #15191d); box-shadow: 0 18px 60px #000d; }
 .graveyard-modal h2 { margin: .15rem 0 .75rem; color: #fff; font-size: 1.5rem; letter-spacing: 0; text-transform: none; }
 .graveyard-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .4rem; }
@@ -177,6 +193,10 @@ summary { cursor: pointer; font-weight: 700; }
 .mulligan-screen .hand.open .card .effect { max-height: none; padding-right: 0; line-height: 1.5; }
 pre { overflow: auto; }
 @keyframes attack-arrow { from { transform: translateX(-3px); } to { transform: translateX(5px); } }
+@keyframes action-layer-fade { 0% { opacity: 0; } 12%, 78% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes trajectory-draw { 0% { opacity: 0; transform: translateY(-50%) scaleX(0); } 18% { opacity: 1; } 72% { opacity: 1; transform: translateY(-50%) scaleX(1); } 100% { opacity: 0; transform: translateY(-50%) scaleX(1); } }
+@keyframes trajectory-head { 0% { opacity: 0; left: 0; } 18% { opacity: 1; } 72% { opacity: 1; left: 100%; } 100% { opacity: 0; left: 100%; } }
+@keyframes action-label-pop { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.86); } 18%, 78% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(.96); } }
 @keyframes stat-change-float { 0% { opacity: 0; transform: translate(-50%, 8px) scale(.75); } 25% { opacity: 1; transform: translate(-50%, 0) scale(1.15); } 100% { opacity: 0; transform: translate(-50%, -22px) scale(1); } }
 @media (max-width: 900px) {
   .game-board { overflow: auto; height: auto; min-height: 100dvh; }

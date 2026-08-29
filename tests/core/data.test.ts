@@ -20,9 +20,9 @@ describe("卡牌資料", () => {
     expect(getMainDeckDefinitions("ALLIANCE").reduce((sum, card) => sum + card.deckCount, 0)).toBe(35);
   });
 
-  it("最後修正：皇家神騎士只消滅對手3手下", () => {
+  it("最後修正：皇家神騎士消滅對手最多3手下", () => {
     const definition = cardDefinitions.find((card) => card.id === "ALLIANCE_012")!;
-    expect(definition.effectsText).toContain("消滅對手3手下。協作15");
+    expect(definition.effectsText).toContain("消滅對手最多3手下。協作15");
   });
 
   it("CardInstance 與不可變 CardDefinition 分離", () => {

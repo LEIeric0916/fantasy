@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getCardDefinition } from "../game/cards/cardRegistry";
+import { getCardKeywordText } from "../game/cards/keywordText";
 import type { CardInstance } from "../game/cards/cardTypes";
 
 interface Props {
@@ -36,6 +37,7 @@ export function CardView({
   onDrop,
 }: Props) {
   const definition = getCardDefinition(card.definitionId);
+  const keywordText = getCardKeywordText(card);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const longPressTriggered = useRef(false);
   const previousStats = useRef({ attack: card.currentAttack, health: card.currentHealth });
@@ -131,7 +133,7 @@ export function CardView({
         <strong>{definition.name}</strong>
         {!handSummary && <small>{definition.subtype.join(" · ") || definition.cardType}</small>}
         {definition.cardType === "MINION" && !isBattleMinion && <span className="stats">{card.currentAttack ?? "?"} / {card.currentHealth ?? "?"}</span>}
-        {!handSummary && <small>{card.keywords.join(" · ") || "—"}</small>}
+        {!handSummary && <small>{keywordText.map((keyword) => keyword.label).join(" · ") || "—"}</small>}
         {!handSummary && card.counters.countdown !== undefined && <small className="countdown-counter">倒數 {card.counters.countdown}</small>}
         {!handSummary && <span className="effect">{definition.effectsText || "無卡牌效果"}</span>}
       </button>

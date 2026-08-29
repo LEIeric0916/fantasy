@@ -6,17 +6,18 @@ import { destroyMinion } from "../../src/game/engine/zoneEngine";
 import { mainState, putCard } from "../helpers";
 
 describe("絕杰榮耀與聯盟絕杰", () => {
-  it("絕杰榮耀在協作20時費用為0，並以玩家整場記錄排除已取得絕杰", () => {
+  it("絕杰榮耀在協作20時不使自身減費，而是讓加入手牌的絕杰費用為0", () => {
     let state = mainState();
     state.players.P1.hand = [];
     state.players.P1.summonedThisGame = 20;
     const first = putCard(state, "P1", "TOKEN_ALLIANCE_HEROIC_GLORY", "HAND", "first");
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: first.instanceId }).state;
-    expect(state.players.P1.mana).toBe(10);
+    expect(state.players.P1.mana).toBe(9);
     state = applyAction(state, { type: "SELECT_EFFECT_OPTION", playerId: "P1", optionId: "DRAW" }).state;
     expect(state.pendingChoice).toMatchObject({ type: "EFFECT_OPTION" });
     state = applyAction(state, { type: "SELECT_EFFECT_OPTION", playerId: "P1", optionId: "TOKEN_ALLIANCE_HERO_AUGUSTIN" }).state;
     expect(state.players.P1.choiceHistory.HEROIC_GLORY_ACQUIRED).toEqual(["TOKEN_ALLIANCE_HERO_AUGUSTIN"]);
+    expect(state.players.P1.hand.find((card) => card.definitionId === "TOKEN_ALLIANCE_HERO_AUGUSTIN")?.currentCost).toBe(0);
 
     const second = putCard(state, "P1", "TOKEN_ALLIANCE_HEROIC_GLORY", "HAND", "second");
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: second.instanceId }).state;
@@ -43,6 +44,20 @@ describe("絕杰榮耀與聯盟絕杰", () => {
     expect(dealDamageToMinion(state, currentAlly, 12, "test", "EFFECT")).toBe(4);
     expect(dealDamageToHero(state, "P1", 8, "shield")).toBe(0);
     expect(dealDamageToHero(state, "P1", 2, "after")).toBe(2);
+  });
+
+  it("狄翁攻擊玩家時也會先觸發攻擊時效果與協作15恢復3水晶", () => {
+    let state = mainState();
+    state.players.P1.summonedThisGame = 15;
+    state.players.P1.mana = 0;
+    const dion = putCard(state, "P1", "TOKEN_ALLIANCE_HERO_DION", "MINION", "dion");
+    const enemy = putCard(state, "P2", "TOKEN_UNDEAD_GENERIC", "MINION", "enemy");
+
+    state = applyAction(state, { type: "ATTACK", playerId: "P1", attackerId: dion.instanceId, target: { type: "HERO", playerId: "P2" } }).state;
+
+    expect(state.players.P1.mana).toBe(3);
+    expect(state.players.P2.minions.some((card) => card.instanceId === enemy.instanceId)).toBe(false);
+    expect(state.players.P2.heroHp).toBe(27);
   });
 
   it("空襲選擇完成後返回額外區且仍作為法術使用", () => {

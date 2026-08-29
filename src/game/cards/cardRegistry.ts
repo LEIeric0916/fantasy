@@ -118,8 +118,6 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
   ALLIANCE_001: [
     { type: "ADD_GENERATED_TO_HAND", definitionId: "TOKEN_ALLIANCE_HEROIC_GLORY", count: 1 },
     { type: "SEGMENT_BREAK" },
-    { type: "DRAW", value: 1 },
-    { type: "SEGMENT_BREAK" },
     { type: "SEARCH_DECK", definitionId: "ALLIANCE_001" },
   ],
   ALLIANCE_002: [
@@ -146,11 +144,6 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
   ALLIANCE_006: [{ type: "GRANT_NEXT_MINION_TEMPORARY_COST_REDUCTION", value: 4 }],
   ALLIANCE_007: [{ type: "DISCOVER_TOP", count: 1, cardType: "MINION", temporaryCostReduction: 2 }],
   ALLIANCE_008: [
-    {
-      type: "CONDITIONAL",
-      condition: { type: "FRIENDLY_MINION_COUNT_AT_LEAST", value: 3 },
-      effects: [{ type: "GAIN_MANA", value: 2 }],
-    },
     { type: "SUMMON", definitionId: "TOKEN_ALLIANCE_ROYAL_HONOR_GUARD", count: 1 },
   ],
   ALLIANCE_010: [
@@ -164,7 +157,7 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
   ],
   ALLIANCE_011: [{ type: "SNAPSHOT_ENEMY_COUNT_AOE_HERO_DRAW_SELF_DEBUFF", aoeDamage: 4, heroDamage: 3, draw: 2 }],
   ALLIANCE_012: [
-    { type: "DESTROY_DISTINCT_ENEMY_MINIONS", count: 3 },
+    { type: "DESTROY_DISTINCT_ENEMY_MINIONS", count: 3, minCount: 0 },
     { type: "SEGMENT_BREAK" },
     {
       type: "CONDITIONAL",
@@ -348,6 +341,7 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
 };
 
 const enterFieldEffects: Record<string, EffectDefinition[]> = {
+  TOKEN_UNDEAD_DOOMSDAY_BOOK: [{ type: "SUMMON", definitionId: "TOKEN_UNDEAD_DOOM_KNIGHT", count: 1 }],
   UNDEAD_011: [{
     type: "SUMMON_WITH_KEYWORD_IF_FIELD",
     definitionId: "TOKEN_UNDEAD_GIANT",
@@ -422,6 +416,7 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
       {
         type: "CONDITIONAL",
         condition: { type: "SUMMONED_THIS_GAME_AT_LEAST", value: 15 },
+        silentOnFailure: true,
         effects: [
           { type: "GRANT_ALL_FRIENDLY_KEYWORD", keyword: "DIVINE_SHIELD" },
           { type: "DAMAGE_ENEMY_HERO", value: 4 },
@@ -430,6 +425,7 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
       {
         type: "CONDITIONAL",
         condition: { type: "SUMMONED_THIS_GAME_BELOW", value: 15 },
+        silentOnFailure: true,
         effects: [
           { type: "GRANT_TARGET_FRIENDLY_MINION_KEYWORD", keyword: "DIVINE_SHIELD" },
           { type: "DAMAGE_ENEMY_HERO", value: 2 },
@@ -439,6 +435,13 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
   },
   ALLIANCE_006: {
     DEATHRATTLE: [{ type: "DRAW", value: 1 }],
+  },
+  ALLIANCE_008: {
+    END_TURN: [
+      { type: "DAMAGE_TARGET_ENEMY_MINION", value: 2 },
+      { type: "SEGMENT_BREAK" },
+      { type: "DAMAGE_ENEMY_HERO", value: 2 },
+    ],
   },
   ALLIANCE_012: {
     DEATHRATTLE: [{ type: "SUMMON", definitionId: "TOKEN_ALLIANCE_ROYAL_PALADIN", count: 2 }],
@@ -452,7 +455,7 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
       {
         type: "CONDITIONAL",
         condition: { type: "SUMMONED_THIS_GAME_AT_LEAST", value: 15 },
-        effects: [{ type: "RESTORE_MANA_VALUE", value: 6 }],
+        effects: [{ type: "RESTORE_MANA_VALUE", value: 3 }],
       },
     ],
   },
@@ -519,7 +522,15 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
     DEATHRATTLE: [{ type: "DRAW", value: 1 }],
   },
   TOKEN_UNDEAD_BOOK_IMMORTAL: {
-    GROWTH: [{ type: "SUMMON", definitionId: "TOKEN_UNDEAD_GENERIC", count: 1 }],
+    GROWTH: [
+      { type: "SUMMON", definitionId: "TOKEN_UNDEAD_GENERIC", count: 1 },
+      {
+        type: "NECROMANCY",
+        cost: 20,
+        silentIfInsufficient: true,
+        effects: [{ type: "TRANSFORM_SELF_FIELD", definitionId: "TOKEN_UNDEAD_DOOMSDAY_BOOK" }],
+      },
+    ],
   },
   TOKEN_UNDEAD_BOOK_REVENGE: {
     END_TURN: [{
@@ -557,10 +568,9 @@ const dynamicCosts: Record<string, CardDefinition["dynamicCost"]> = {
   MACHINE_012: { type: "RECYCLE_CHARGE" },
   MACHINE_014: { type: "FRIENDLY_FIELD_SUBTYPE_COUNT", subtype: "ARTIFACT" },
   ALLIANCE_007: { type: "ENEMY_MINION_COUNT" },
-  ALLIANCE_009: { type: "TURN_AND_EXISTING_FRIENDLY_MINIONS", turnAtLeast: 5, minExistingMinions: 2, reduction: 5 },
+  ALLIANCE_009: { type: "TURN_AND_EXISTING_FRIENDLY_MINIONS", turnAtLeast: 5, minExistingMinions: 3, reduction: 5 },
   ALLIANCE_010: { type: "SUMMONED_THIS_TURN_MULTIPLIER", multiplier: 2 },
   ALLIANCE_011: { type: "ENEMY_MINION_COUNT" },
-  TOKEN_ALLIANCE_HEROIC_GLORY: { type: "SUMMONED_THIS_GAME_AT_LEAST_FIXED", value: 20, cost: 0 },
   TOKEN_ALLIANCE_HERO_AUGUSTIN: { type: "ENEMY_MINION_COUNT" },
   TOKEN_ALLIANCE_HERO_VALENTINE: { type: "FRIENDLY_MINION_COUNT" },
 };
@@ -598,13 +608,7 @@ const effectSummons: Record<string, CardDefinition["effectSummon"]> = {
   MACHINE_011: { event: "RECYCLE_CHARGE_AT_LEAST", value: 6 },
 };
 
-const activatedEffects: Record<string, CardDefinition["activatedEffect"]> = {
-  TOKEN_UNDEAD_BOOK_IMMORTAL: {
-    resource: "NECROMANCY",
-    cost: 20,
-    effects: [{ type: "TRANSFORM_SELF_FIELD", definitionId: "TOKEN_UNDEAD_DOOMSDAY_BOOK" }],
-  },
-};
+const activatedEffects: Record<string, CardDefinition["activatedEffect"]> = {};
 
 const transformAuras: Record<string, CardDefinition["transformAura"]> = {
   TOKEN_UNDEAD_BOOK_PLAGUE: {

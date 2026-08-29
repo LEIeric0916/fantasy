@@ -29,6 +29,7 @@ describe("瘟疫典錄與末日序曲", () => {
     state = applyAction(state, { type: "END_TURN", playerId: "P1" }).state;
     state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [target.instanceId] }).state;
     expect(state.players.P1.fields.find((card) => card.instanceId === book.instanceId)?.definitionId).toBe("TOKEN_UNDEAD_DOOMSDAY_BOOK");
+    expect(state.players.P1.minions.filter((card) => card.definitionId === "TOKEN_UNDEAD_DOOM_KNIGHT")).toHaveLength(1);
   });
 
   it("瘟疫標記恰好為5時不會因其他行動提前轉變", () => {
@@ -61,7 +62,17 @@ describe("瘟疫典錄與末日序曲", () => {
     expect(state.players.P1.fields).toHaveLength(1);
     expect(state.players.P1.fields[0].instanceId).toBe(ids[2]);
     expect(state.players.P1.fields[0].definitionId).toBe("TOKEN_UNDEAD_DOOMSDAY_BOOK");
+    expect(state.players.P1.minions.filter((card) => card.definitionId === "TOKEN_UNDEAD_DOOM_KNIGHT")).toHaveLength(1);
     expect(state.players.P1.extraDeck.filter((card) => card.definitionId === "TOKEN_UNDEAD_BOOK_DOOM_PRELUDE")).toHaveLength(2);
     expect(state.players.P1.deck).toHaveLength(initialDeckSize - 2);
+  });
+
+  it("直接召喚末日之書時會以入場曲召喚衍生末日騎士", () => {
+    const state = mainState();
+    expect(summonGeneratedField(state, "P1", "TOKEN_UNDEAD_DOOMSDAY_BOOK")).toBe(true);
+    resolvePendingEffects(state);
+
+    expect(state.players.P1.fields.map((card) => card.definitionId)).toContain("TOKEN_UNDEAD_DOOMSDAY_BOOK");
+    expect(state.players.P1.minions.filter((card) => card.definitionId === "TOKEN_UNDEAD_DOOM_KNIGHT")).toHaveLength(1);
   });
 });

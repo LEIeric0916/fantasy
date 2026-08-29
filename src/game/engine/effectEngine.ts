@@ -93,7 +93,7 @@ function conditionMatches(
   }
 }
 
-function canExecuteEffect(state: GameState, playerId: PlayerId, source: CardInstance, effect: EffectDefinition): boolean {
+export function canExecuteEffect(state: GameState, playerId: PlayerId, source: CardInstance, effect: EffectDefinition): boolean {
   switch (effect.type) {
     case "DRAW": return state.players[playerId].deck.length > 0;
     case "RESTORE_MANA":
@@ -114,6 +114,9 @@ function canExecuteEffect(state: GameState, playerId: PlayerId, source: CardInst
     case "CONDITIONAL":
       return conditionMatches(state, playerId, source, effect.condition)
         && effect.effects.some((nested) => canExecuteEffect(state, playerId, source, nested));
+    case "NECROMANCY":
+      return state.players[playerId].resources.necromancy >= effect.cost
+        && effect.effects.some((nested) => canExecuteEffect(state, playerId, source, nested));
     case "SET_HAND_CARD_COST_ZERO":
       return state.players[playerId].hand.filter((card) => {
         const definition = getCardDefinition(card.definitionId);
@@ -122,6 +125,24 @@ function canExecuteEffect(state: GameState, playerId: PlayerId, source: CardInst
       }).length >= effect.count;
     default: return true;
   }
+}
+
+export function shouldEnqueueTriggeredEffectList(
+  state: GameState,
+  playerId: PlayerId,
+  source: CardInstance,
+  effects: readonly EffectDefinition[],
+): boolean {
+  return effects.some((effect) => {
+    if (effect.type === "SEGMENT_BREAK") return false;
+    if (effect.type === "CONDITIONAL" && effect.silentOnFailure) {
+      return conditionMatches(state, playerId, source, effect.condition);
+    }
+    if (effect.type === "NECROMANCY" && effect.silentIfInsufficient) {
+      return state.players[playerId].resources.necromancy >= effect.cost;
+    }
+    return true;
+  });
 }
 
 function resolveEffectList(
@@ -528,19 +549,23 @@ function resolveEffectList(
       }
       case "DESTROY_DISTINCT_ENEMY_MINIONS": {
         const candidates = getLegalEnemyEffectTargets(state, playerId).map((card) => card.instanceId);
-        if (candidates.length < effect.count) {
+        const requiredCount = effect.minCount ?? effect.count;
+        if (candidates.length < requiredCount) {
           notifyEffectSkipped(state, playerId, source, `可被消滅的敵方手下不足 ${effect.count} 名（目前 ${candidates.length} 名）`);
           const boundary = skipCommaChain(effectIndex);
           if (boundary === undefined) return false;
           effectIndex = boundary;
           break;
         }
+        if (candidates.length === 0 && requiredCount === 0) break;
+        const count = Math.min(effect.count, candidates.length);
         state.pendingChoice = {
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: `指定對手${effect.count}名不同手下消滅`,
-          count: effect.count,
+          prompt: effect.minCount === undefined ? `指定對手${effect.count}名不同手下消滅` : `指定對手最多${effect.count}名不同手下消滅`,
+          count,
+          minCount: effect.minCount,
           candidateInstanceIds: candidates,
           resolution: { type: "DESTROY_MINIONS" },
           remainingEffects,
@@ -1025,7 +1050,7 @@ function resolveEffectList(
           options: candidates.map((definitionId) => ({
             id: definitionId,
             label: getCardDefinition(definitionId).name,
-            effects: [{ type: "RECORD_CHOICE_ADD_GENERATED_TO_HAND", definitionId, historyKey: effect.historyKey }],
+            effects: [{ type: "RECORD_CHOICE_ADD_GENERATED_TO_HAND", definitionId, historyKey: effect.historyKey, fixedCost: 0 }],
           })),
           remainingEffects,
         };
@@ -1037,6 +1062,10 @@ function resolveEffectList(
         state.players[playerId].choiceHistory[effect.historyKey] = acquired;
         const definition = getCardDefinition(effect.definitionId);
         const card = createCardInstance(definition, playerId, "HAND", `${playerId}-${effect.definitionId}-choice-${state.turnNumber}-${state.log.length}`);
+        if (effect.fixedCost !== undefined) {
+          card.counters.fixedCost = effect.fixedCost;
+          card.currentCost = effect.fixedCost;
+        }
         state.players[playerId].hand.push(card);
         addLog(state, "ZONE", `${playerId} 取得 ${definition.name}`, { instanceId: card.instanceId, historyKey: effect.historyKey });
         break;
@@ -1059,6 +1088,30 @@ function resolveEffectList(
         addLog(state, "RESOURCE", `${source.definitionId} 發動機械術${effect.cost}`, {
           source: source.instanceId,
           recycleCharge: player.resources.recycleCharge,
+        });
+        if (!resolveEffectList(state, playerId, source, executableEffects)) return false;
+        break;
+      }
+      case "NECROMANCY": {
+        const player = state.players[playerId];
+        const executableEffects = effect.effects.filter((nested) => canExecuteEffect(state, playerId, source, nested));
+        if (player.resources.necromancy < effect.cost || executableEffects.length === 0) {
+          if (!effect.silentIfInsufficient) {
+            notifyEffectSkipped(
+              state,
+              playerId,
+              source,
+              player.resources.necromancy < effect.cost
+                ? `死靈數不足（需要 ${effect.cost}，目前 ${player.resources.necromancy}）`
+                : "死靈術的後續效果無法執行",
+            );
+          }
+          break;
+        }
+        player.resources.necromancy -= effect.cost;
+        addLog(state, "RESOURCE", `${source.definitionId} 發動死靈術${effect.cost}`, {
+          source: source.instanceId,
+          necromancy: player.resources.necromancy,
         });
         if (!resolveEffectList(state, playerId, source, executableEffects)) return false;
         break;

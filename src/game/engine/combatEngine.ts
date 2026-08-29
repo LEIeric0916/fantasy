@@ -66,6 +66,15 @@ export function resolveAttack(state: GameState, playerId: PlayerId, attackerId: 
   if (!legal) throw new InvalidActionError("攻擊目標不合法（請檢查嘲諷與進場回合限制）");
   attacker.attacksUsedThisTurn += 1;
 
+  const preAttackTiming = createTimingContext(state, `PRE_ATTACK:${attacker.instanceId}:${target.type === "HERO" ? target.playerId : target.instanceId}`);
+  const attackerPreAttackEffects = !attacker.sealed ? getCardDefinition(attacker.definitionId).triggeredEffects?.ON_SELF_COMBAT_START : undefined;
+  if (attackerPreAttackEffects) {
+    enqueueTriggeredEffects(state, attacker, attackerPreAttackEffects, "ON_SELF_COMBAT_START", preAttackTiming);
+    resolvePendingEffects(state);
+    if (gameHasEnded(state)) return;
+    if (attacker.zone !== "MINION") return;
+  }
+
   if (target.type === "HERO") {
     const damage = attacker.currentAttack ?? 0;
     dealDamageToHero(state, target.playerId, damage, attacker.instanceId, "COMBAT");
@@ -74,15 +83,15 @@ export function resolveAttack(state: GameState, playerId: PlayerId, attackerId: 
   }
 
   const defender = state.players[opponentOf(playerId)].minions.find((card) => card.instanceId === target.instanceId);
-  if (!defender) throw new InvalidActionError("防守手下不存在");
+  if (!defender) return;
   const preCombatTiming = createTimingContext(state, `PRE_COMBAT:${attacker.instanceId}:${defender.instanceId}`);
-  for (const combatant of [attacker, defender]) {
-    const effects = !combatant.sealed ? getCardDefinition(combatant.definitionId).triggeredEffects?.ON_SELF_COMBAT_START : undefined;
-    if (effects) enqueueTriggeredEffects(state, combatant, effects, "ON_SELF_COMBAT_START", preCombatTiming);
+  const defenderPreCombatEffects = !defender.sealed ? getCardDefinition(defender.definitionId).triggeredEffects?.ON_SELF_COMBAT_START : undefined;
+  if (defenderPreCombatEffects) {
+    enqueueTriggeredEffects(state, defender, defenderPreCombatEffects, "ON_SELF_COMBAT_START", preCombatTiming);
+    resolvePendingEffects(state);
+    if (gameHasEnded(state)) return;
+    if (attacker.zone !== "MINION" || defender.zone !== "MINION") return;
   }
-  resolvePendingEffects(state);
-  if (gameHasEnded(state)) return;
-  if (attacker.zone !== "MINION" || defender.zone !== "MINION") return;
   const attackerKillEffects = !attacker.sealed ? getCardDefinition(attacker.definitionId).triggeredEffects?.ON_KILL : undefined;
   const defenderKillEffects = !defender.sealed ? getCardDefinition(defender.definitionId).triggeredEffects?.ON_KILL : undefined;
   const combatKillAuras = state.players[playerId].minions.filter((card) =>

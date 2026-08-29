@@ -27,6 +27,17 @@ describe("機械前期卡與回收", () => {
     expect(state.players.P1.resources.recycleCharge).toBe(2);
   });
 
+  it("機械帝國牧師回合結束光環增加回收充能並賦予機械軍隊聖盾術", () => {
+    let state = mainState();
+    putCard(state, "P1", "TOKEN_MACHINE_PRIEST", "MINION", "priest");
+    const soldier = putCard(state, "P1", "TOKEN_MACHINE_EMPIRE_SOLDIER", "MINION", "soldier");
+
+    state = applyAction(state, { type: "END_TURN", playerId: "P1" }).state;
+
+    expect(state.players.P1.resources.recycleCharge).toBe(1);
+    expect(state.players.P1.minions.find((card) => card.instanceId === soldier.instanceId)?.keywords).toContain("DIVINE_SHIELD");
+  });
+
   it("機械軍技師增加2充能，有神器時召喚齒輪", () => {
     let state = mainState();
     putCard(state, "P1", "TOKEN_MACHINE_ARTIFACT_BOX", "FIELD", "artifact");

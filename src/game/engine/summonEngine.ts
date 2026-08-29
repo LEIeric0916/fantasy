@@ -117,8 +117,9 @@ export function summonGeneratedField(state: GameState, playerId: PlayerId, defin
   const card = createCardInstance(definition, playerId, "FIELD", `${playerId}-${definitionId}-generated-${state.turnNumber}-${state.log.length}`);
   player.fields.push(card);
   addLog(state, "ZONE", `召喚立場 ${definition.name}`, { instanceId: card.instanceId, reason: "EFFECT_SUMMON_FIELD" });
-  if (definition.effects?.length) {
-    enqueueTriggeredEffects(state, card, definition.effects, "ENTER_FIELD", createTimingContext(state, `ENTER_FIELD:${card.instanceId}`));
+  const enterEffects = [...(definition.effects ?? []), ...(definition.enterFieldEffects ?? [])];
+  if (enterEffects.length) {
+    enqueueTriggeredEffects(state, card, enterEffects, "ENTER_FIELD", createTimingContext(state, `ENTER_FIELD:${card.instanceId}`));
   }
   return true;
 }

@@ -3,7 +3,7 @@ import { applyAction } from "../../src/game/engine/gameEngine";
 import { mainState, putCard } from "../helpers";
 
 describe("聯盟前期卡", () => {
-  it("皇家兵團依次獲得絕杰榮耀、抽1、檢索同名牌並洗牌", () => {
+  it("皇家兵團有嘲諷，並依次獲得絕杰榮耀與檢索同名牌", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const searched = putCard(state, "P1", "ALLIANCE_001", "HAND", "deck-copy");
@@ -11,12 +11,15 @@ describe("聯盟前期卡", () => {
     searched.zone = "DECK";
     state.players.P1.deck.unshift(searched);
     const legion = putCard(state, "P1", "ALLIANCE_001", "HAND", "played");
+    const deckBefore = state.players.P1.deck.length;
+    expect(legion.keywords).toContain("TAUNT");
 
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: legion.instanceId }).state;
     expect(state.players.P1.hand.some((card) => card.definitionId === "TOKEN_ALLIANCE_HEROIC_GLORY")).toBe(true);
     expect(state.pendingChoice).toMatchObject({ type: "EFFECT_CARDS", candidateInstanceIds: [searched.instanceId] });
     state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [searched.instanceId] }).state;
     expect(state.players.P1.hand.some((card) => card.instanceId === searched.instanceId)).toBe(true);
+    expect(state.players.P1.deck).toHaveLength(deckBefore - 1);
   });
 
   it("皇家匕首先召喚衛兵；協作15時自身獲得沖鋒與+2攻擊", () => {

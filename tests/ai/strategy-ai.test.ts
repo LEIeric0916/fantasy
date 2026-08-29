@@ -5,8 +5,11 @@ import { chooseHeuristicAction } from "../../src/game/ai/heuristicPolicy";
 import { getActingPlayerId } from "../../src/game/ai/legalActionEngine";
 import { chooseSearchAction } from "../../src/game/ai/searchPolicy";
 import { evaluatePublicState } from "../../src/game/ai/stateEvaluator";
+import { refreshHandCosts } from "../../src/game/engine/costEngine";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { createInitialGame } from "../../src/game/state/createInitialGame";
+import { createCardInstance } from "../../src/game/state/CardInstance";
+import { getCardDefinition } from "../../src/game/cards/cardRegistry";
 import { mainState, putCard } from "../helpers";
 
 describe("AI 公開局面評分", () => {
@@ -83,6 +86,36 @@ describe("AI 公開局面評分", () => {
       type: "PLAY_CARD",
       playerId: "P1",
       instanceId: third.instanceId,
+    });
+  });
+
+  it("困難聯盟 AI 會先打出減費連動牌，不會急著裸下皇家戰士", () => {
+    const state = mainState();
+    state.players.P1.faction = "ALLIANCE";
+    state.players.P1.hand = [];
+    state.players.P1.deck = [];
+    state.players.P1.mana = 9;
+    state.players.P1.maxMana = 9;
+    state.players.P1.summonedThisTurn = 0;
+    state.players.P1.summonedThisGame = 8;
+
+    const das = putCard(state, "P1", "ALLIANCE_007", "HAND", "discount-enabler");
+    putCard(state, "P1", "ALLIANCE_010", "HAND", "expensive-warrior");
+    putCard(state, "P1", "ALLIANCE_002", "HAND", "extra-minion");
+    for (let index = 0; index < 4; index += 1) {
+      putCard(state, "P2", "TOKEN_MACHINE_DESTROYER", "MINION", `enemy-${index}`);
+    }
+    for (const definitionId of ["ALLIANCE_002", "ALLIANCE_004", "ALLIANCE_006"]) {
+      state.players.P1.deck.push(createCardInstance(getCardDefinition(definitionId), "P1", "DECK", `P1-${definitionId}-deck`));
+    }
+    refreshHandCosts(state);
+
+    expect(das.currentCost).toBe(0);
+    const decision = chooseSearchAction(state, "P1", 123);
+    expect(decision.action).toEqual({
+      type: "PLAY_CARD",
+      playerId: "P1",
+      instanceId: das.instanceId,
     });
   });
 });

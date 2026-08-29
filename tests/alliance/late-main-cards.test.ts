@@ -14,7 +14,7 @@ describe("聯盟後期主牌", () => {
     state.players.P1.deck.unshift(searched);
     const warrior = putCard(state, "P1", "ALLIANCE_010", "HAND", "played");
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: warrior.instanceId }).state;
-    expect(state.players.P1.mana).toBe(7);
+    expect(state.players.P1.mana).toBe(5);
     state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [searched.instanceId] }).state;
     expect(state.players.P1.minions.some((card) => card.definitionId === "TOKEN_ALLIANCE_ROYAL_WARRIOR")).toBe(true);
   });
@@ -32,7 +32,7 @@ describe("聯盟後期主牌", () => {
     expect(played.currentHealth).toBe(4);
   });
 
-  it("加拉德必須指定3個不同目標；協作15傷害為句號式獨立效果", () => {
+  it("加拉德可指定最多3個不同目標；協作15傷害為句號式獨立效果", () => {
     let state = mainState();
     state.players.P1.hand = [];
     state.players.P1.summonedThisGame = 14;
@@ -41,10 +41,22 @@ describe("聯盟後期主牌", () => {
     const third = putCard(state, "P2", "TOKEN_MACHINE_DESTROYER", "MINION", "third");
     const gallard = putCard(state, "P1", "ALLIANCE_012", "HAND", "gallard");
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: gallard.instanceId }).state;
-    expect(state.pendingChoice).toMatchObject({ type: "EFFECT_CARDS", count: 3 });
+    expect(state.pendingChoice).toMatchObject({ type: "EFFECT_CARDS", count: 3, minCount: 0 });
     state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [first.instanceId, second.instanceId, third.instanceId] }).state;
     expect(state.players.P2.minions).toHaveLength(0);
     // 三名毀滅者的死亡之聲現在依場上順序自動結算，各恢復 1 HP。
     expect(state.players.P2.heroHp).toBe(29);
+  });
+
+  it("加拉德可以少於3個目標時只消滅已選目標", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    const first = putCard(state, "P2", "TOKEN_MACHINE_DESTROYER", "MINION", "first");
+    const second = putCard(state, "P2", "TOKEN_MACHINE_DESTROYER", "MINION", "second");
+    const third = putCard(state, "P2", "TOKEN_MACHINE_DESTROYER", "MINION", "third");
+    const gallard = putCard(state, "P1", "ALLIANCE_012", "HAND", "gallard-up-to");
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: gallard.instanceId }).state;
+    state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [first.instanceId, second.instanceId] }).state;
+    expect(state.players.P2.minions.map((card) => card.instanceId)).toEqual([third.instanceId]);
   });
 });

@@ -4,6 +4,8 @@ import type { GameState } from "../state/GameState";
 import { addLog } from "../utils/gameLog";
 import { hasActiveKeyword } from "../keywords/keywordRules";
 import { InvalidActionError, RuleUndefinedError } from "./errors";
+import { createTimingContext } from "./simultaneousEngine";
+import { enqueueTriggeredEffects } from "./triggerEngine";
 
 export function transformMinion(state: GameState, card: CardInstance, definitionId: string): boolean {
   if (card.zone !== "MINION") throw new InvalidActionError("只有場上的手下可以轉變");
@@ -77,6 +79,9 @@ export function transformField(state: GameState, card: CardInstance, definitionI
     instanceId: card.instanceId,
     originalDefinitionId: card.originalDefinitionId,
   });
+  if (definition.enterFieldEffects?.length) {
+    enqueueTriggeredEffects(state, card, definition.enterFieldEffects, "TRANSFORM_FIELD:ENTER_FIELD", createTimingContext(state, `TRANSFORM_FIELD_ENTER:${card.instanceId}`));
+  }
   checkDoomsdayWin(state, card.controllerId);
   return true;
 }

@@ -9,7 +9,7 @@ import { moveCard } from "./zoneEngine";
 import { processCountdownPhase } from "./countdownEngine";
 import { clearTemporaryHandCosts } from "./costEngine";
 import { enqueueStartTurnEffectSummons, enqueueStateBasedEffectSummons } from "./effectSummonEngine";
-import { resolvePendingEffects } from "./effectEngine";
+import { resolvePendingEffects, shouldEnqueueTriggeredEffectList } from "./effectEngine";
 import { createTimingContext } from "./simultaneousEngine";
 import { enqueueTriggeredEffects } from "./triggerEngine";
 
@@ -95,7 +95,9 @@ export function continueAfterCountdown(state: GameState): void {
   const timing = createTimingContext(state, `GROWTH:${state.turnNumber}`);
   for (const source of state.players[playerId].fields) {
     const effects = getCardDefinition(source.definitionId).triggeredEffects?.GROWTH;
-    if (!source.sealed && effects?.length) enqueueTriggeredEffects(state, source, effects, "GROWTH", timing);
+    if (!source.sealed && effects?.length && shouldEnqueueTriggeredEffectList(state, playerId, source, effects)) {
+      enqueueTriggeredEffects(state, source, effects, "GROWTH", timing);
+    }
   }
   resolvePendingEffects(state);
   if (gameHasEnded(state)) return;
@@ -140,7 +142,9 @@ export function requestEndTurn(state: GameState, playerId: PlayerId): void {
   const timing = createTimingContext(state, `END_TURN:${state.turnNumber}`);
   for (const source of [...state.players[playerId].minions, ...state.players[playerId].fields]) {
     const effects = getCardDefinition(source.definitionId).triggeredEffects?.END_TURN;
-    if (!source.sealed && effects?.length) enqueueTriggeredEffects(state, source, effects, "END_TURN", timing);
+    if (!source.sealed && effects?.length && shouldEnqueueTriggeredEffectList(state, playerId, source, effects)) {
+      enqueueTriggeredEffects(state, source, effects, "END_TURN", timing);
+    }
   }
   resolvePendingEffects(state);
   if (gameHasEnded(state)) return;
