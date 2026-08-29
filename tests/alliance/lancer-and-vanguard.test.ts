@@ -41,6 +41,7 @@ describe("皇家圣騎槍衛與戰爭兵器先鋒號", () => {
   it("先鋒號第5回合以上且已有3名友軍時費用降至1；有其他人類軍隊時獲得動態威懾", () => {
     let state = mainState();
     state.turnNumber = 5;
+    state.players.P1.turnsStarted = 5;
     state.players.P1.hand = [];
     putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", "ally-1");
     putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", "ally-2");
@@ -58,10 +59,24 @@ describe("皇家圣騎槍衛與戰爭兵器先鋒號", () => {
   it("先鋒號第5回合以上但我方場上只有2名手下時不會減費", () => {
     let state = mainState();
     state.turnNumber = 5;
+    state.players.P1.turnsStarted = 5;
     state.players.P1.hand = [];
     putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", "ally-1");
     putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", "ally-2");
     const vanguard = putCard(state, "P1", "ALLIANCE_009", "HAND", "vanguard-no-discount");
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: vanguard.instanceId }).state;
+    expect(state.players.P1.mana).toBe(4);
+  });
+
+  it("先鋒號以持有者自己的回合數判斷，第4回合即使全場回合數已超過5也不減費", () => {
+    let state = mainState();
+    state.turnNumber = 7;
+    state.players.P1.turnsStarted = 4;
+    state.players.P1.hand = [];
+    putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", "turn-four-ally-1");
+    putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", "turn-four-ally-2");
+    putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", "turn-four-ally-3");
+    const vanguard = putCard(state, "P1", "ALLIANCE_009", "HAND", "turn-four-vanguard");
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: vanguard.instanceId }).state;
     expect(state.players.P1.mana).toBe(4);
   });

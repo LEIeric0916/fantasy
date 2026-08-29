@@ -11,6 +11,7 @@ export function mainState(): GameState {
   });
   state.phase = "MAIN";
   state.turnNumber = 1;
+  state.players.P1.turnsStarted = 1;
   state.activePlayerId = "P1";
   state.players.P1.maxMana = 10;
   state.players.P1.mana = 10;

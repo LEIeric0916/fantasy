@@ -59,7 +59,7 @@
       "health": 1,
       "deckCount": 3,
       "keywords": ["BATTLECRY", "DEATHRATTLE"],
-      "effectsText": "戰吼：將對手場上最多2名生命為5以下、且不受紀律阻擋的手下轉變為衍生「不朽者」。死亡之聲：召喚1張「黑暗之書 末日序曲」。",
+      "effectsText": "戰吼：將對手場上最多2名目前生命為5或以下、且不受紀律阻擋的手下轉變為衍生「不朽者」。死亡之聲：召喚1張「黑暗之書 末日序曲」。",
       "generatedOnly": false,
       "notes": "最後修正確認戰記卡文中的角色統一改為手下；2個目標必須為不同CardInstance。"
     },

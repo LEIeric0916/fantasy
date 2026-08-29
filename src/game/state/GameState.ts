@@ -38,6 +38,7 @@ export interface PlayerState {
   summonedThisTurn: number;
   summonedThisGame: number;
   cardsPlayedThisTurn: number;
+  turnsStarted: number;
   mulliganDone: boolean;
   normalDraws: number;
   coinGranted: boolean;

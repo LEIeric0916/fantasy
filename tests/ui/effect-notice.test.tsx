@@ -56,6 +56,24 @@ describe("效果未發動介面提示", () => {
     container.remove();
   });
 
+  it("加拉德與其衍生皇家聖騎兵都顯示嘲諷特效", () => {
+    const state = mainState();
+    const gallard = putCard(state, "P1", "ALLIANCE_012", "MINION", "taunt-gallard");
+    const paladin = putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_PALADIN", "MINION", "taunt-paladin");
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
+    for (const card of [gallard, paladin]) {
+      const rendered = container.querySelector(`[data-instance-id="${card.instanceId}"]`);
+      expect(rendered?.classList.contains("status-taunt")).toBe(true);
+      expect(rendered?.querySelector(".status-badge.taunt")?.textContent).toBe("嘲諷");
+      expect(rendered?.querySelector('[aria-label="嘲諷盾牌"]')).not.toBeNull();
+    }
+    act(() => root.unmount());
+    container.remove();
+  });
+
 
   it("直接向玩家顯示卡牌名稱與未發動原因", () => {
     const state = mainState();

@@ -1050,7 +1050,12 @@ function resolveEffectList(
           options: candidates.map((definitionId) => ({
             id: definitionId,
             label: getCardDefinition(definitionId).name,
-            effects: [{ type: "RECORD_CHOICE_ADD_GENERATED_TO_HAND", definitionId, historyKey: effect.historyKey, fixedCost: 0 }],
+            effects: [{
+              type: "RECORD_CHOICE_ADD_GENERATED_TO_HAND",
+              definitionId,
+              historyKey: effect.historyKey,
+              fixedCost: state.players[playerId].summonedThisGame >= 20 ? 0 : undefined,
+            }],
           })),
           remainingEffects,
         };

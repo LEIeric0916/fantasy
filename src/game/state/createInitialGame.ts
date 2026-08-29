@@ -51,6 +51,7 @@ function createPlayer(id: PlayerId, faction: Faction, deck: CardInstance[]): Pla
     summonedThisTurn: 0,
     summonedThisGame: 0,
     cardsPlayedThisTurn: 0,
+    turnsStarted: 0,
     mulliganDone: false,
     normalDraws: 0,
     coinGranted: false,

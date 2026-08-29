@@ -39,7 +39,7 @@ describe("換牌與回合", () => {
     state = applyAction(state, { type: "MULLIGAN", playerId: "P2", instanceIds: [] }).state;
     expect(state.phase).toBe("MAIN");
     expect(state.turnNumber).toBe(1);
-    expect(state.players.P1).toMatchObject({ maxMana: 1, mana: 1 });
+    expect(state.players.P1).toMatchObject({ maxMana: 1, mana: 1, turnsStarted: 1 });
     expect(state.players.P1.hand).toHaveLength(5);
     expect(state.log.filter((entry) => entry.type === "PHASE").slice(-4).map((entry) => entry.message)).toEqual(["DRAW", "COUNTDOWN", "GROWTH", "MAIN"]);
   });
@@ -54,6 +54,7 @@ describe("換牌與回合", () => {
     expect(state.players.P2.hand.length).toBe(before + 3);
     expect(state.players.P2.hand.some((card) => card.definitionId === "TOKEN_COIN")).toBe(true);
     expect(state.players.P2.maxMana).toBe(1);
+    expect(state.players.P2.turnsStarted).toBe(1);
     const p1BeforeSecondTurn = state.players.P1.hand.length;
     state = applyAction(state, { type: "END_TURN", playerId: "P2" }).state;
     expect(state.players.P1.hand.length).toBe(p1BeforeSecondTurn + 1);

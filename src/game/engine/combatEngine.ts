@@ -66,10 +66,10 @@ export function resolveAttack(state: GameState, playerId: PlayerId, attackerId: 
   if (!legal) throw new InvalidActionError("攻擊目標不合法（請檢查嘲諷與進場回合限制）");
   attacker.attacksUsedThisTurn += 1;
 
-  const preAttackTiming = createTimingContext(state, `PRE_ATTACK:${attacker.instanceId}:${target.type === "HERO" ? target.playerId : target.instanceId}`);
-  const attackerPreAttackEffects = !attacker.sealed ? getCardDefinition(attacker.definitionId).triggeredEffects?.ON_SELF_COMBAT_START : undefined;
-  if (attackerPreAttackEffects) {
-    enqueueTriggeredEffects(state, attacker, attackerPreAttackEffects, "ON_SELF_COMBAT_START", preAttackTiming);
+  const attackTiming = createTimingContext(state, `ATTACK:${attacker.instanceId}:${target.type === "HERO" ? target.playerId : target.instanceId}`);
+  const attackerAttackEffects = !attacker.sealed ? getCardDefinition(attacker.definitionId).triggeredEffects?.ON_ATTACK : undefined;
+  if (attackerAttackEffects) {
+    enqueueTriggeredEffects(state, attacker, attackerAttackEffects, "ON_ATTACK", attackTiming);
     resolvePendingEffects(state);
     if (gameHasEnded(state)) return;
     if (attacker.zone !== "MINION") return;
@@ -85,9 +85,15 @@ export function resolveAttack(state: GameState, playerId: PlayerId, attackerId: 
   const defender = state.players[opponentOf(playerId)].minions.find((card) => card.instanceId === target.instanceId);
   if (!defender) return;
   const preCombatTiming = createTimingContext(state, `PRE_COMBAT:${attacker.instanceId}:${defender.instanceId}`);
+  const attackerPreCombatEffects = !attacker.sealed ? getCardDefinition(attacker.definitionId).triggeredEffects?.ON_SELF_COMBAT_START : undefined;
   const defenderPreCombatEffects = !defender.sealed ? getCardDefinition(defender.definitionId).triggeredEffects?.ON_SELF_COMBAT_START : undefined;
+  if (attackerPreCombatEffects) {
+    enqueueTriggeredEffects(state, attacker, attackerPreCombatEffects, "ON_SELF_COMBAT_START", preCombatTiming);
+  }
   if (defenderPreCombatEffects) {
     enqueueTriggeredEffects(state, defender, defenderPreCombatEffects, "ON_SELF_COMBAT_START", preCombatTiming);
+  }
+  if (attackerPreCombatEffects || defenderPreCombatEffects) {
     resolvePendingEffects(state);
     if (gameHasEnded(state)) return;
     if (attacker.zone !== "MINION" || defender.zone !== "MINION") return;

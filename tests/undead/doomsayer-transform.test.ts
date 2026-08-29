@@ -11,14 +11,22 @@ describe("不朽者法師 末日宣告者", () => {
     const source = putCard(state, "P1", "UNDEAD_004", "HAND", "battlecry");
     const first = putCard(state, "P2", "UNDEAD_002", "MINION", "first");
     const second = putCard(state, "P2", "DRAGON_003", "MINION", "second");
+    const tooHealthy = putCard(state, "P2", "TOKEN_MACHINE_DESTROYER", "MINION", "too-healthy");
     first.currentHealth = 1;
     first.damageTaken = 1;
+    second.currentHealth = 5;
+    second.maxHealth = 5;
+    tooHealthy.currentHealth = 6;
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: source.instanceId }).state;
+    expect(state.pendingChoice).toMatchObject({
+      candidateInstanceIds: [first.instanceId, second.instanceId],
+    });
     state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [first.instanceId, second.instanceId] }).state;
-    for (const target of state.players.P2.minions) {
+    for (const target of state.players.P2.minions.filter((card) => card.instanceId !== tooHealthy.instanceId)) {
       expect(target.definitionId).toBe("TOKEN_UNDEAD_GENERIC");
       expect(target).toMatchObject({ currentAttack: 2, currentHealth: 2, maxHealth: 2, damageTaken: 0 });
     }
+    expect(state.players.P2.minions.find((card) => card.instanceId === tooHealthy.instanceId)?.definitionId).toBe("TOKEN_MACHINE_DESTROYER");
     expect(first.originalDefinitionId).toBe("UNDEAD_002");
     expect(state.players.P2.deck.length).toBeGreaterThan(0);
   });

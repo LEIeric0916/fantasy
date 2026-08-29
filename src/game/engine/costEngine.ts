@@ -42,7 +42,7 @@ export function refreshCardCost(state: GameState, playerId: PlayerId, card: Card
       getCardDefinition(field.definitionId).subtype.includes(subtype),
     ).length;
   } else if (definition.dynamicCost?.type === "TURN_AND_EXISTING_FRIENDLY_MINIONS") {
-    if (state.turnNumber >= definition.dynamicCost.turnAtLeast
+    if (state.players[playerId].turnsStarted >= definition.dynamicCost.turnAtLeast
       && state.players[playerId].minions.length >= definition.dynamicCost.minExistingMinions) {
       value -= definition.dynamicCost.reduction;
     }

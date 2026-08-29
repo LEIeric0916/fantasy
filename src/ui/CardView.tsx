@@ -47,6 +47,7 @@ export function CardView({
   const plagueThreshold = definition.transformAura?.counter === "plagueMarks" ? definition.transformAura.threshold : 6;
   const boardStatuses = card.zone === "MINION" || card.zone === "FIELD" ? [
     ...(card.sealed ? [{ key: "sealed", label: "封印" }] : []),
+    ...(card.keywords.includes("TAUNT") && !card.sealed ? [{ key: "taunt", label: "嘲諷" }] : []),
     ...(card.keywords.includes("DIVINE_SHIELD") && !card.sealed ? [{ key: "divine-shield", label: "聖盾術" }] : []),
     ...(card.keywords.includes("STEALTH") && !card.sealed ? [{ key: "stealth", label: "潛行" }] : []),
     ...(card.keywords.includes("DETERRENCE") && !card.sealed ? [{ key: "deterrence", label: "威懾" }] : []),
@@ -120,6 +121,7 @@ export function CardView({
       onPointerLeave={clearLongPress}
       onContextMenu={(event) => event.preventDefault()}
     >
+      {card.zone === "MINION" && card.keywords.includes("TAUNT") && !card.sealed && <span className="taunt-emblem" aria-label="嘲諷盾牌" />}
       {boardStatuses.length > 0 && <span className="status-strip" aria-label={`狀態：${boardStatuses.map((status) => status.label).join("、")}`}>{boardStatuses.map((status) => <small className={`status-badge ${status.key}`} title={status.description} key={status.key}>{status.label}</small>)}</span>}
       {plagueMarks !== undefined && <span className="counter-badge plague-counter" aria-label={`瘟疫標記 ${plagueMarks}`}><small>瘟疫</small><strong>{plagueMarks}</strong><small>/ {plagueThreshold}</small></span>}
       <button className="card-surface" disabled={disabled} onClick={() => {

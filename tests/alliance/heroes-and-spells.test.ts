@@ -6,6 +6,19 @@ import { destroyMinion } from "../../src/game/engine/zoneEngine";
 import { mainState, putCard } from "../helpers";
 
 describe("絕杰榮耀與聯盟絕杰", () => {
+  it("絕杰榮耀未達協作20時，加入手牌的絕杰維持原費用", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    state.players.P1.summonedThisGame = 19;
+    const glory = putCard(state, "P1", "TOKEN_ALLIANCE_HEROIC_GLORY", "HAND", "below-rally");
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: glory.instanceId }).state;
+    state = applyAction(state, { type: "SELECT_EFFECT_OPTION", playerId: "P1", optionId: "DRAW" }).state;
+    state = applyAction(state, { type: "SELECT_EFFECT_OPTION", playerId: "P1", optionId: "TOKEN_ALLIANCE_HERO_AUGUSTIN" }).state;
+    const acquired = state.players.P1.hand.find((card) => card.definitionId === "TOKEN_ALLIANCE_HERO_AUGUSTIN");
+    expect(acquired?.currentCost).toBe(5);
+    expect(acquired?.counters.fixedCost).toBeUndefined();
+  });
+
   it("絕杰榮耀在協作20時不使自身減費，而是讓加入手牌的絕杰費用為0", () => {
     let state = mainState();
     state.players.P1.hand = [];
@@ -58,6 +71,18 @@ describe("絕杰榮耀與聯盟絕杰", () => {
     expect(state.players.P1.mana).toBe(3);
     expect(state.players.P2.minions.some((card) => card.instanceId === enemy.instanceId)).toBe(false);
     expect(state.players.P2.heroHp).toBe(27);
+  });
+
+  it("狄翁被其他手下攻擊時不會發動攻擊時效果", () => {
+    let state = mainState();
+    state.players.P2.summonedThisGame = 15;
+    state.players.P2.mana = 0;
+    const attacker = putCard(state, "P1", "TOKEN_UNDEAD_GENERIC", "MINION", "attacker");
+    const ally = putCard(state, "P1", "TOKEN_UNDEAD_GENERIC", "MINION", "bystander");
+    const dion = putCard(state, "P2", "TOKEN_ALLIANCE_HERO_DION", "MINION", "defending-dion");
+    state = applyAction(state, { type: "ATTACK", playerId: "P1", attackerId: attacker.instanceId, target: { type: "MINION", instanceId: dion.instanceId } }).state;
+    expect(state.players.P2.mana).toBe(0);
+    expect(state.players.P1.minions.some((card) => card.instanceId === ally.instanceId)).toBe(true);
   });
 
   it("空襲選擇完成後返回額外區且仍作為法術使用", () => {

@@ -405,7 +405,7 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
     DEATHRATTLE: [{ type: "DRAW", value: 1 }],
   },
   ALLIANCE_004: {
-    ON_SELF_COMBAT_START: [{
+    ON_ATTACK: [{
       type: "CONDITIONAL",
       condition: { type: "SUMMONED_THIS_GAME_AT_LEAST", value: 10 },
       effects: [{ type: "DAMAGE_ALL_ENEMY_MINIONS", value: 2 }],
@@ -450,7 +450,7 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
     DEATHRATTLE: [{ type: "RETURN_SELF_TO_HAND" }],
   },
   TOKEN_ALLIANCE_HERO_DION: {
-    ON_SELF_COMBAT_START: [
+    ON_ATTACK: [
       { type: "DAMAGE_ALL_ENEMY_MINIONS", value: 7 },
       {
         type: "CONDITIONAL",

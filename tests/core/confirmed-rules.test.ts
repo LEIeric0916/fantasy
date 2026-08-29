@@ -80,7 +80,7 @@ describe("最後修正的卡表文字", () => {
     expect(getCardDefinition("DRAGON_002").keywords).toContain("BATTLECRY");
     expect(getCardDefinition("DRAGON_002").effectsText).toMatch(/^戰吼：/);
     expect(getCardDefinition("DRAGON_009").effectsText).toContain("返回牌組並洗牌");
-    expect(getCardDefinition("UNDEAD_004").effectsText).toContain("最多2名生命為5以下、且不受紀律阻擋的手下");
+    expect(getCardDefinition("UNDEAD_004").effectsText).toContain("最多2名目前生命為5或以下、且不受紀律阻擋的手下");
     expect(getCardDefinition("UNDEAD_010").effectsText).toContain("死靈數為10以上時");
     expect(getCardDefinition("UNDEAD_013").effectsText).toContain("翻開5張，從中指定3張手下");
   });

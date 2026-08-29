@@ -49,6 +49,7 @@ function grantCoin(state: GameState, playerId: PlayerId): void {
 export function beginTurn(state: GameState): void {
   const player = state.players[state.activePlayerId];
   state.turnNumber += 1;
+  player.turnsStarted += 1;
   state.pendingChoice = undefined;
   player.summonedThisTurn = 0;
   player.cardsPlayedThisTurn = 0;

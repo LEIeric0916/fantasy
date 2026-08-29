@@ -30,6 +30,18 @@ describe("不朽的懲戒魔龍 奧迪菲斯", () => {
     expect(auraIndex).toBeLessThan(combatIndex);
   });
 
+  it("攻擊玩家不屬於交戰，不發動交戰時效果", () => {
+    let state = mainState();
+    const source = putCard(state, "P1", "UNDEAD_012", "MINION", "attack-hero");
+    state = applyAction(state, {
+      type: "ATTACK",
+      playerId: "P1",
+      attackerId: source.instanceId,
+      target: { type: "HERO", playerId: "P2" },
+    }).state;
+    expect(state.players.P2.heroHp).toBe(24);
+  });
+
   it("殺意在完整戰斗後由玩家選擇召喚一種黑暗之書", () => {
     let state = mainState();
     const source = putCard(state, "P1", "UNDEAD_012", "MINION", "on-kill");
