@@ -118,3 +118,33 @@ export function createInitialGame(options: CreateGameOptions = {}): GameState {
 export function createTestCard(definitionId: string, ownerId: PlayerId, zone: CardInstance["zone"], id: string): CardInstance {
   return createCardInstance(getCardDefinition(definitionId), ownerId, zone, id);
 }
+
+export function createFirstTutorialGame(): GameState {
+  const state = createInitialGame({
+    factions: { P1: "ALLIANCE", P2: "ALLIANCE" },
+    startingPlayerId: "P1",
+    seed: 1,
+    shuffle: false,
+  });
+
+  for (const playerId of ["P1", "P2"] as const) {
+    const player = state.players[playerId];
+    for (const card of player.hand) {
+      card.zone = "DECK";
+      player.deck.push(card);
+    }
+    player.hand = [];
+    player.mulliganDone = true;
+  }
+
+  const tutorialCard = createTestCard("TOKEN_ALLIANCE_ROYAL_GUARD", "P1", "HAND", "tutorial-royal-guard");
+  state.players.P1.hand.push(tutorialCard);
+  state.players.P1.mana = 1;
+  state.players.P1.maxMana = 1;
+  state.players.P1.turnsStarted = 1;
+  state.phase = "MAIN";
+  state.turnNumber = 1;
+  state.log = [];
+  state.effectNotices = [];
+  return state;
+}

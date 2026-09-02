@@ -65,9 +65,10 @@ export type EffectDefinition =
   | { type: "SUMMON"; definitionId: string; count: number }
   | { type: "SUMMON_FIELD"; definitionId: string; count: number }
   | { type: "CHOOSE_GENERATED_FIELD"; definitionIds: string[] }
-  | { type: "CHOOSE_DISTINCT_GENERATED_MINIONS"; definitionIds: string[]; count: number }
+  | { type: "CHOOSE_DISTINCT_GENERATED_FIELDS"; definitionIds: string[]; count: number }
+  | { type: "CHOOSE_DISTINCT_GENERATED_MINIONS"; definitionIds: string[]; count: number; upTo?: boolean }
   | { type: "SUMMON_PER_FRIENDLY_FIELD_SUBTYPE"; definitionId: string; subtype: string }
-  | { type: "SUMMON_WITH_KEYWORD_IF_FIELD"; definitionId: string; count: number; fieldDefinitionId: string; keyword: Keyword }
+  | { type: "SUMMON_WITH_KEYWORD_IF_FIELD"; definitionId: string; count: number; fieldDefinitionId: string; keyword: Keyword; additionalKeywords?: Keyword[] }
   | { type: "DAMAGE_ALL_ENEMY_MINIONS"; value: number }
   | { type: "DAMAGE_ALL_OTHER_MINIONS"; value: number }
   | { type: "DAMAGE_TARGET_ENEMY_MINION"; value: number }
@@ -124,7 +125,7 @@ export type EffectDefinition =
   | { type: "MECHANICAL_TECHNIQUE"; cost: number; effects: EffectDefinition[] }
   | { type: "NECROMANCY"; cost: number; effects: EffectDefinition[]; silentIfInsufficient?: boolean }
   | { type: "RETURN_HAND_TO_DECK_MACHINE_DISCOUNT"; maxCount: number; reductionPerCard: number }
-  | { type: "SET_HAND_CARD_COST_ZERO"; count: number; cardType?: CardType; subtype?: string }
+  | { type: "SET_HAND_CARD_COST_ZERO"; count: number; cardType?: CardType; subtype?: string; subtypes?: string[] }
   | { type: "NECRO_REVIVE_SELF"; value: number }
   | { type: "SEGMENT_BREAK" }
   | { type: "CONDITIONAL"; condition: ConditionDefinition; effects: EffectDefinition[]; silentOnFailure?: boolean }
@@ -154,7 +155,7 @@ export interface CardDefinition {
     | { type: "RECYCLE_CHARGE" }
     | { type: "FRIENDLY_FIELD_SUBTYPE_COUNT"; subtype: string }
     | { type: "TURN_AND_EXISTING_FRIENDLY_MINIONS"; turnAtLeast: number; minExistingMinions: number; reduction: number }
-    | { type: "SUMMONED_THIS_TURN_MULTIPLIER"; multiplier: number }
+    | { type: "SUMMONED_THIS_TURN_MULTIPLIER"; multiplier: number; turnAtLeast: number }
     | { type: "SUMMONED_THIS_GAME_AT_LEAST_FIXED"; value: number; cost: number }
     | { type: "FRIENDLY_MINION_COUNT" }
     | { type: "TURN_SUMMONED_DRAGON_COST_AT_LEAST"; threshold: number; reduction: number };

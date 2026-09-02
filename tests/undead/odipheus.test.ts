@@ -7,9 +7,11 @@ describe("不朽的懲戒魔龍 奧迪菲斯", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const source = putCard(state, "P1", "UNDEAD_012", "HAND", "battlecry");
+    expect(source.currentCost).toBe(7);
     const destroyed = putCard(state, "P2", "UNDEAD_001", "MINION", "destroyed");
     const sanctuary = putCard(state, "P2", "DRAGON_006", "MINION", "sanctuary");
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: source.instanceId }).state;
+    expect(state.players.P1.mana).toBe(3);
     expect(state.players.P2.graveyard.some((card) => card.instanceId === destroyed.instanceId)).toBe(true);
     expect(state.players.P2.minions.some((card) => card.instanceId === sanctuary.instanceId)).toBe(true);
   });

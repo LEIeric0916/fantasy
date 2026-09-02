@@ -99,7 +99,7 @@ function playCard(state: GameState, playerId: PlayerId, instanceId: string): voi
     addLog(state, "RESOURCE", `${definition.name} 使用下一張手下減費 ${player.nextMinionTemporaryCostReduction}`, { instanceId: card.instanceId });
     player.nextMinionTemporaryCostReduction = 0;
   }
-  if (definition.cardType === "MINION" && definition.subtype.includes("MACHINE") && player.nextMachineCostReduction > 0) {
+  if (definition.cardType === "MINION" && definition.faction === "MACHINE" && player.nextMachineCostReduction > 0) {
     addLog(state, "RESOURCE", `${definition.name} 使用下一張機械手下減費 ${player.nextMachineCostReduction}`, { instanceId: card.instanceId });
     player.nextMachineCostReduction = 0;
   }

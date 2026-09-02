@@ -35,4 +35,20 @@ describe("機械降神術", () => {
     expect(state.players.P1.nextMachineCostReduction).toBe(0);
     expect(state.players.P1.resources.recycleCharge).toBe(1);
   });
+
+  it("奧古斯是機械陣營與機械種族手下，可獲得降神術減費", () => {
+    let state = mainState();
+    state.players.P1.faction = "MACHINE";
+    state.players.P1.hand = [];
+    const spell = putCard(state, "P1", "MACHINE_007", "HAND", "augus-spell");
+    const returned = putCard(state, "P1", "DRAGON_001", "HAND", "augus-returned");
+    const augus = putCard(state, "P1", "MACHINE_013", "HAND", "discounted-augus");
+
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: spell.instanceId }).state;
+    state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [returned.instanceId] }).state;
+    expect(state.players.P1.hand.find((card) => card.instanceId === augus.instanceId)?.currentCost).toBe(5);
+
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: augus.instanceId }).state;
+    expect(state.players.P1.nextMachineCostReduction).toBe(0);
+  });
 });

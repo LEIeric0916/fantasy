@@ -20,7 +20,7 @@ describe("卡牌效果欄關鍵字說明", () => {
     const definition = cardDefinitions.find((card) => card.id === "TOKEN_ALLIANCE_ROYAL_HONOR_GUARD");
     expect(definition?.keywords).toContain("DISCIPLINE");
     expect(KEYWORD_TEXT.DISCIPLINE.label).toBe("紀律");
-    expect(KEYWORD_TEXT.DISCIPLINE.description).toContain("仍會受到直接傷害");
+    expect(KEYWORD_TEXT.DISCIPLINE.description).toContain("仍會受到效果傷害");
   });
 
   it("主牌皇家戰士費用為9", () => {

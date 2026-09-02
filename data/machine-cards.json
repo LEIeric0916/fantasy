@@ -134,9 +134,9 @@
       "health": 2,
       "deckCount": 3,
       "keywords": ["RUSH", "BATTLECRY"],
-      "effectsText": "戰吼：抽2張牌。機械術3：使手中2張神器消耗變為0，召喚1名「機械帝國士兵」。",
+      "effectsText": "戰吼：抽2張牌。機械術3：使手中最多2張神器（包含神器法術）消耗變為0，召喚1名「機械帝國士兵」。",
       "generatedOnly": false,
-      "notes": "最後修正確認采用方案B：手中不足2張神器時，『使2張神器費用變0』整段跳過；只要召喚士兵可執行，仍消耗3充能並召喚士兵。"
+      "notes": "最多指定2張神器使消耗變為0；神器包含ARTIFACT立場與ARTIFACT_SPELL法術。手中不足2張時可只選現有神器。"
     },
     {
       "id": "MACHINE_010",
@@ -188,13 +188,13 @@
       "name": "機械法師 奧古斯",
       "faction": "MACHINE",
       "cardType": "MINION",
-      "subtype": ["HUMAN"],
+      "subtype": ["MACHINE"],
       "originalCost": 7,
       "attack": 3,
       "health": 3,
       "deckCount": 3,
       "keywords": ["BATTLECRY"],
-      "effectsText": "戰吼：各召喚1名「機械帝國收割者」與「機械毀滅者」。機械術15：由玩家任選2張不同名的「機械神造物」召喚。",
+      "effectsText": "戰吼：各召喚1名「機械帝國收割者」與「機械毀滅者」。機械術15：由玩家任選最多2張不同名的「機械神造物」召喚。",
       "generatedOnly": false,
       "notes": ""
     },

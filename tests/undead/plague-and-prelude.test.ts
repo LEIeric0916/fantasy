@@ -43,10 +43,11 @@ describe("瘟疫典錄與末日序曲", () => {
     expect(after?.counters.plagueMarks).toBe(5);
   });
 
-  it("不朽的追憶者明確具有聖盾術與衝刺", () => {
+  it("殘光渡扉者亞恩具有衝刺與嘲諷", () => {
     const state = mainState();
-    const recollector = putCard(state, "P1", "UNDEAD_008", "MINION", "recollector-keywords");
-    expect(recollector.keywords).toEqual(expect.arrayContaining(["DIVINE_SHIELD", "RUSH"]));
+    const yaan = putCard(state, "P1", "UNDEAD_008", "MINION", "yaan-keywords");
+    expect(yaan.keywords).toEqual(expect.arrayContaining(["RUSH", "TAUNT"]));
+    expect(yaan.keywords).not.toContain("DIVINE_SHIELD");
   });
 
   it("只有進入場上的第3張末日序曲發動入場曲並保留為末日之書", () => {

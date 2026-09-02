@@ -59,6 +59,11 @@ export function CardView({
     ...(card.counters.damageCap !== undefined ? [{ key: "damage-cap", label: `減傷≤${card.counters.damageCap}` }] : []),
   ] : [];
   const statusClasses = boardStatuses.map((status) => `status-${status.key}`).join(" ");
+  const protectionEmblems = card.sealed || (card.zone !== "MINION" && card.zone !== "FIELD") ? [] : [
+    ...(card.keywords.includes("TAUNT") ? [{ key: "taunt", label: "嘲諷盾牌" }] : []),
+    ...(card.keywords.includes("DISCIPLINE") ? [{ key: "discipline", label: "紀律徽章" }] : []),
+    ...(card.keywords.includes("SANCTUARY") ? [{ key: "sanctuary", label: "庇護白盾" }] : []),
+  ];
   const isBattleMinion = card.zone === "MINION" && definition.cardType === "MINION";
 
   useEffect(() => {
@@ -95,7 +100,7 @@ export function CardView({
 
   return (
     <article
-      className={`card ${statusClasses} ${handSummary ? "hand-card" : ""} ${entranceActive ? "minion-entering" : ""} ${selected ? "selected" : ""} ${playable ? "playable" : ""} ${actionable ? "actionable" : ""} ${dropTarget ? "drop-target" : ""}`}
+      className={`card ${statusClasses} ${protectionEmblems.length ? "has-protection-emblems" : ""} ${handSummary ? "hand-card" : ""} ${entranceActive ? "minion-entering" : ""} ${selected ? "selected" : ""} ${playable ? "playable" : ""} ${actionable ? "actionable" : ""} ${dropTarget ? "drop-target" : ""}`}
       draggable={draggable}
       onDragStart={(event) => {
         clearLongPress();
@@ -121,7 +126,9 @@ export function CardView({
       onPointerLeave={clearLongPress}
       onContextMenu={(event) => event.preventDefault()}
     >
-      {card.zone === "MINION" && card.keywords.includes("TAUNT") && !card.sealed && <span className="taunt-emblem" aria-label="嘲諷盾牌" />}
+      {protectionEmblems.length > 0 && <span className="protection-emblems" aria-label={`防護效果：${protectionEmblems.map((emblem) => emblem.label).join("、")}`}>
+        {protectionEmblems.map((emblem) => <span className={`status-emblem ${emblem.key}-emblem`} aria-label={emblem.label} title={emblem.label} key={emblem.key} />)}
+      </span>}
       {boardStatuses.length > 0 && <span className="status-strip" aria-label={`狀態：${boardStatuses.map((status) => status.label).join("、")}`}>{boardStatuses.map((status) => <small className={`status-badge ${status.key}`} title={status.description} key={status.key}>{status.label}</small>)}</span>}
       {plagueMarks !== undefined && <span className="counter-badge plague-counter" aria-label={`瘟疫標記 ${plagueMarks}`}><small>瘟疫</small><strong>{plagueMarks}</strong><small>/ {plagueThreshold}</small></span>}
       <button className="card-surface" disabled={disabled} onClick={() => {

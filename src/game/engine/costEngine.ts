@@ -23,7 +23,7 @@ export function refreshCardCost(state: GameState, playerId: PlayerId, card: Card
   if (definition.originalCost === null) throw new RuleUndefinedError("NULL_CARD_COST", "卡牌費用為 null，不能計算", definition.id);
   let value = definition.originalCost + (card.counters.temporaryCostAdjustment ?? 0);
   if (definition.cardType === "MINION") value -= state.players[playerId].nextMinionTemporaryCostReduction;
-  if (definition.cardType === "MINION" && definition.subtype.includes("MACHINE")) {
+  if (definition.cardType === "MINION" && definition.faction === "MACHINE") {
     value -= state.players[playerId].nextMachineCostReduction;
   }
   if (definition.dynamicCost?.type === "ENEMY_MINION_COUNT") {
@@ -47,7 +47,9 @@ export function refreshCardCost(state: GameState, playerId: PlayerId, card: Card
       value -= definition.dynamicCost.reduction;
     }
   } else if (definition.dynamicCost?.type === "SUMMONED_THIS_TURN_MULTIPLIER") {
-    value -= state.players[playerId].summonedThisTurn * definition.dynamicCost.multiplier;
+    if (state.players[playerId].turnsStarted >= definition.dynamicCost.turnAtLeast) {
+      value -= state.players[playerId].summonedThisTurn * definition.dynamicCost.multiplier;
+    }
   } else if (definition.dynamicCost?.type === "SUMMONED_THIS_GAME_AT_LEAST_FIXED") {
     if (state.players[playerId].summonedThisGame >= definition.dynamicCost.value) value = definition.dynamicCost.cost;
   } else if (definition.dynamicCost?.type === "FRIENDLY_MINION_COUNT") {

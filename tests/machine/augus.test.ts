@@ -42,4 +42,25 @@ describe("機械法師 奧古斯", () => {
     expect(state.players.P1.resources.recycleCharge).toBe(14);
     expect(state.players.P1.minions).toHaveLength(3);
   });
+
+  it("戰吼後只剩一個手下空位時可只召喚一張神造物", () => {
+    let state = mainState();
+    state.players.P1.faction = "MACHINE";
+    state.players.P1.hand = [];
+    state.players.P1.resources.recycleCharge = 15;
+    putCard(state, "P1", "TOKEN_MACHINE_EMPIRE_SOLDIER", "MINION", "occupied-one");
+    putCard(state, "P1", "TOKEN_MACHINE_EMPIRE_SOLDIER", "MINION", "occupied-two");
+    putCard(state, "P1", "TOKEN_MACHINE_EMPIRE_SOLDIER", "MINION", "occupied-three");
+    const augus = putCard(state, "P1", "MACHINE_013", "HAND", "one-slot");
+
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: augus.instanceId }).state;
+    expect(state.players.P1.minions).toHaveLength(6);
+    expect(state.pendingChoice).toMatchObject({ type: "EFFECT_OPTION" });
+    if (state.pendingChoice?.type !== "EFFECT_OPTION") throw new Error("expected divine choice");
+    expect(state.pendingChoice.options.map((option) => option.id)).toContain("STOP");
+
+    state = applyAction(state, { type: "SELECT_EFFECT_OPTION", playerId: "P1", optionId: "TOKEN_MACHINE_DIVINE_DATE_MASAMUNE" }).state;
+    expect(state.players.P1.minions).toHaveLength(7);
+    expect(state.pendingChoice).toBeUndefined();
+  });
 });

@@ -43,8 +43,8 @@
       "attack": 1,
       "health": 1,
       "deckCount": 3,
-      "keywords": ["CHARGE", "DEATHRATTLE", "ON_REVIVE"],
-      "effectsText": "死亡之聲：召喚2名「不朽者之靈」。復活：此手下從棄堆被任何方式復活到場上時，+2/+0；離場時還原此加成。",
+      "keywords": ["CHARGE", "DEATHRATTLE", "ON_REVIVE", "ON_DISCARD"],
+      "effectsText": "被捨棄時：死靈數+2，抽1張牌。死亡之聲：召喚2名「不朽者之靈」。復活：此手下從棄堆被任何方式復活到場上時，+2/+0；離場時還原此加成。",
       "generatedOnly": false,
       "notes": ""
     },
@@ -110,18 +110,18 @@
     },
     {
       "id": "UNDEAD_008",
-      "name": "不朽的追憶者",
+      "name": "殘光渡扉者 亞恩",
       "faction": "UNDEAD",
       "cardType": "MINION",
       "subtype": ["UNDEAD"],
       "originalCost": 4,
-      "attack": 4,
-      "health": 3,
+      "attack": 3,
+      "health": 7,
       "deckCount": 2,
-      "keywords": ["RUSH", "DIVINE_SHIELD", "BATTLECRY", "ON_DISCARD"],
-      "effectsText": "聖盾術，衝刺。被捨棄時：死靈數+2，抽1張牌。戰吼：捨棄1張手牌，抽2張牌，使對手1手下封印。",
+      "keywords": ["RUSH", "TAUNT", "BATTLECRY", "AURA"],
+      "effectsText": "衝刺，嘲諷。戰吼：捨棄1張手牌，召喚2張不同名的黑暗之書。光環：回合結束時恢復我方玩家3HP，使我方1名手下獲得聖盾術。",
       "generatedOnly": false,
-      "notes": "最後修正確認未寫持續回合的封印永久持續，直到該卡離場。"
+      "notes": ""
     },
     {
       "id": "UNDEAD_009",
@@ -164,7 +164,7 @@
       "health": 5,
       "deckCount": 3,
       "keywords": ["NECRO_REVIVE_5"],
-      "effectsText": "死靈復活5。進場時：召喚2名「不朽者巨靈」；若我方場上有末日之書，使這些巨靈獲得衝鋒。",
+      "effectsText": "死靈復活5。進場時：召喚2名「不朽者巨靈」；若我方場上有末日之書，使這些巨靈獲得聖盾術與衝鋒。",
       "generatedOnly": false,
       "notes": "最後修正確認進場時包含以任何方式進入場上，並與僅從手牌打出的戰吼區分。"
     },
@@ -174,7 +174,7 @@
       "faction": "UNDEAD",
       "cardType": "MINION",
       "subtype": ["UNDEAD"],
-      "originalCost": 8,
+      "originalCost": 7,
       "attack": 6,
       "health": 7,
       "deckCount": 2,

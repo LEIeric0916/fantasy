@@ -50,7 +50,7 @@
       "health": 1,
       "deckCount": 3,
       "keywords": ["BATTLECRY", "AURA"],
-      "effectsText": "戰吼：召喚1名「民兵」，抽1張牌。光環：我方每召喚1手下，抽1張牌；一回合最多發動2次。",
+      "effectsText": "戰吼：召喚1名「民兵」，抽1張牌。光環：我方每召喚1手下，抽1張牌；一回合最多發動1次。",
       "generatedOnly": false,
       "notes": "最後修正確認先處理戰吼；光環角色進場當下即生效，因此戰吼召喚民兵會觸發自身光環，總計抽2張。"
     },
@@ -155,7 +155,7 @@
       "health": 5,
       "deckCount": 3,
       "keywords": ["RUSH", "DIVINE_SHIELD", "BATTLECRY"],
-      "effectsText": "減費2X：X為我方這回合召喚手下次數。戰吼：檢索1張主牌「皇家戰士」；協作10：另從衍生牌庫召喚1名衍生「皇家戰士」。",
+      "effectsText": "減費2X：第5回合以上時，X為我方這回合召喚手下次數。戰吼：檢索1張主牌「皇家戰士」；協作15：另從衍生牌庫召喚1名衍生「皇家戰士」。",
       "generatedOnly": false,
       "notes": "主牌檢索與未指定來源召喚已明確區分。"
     },
@@ -165,7 +165,7 @@
       "faction": "ALLIANCE",
       "cardType": "MINION",
       "subtype": ["HUMAN", "ARMY"],
-      "originalCost": 7,
+      "originalCost": 8,
       "attack": 7,
       "health": 7,
       "deckCount": 3,
@@ -185,9 +185,9 @@
       "health": 8,
       "deckCount": 3,
       "keywords": ["CHARGE", "TAUNT", "BATTLECRY", "DEATHRATTLE"],
-      "effectsText": "戰吼：消滅對手最多3手下。協作15：給予對手玩家4點傷害。死亡之聲：召喚2名「皇家聖騎兵」。",
+      "effectsText": "戰吼：消滅對手最多3手下。協作20：給予對手玩家4點傷害。死亡之聲：召喚2名「皇家聖騎兵」。",
       "generatedOnly": false,
-      "notes": "最後修正確認：消滅對手最多3手下，可指定0～3個不同CardInstance；協作15為句號式獨立效果。"
+      "notes": "最後修正確認：消滅對手最多3手下，可指定0～3個不同CardInstance；協作20為句號式獨立效果。"
     }
   ]
 }

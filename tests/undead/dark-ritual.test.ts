@@ -14,7 +14,7 @@ describe("黑暗祭儀", () => {
 
     const first = state.players.P1.deck.find((card) => getCardDefinition(card.definitionId).cardType === "MINION")!;
     const second = state.players.P1.deck.find((card) => card.instanceId !== first.instanceId && getCardDefinition(card.definitionId).cardType === "MINION")!;
-    const onDiscard = createCardInstance(getCardDefinition("UNDEAD_008"), "P1", "DECK", "ritual-on-discard");
+    const onDiscard = createCardInstance(getCardDefinition("UNDEAD_003"), "P1", "DECK", "ritual-on-discard");
     const filler = state.players.P1.deck.filter((card) => getCardDefinition(card.definitionId).cardType === "SPELL").slice(0, 2);
     const topIds = new Set([first.instanceId, second.instanceId, ...filler.map((card) => card.instanceId)]);
     state.players.P1.deck = state.players.P1.deck.filter((card) => !topIds.has(card.instanceId));

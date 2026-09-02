@@ -73,6 +73,27 @@ describe("瀏覽器入口流程", () => {
     expect(container.textContent).toContain("牌庫31");
   });
 
+  it("P1 與 P2 陣營選單都能選擇隨機陣營", () => {
+    const random = vi.spyOn(Math, "random")
+      .mockReturnValueOnce(0.01)
+      .mockReturnValueOnce(0.74);
+    const first = changeSelect("P1 玩家陣營", "RANDOM");
+    const second = changeSelect("P2 玩家陣營", "RANDOM");
+    changeSelect("先攻設定", "P1");
+    expect([...first.options].map((option) => option.value)).toEqual(["RANDOM", "DRAGON", "UNDEAD", "MACHINE", "ALLIANCE"]);
+    expect([...second.options].map((option) => option.value)).toEqual(["RANDOM", "DRAGON", "UNDEAD", "MACHINE", "ALLIANCE"]);
+
+    click(button("建立對局"));
+    click(button("確認換牌（0）"));
+    click(button("已交接，顯示畫面"));
+    click(button("確認換牌（0）"));
+    click(button("已交接，顯示畫面"));
+
+    expect(container.textContent).toContain("P1 · DRAGON");
+    expect(container.textContent).toContain("P2 · MACHINE");
+    random.mockRestore();
+  });
+
   it("可選擇隨機 AI 模式，由 P2 自動完成換牌並維持 P1 視角", () => {
     vi.useFakeTimers();
     changeSelect("對戰模式", "RANDOM_AI");
@@ -91,11 +112,61 @@ describe("瀏覽器入口流程", () => {
     const mode = container.querySelector<HTMLSelectElement>('select[aria-label="對戰模式"]')!;
     expect([...mode.options].map((option) => option.value)).toEqual([
       "LOCAL",
+      "TUTORIAL",
       "RANDOM_AI",
       "HEURISTIC_AI",
       "SEARCH_AI",
       "WATCH_AI_HEURISTIC",
     ]);
+  });
+
+  it("新手教學第一關會依序介紹介面並等待玩家拖曳皇家衛兵出牌", () => {
+    changeSelect("對戰模式", "TUTORIAL");
+    expect(container.querySelector('select[aria-label="P1 玩家陣營"]')).toBeNull();
+    click(button("建立對局"));
+
+    expect(container.textContent).toContain("新手教學 · 第一關");
+    expect(container.textContent).toContain("場地區：手下與立場");
+    for (const expected of ["配置：牌組與手牌", "玩家資訊區", "先看看你的手牌", "查看卡牌詳細資訊", "確認費用與水晶", "請親自打出皇家衛兵"]) {
+      click(container.querySelector<HTMLElement>(".tutorial-overlay")!);
+      expect(container.textContent).toContain(expected);
+    }
+
+    expect(container.textContent).toContain("皇家衛兵");
+    expect(container.textContent).toContain("1/1");
+    const handCard = container.querySelector<HTMLElement>('[data-instance-id="tutorial-royal-guard"]')!;
+    expect(handCard.getAttribute("draggable")).toBe("true");
+    const dataTransfer = { effectAllowed: "none", dropEffect: "none", setData: () => undefined };
+    const dragStart = new Event("dragstart", { bubbles: true });
+    Object.defineProperty(dragStart, "dataTransfer", { value: dataTransfer });
+    act(() => handCard.dispatchEvent(dragStart));
+    const activeSide = container.querySelector<HTMLElement>(".active-side")!;
+    const drop = new Event("drop", { bubbles: true });
+    Object.defineProperty(drop, "dataTransfer", { value: dataTransfer });
+    act(() => activeSide.dispatchEvent(drop));
+
+    expect(container.textContent).toContain("第一關完成！");
+    expect(container.querySelector('.minion-zone [data-instance-id="tutorial-royal-guard"]')).not.toBeNull();
+  });
+
+  it("可從起始頁面開啟卡表、篩選卡牌並查看詳細資訊", () => {
+    click(button("查看卡表"));
+    expect(container.textContent).toContain("CARD LIBRARY");
+    expect(container.textContent).toContain("卡表");
+    expect(container.textContent).toContain("選擇一副牌查看卡表");
+
+    click(container.querySelector<HTMLButtonElement>('button[aria-label="查看龍族牌組"]')!);
+    expect(container.textContent).toContain("赤焰的龍皇兵");
+
+    click(container.querySelector<HTMLButtonElement>('button[aria-label="查看機械牌組"]')!);
+    expect(container.textContent).toContain("機械帝國遊騎兵");
+    expect(container.textContent).not.toContain("赤焰的龍皇兵");
+
+    click(container.querySelector<HTMLButtonElement>('button[aria-label="檢視 機械帝國遊騎兵"]')!);
+    expect(container.querySelector('[role="dialog"]')?.getAttribute("aria-label")).toBe("機械帝國遊騎兵 卡牌資訊");
+    click(button("×"));
+    click(button("返回起始頁面"));
+    expect(container.textContent).toContain("建立對局");
   });
 
   it("可選擇 AI vs AI 觀戰模式，雙方自動完成換牌", () => {

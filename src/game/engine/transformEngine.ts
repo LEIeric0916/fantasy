@@ -9,7 +9,7 @@ import { enqueueTriggeredEffects } from "./triggerEngine";
 
 export function transformMinion(state: GameState, card: CardInstance, definitionId: string): boolean {
   if (card.zone !== "MINION") throw new InvalidActionError("只有場上的手下可以轉變");
-  if (hasActiveKeyword(card, "DISCIPLINE") || hasActiveKeyword(card, "INVINCIBLE")) return false;
+  if (hasActiveKeyword(card, "INVINCIBLE")) return false;
   const definition = getCardDefinition(definitionId);
   if (definition.cardType !== "MINION") throw new InvalidActionError("轉變目標定義必須是手下");
   if (definition.attack === null || definition.health === null) {
@@ -65,7 +65,7 @@ export function checkDoomsdayWin(state: GameState, playerId: CardInstance["contr
 
 export function transformField(state: GameState, card: CardInstance, definitionId: string): boolean {
   if (card.zone !== "FIELD") throw new InvalidActionError("只有場上的立場可以轉變");
-  if (hasActiveKeyword(card, "DISCIPLINE") || hasActiveKeyword(card, "INVINCIBLE")) return false;
+  if (hasActiveKeyword(card, "INVINCIBLE")) return false;
   const definition = getCardDefinition(definitionId);
   if (definition.cardType !== "FIELD") throw new InvalidActionError("轉變目標定義必須是立場");
   const previousDefinitionId = card.definitionId;

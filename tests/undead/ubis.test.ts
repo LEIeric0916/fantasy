@@ -1,10 +1,34 @@
 import { describe, expect, it } from "vitest";
-import { resolvePendingEffects } from "../../src/game/engine/effectEngine";
+import { resolvePendingEffects, selectEffectCards } from "../../src/game/engine/effectEngine";
 import { reviveMinion } from "../../src/game/engine/reviveEngine";
 import { destroyMinion } from "../../src/game/engine/zoneEngine";
 import { mainState, putCard } from "../helpers";
 
 describe("迅疾黑暗騎士 烏比斯", () => {
+  it("被效果捨棄時死靈數加2並抽1張牌", () => {
+    const state = mainState();
+    state.players.P1.hand = [];
+    const source = putCard(state, "P1", "UNDEAD_002", "MINION", "discard-source");
+    const ubis = putCard(state, "P1", "UNDEAD_003", "HAND", "discarded");
+    const deckBefore = state.players.P1.deck.length;
+    state.pendingChoice = {
+      type: "EFFECT_CARDS",
+      playerId: "P1",
+      sourceInstanceId: source.instanceId,
+      prompt: "測試捨棄",
+      candidateInstanceIds: [ubis.instanceId],
+      count: 1,
+      resolution: { type: "DISCARD_HAND" },
+      remainingEffects: [],
+    };
+
+    selectEffectCards(state, "P1", [ubis.instanceId]);
+
+    expect(state.players.P1.resources.necromancy).toBe(2);
+    expect(state.players.P1.deck).toHaveLength(deckBefore - 1);
+    expect(state.players.P1.graveyard.map((card) => card.instanceId)).toContain(ubis.instanceId);
+  });
+
   it("死亡之聲召喚兩名不朽者之靈", () => {
     const state = mainState();
     const ubis = putCard(state, "P1", "UNDEAD_003", "MINION", "death");

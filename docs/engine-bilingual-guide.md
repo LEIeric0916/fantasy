@@ -141,6 +141,7 @@ GameBoard 派發 Action
 | `SUMMON` | 召喚衍生手下 |
 | `SUMMON_FIELD` | 召喚衍生立場 |
 | `CHOOSE_GENERATED_FIELD` | 選擇一種衍生立場召喚 |
+| `CHOOSE_DISTINCT_GENERATED_FIELDS` | 選擇不同衍生立場召喚 |
 | `CHOOSE_DISTINCT_GENERATED_MINIONS` | 選擇不同衍生手下召喚 |
 | `SUMMON_PER_FRIENDLY_FIELD_SUBTYPE` | 依我方指定類型立場數召喚 |
 | `SUMMON_WITH_KEYWORD_IF_FIELD` | 召喚；若有指定立場則賦予關鍵字 |
@@ -345,7 +346,7 @@ MULLIGAN 換牌
 | English | 中文名稱 | 實際工作 |
 |---|---|---|
 | `getLegalEnemyEffectTargets` | 取得合法敵方效果目標 | 只從對手手下區挑選；排除潛行與光紋，干涉型效果再排除紀律及無敵 |
-| `interference` | 是否屬於干涉型效果 | `true` 表示消滅、封印等會被紀律阻擋的效果 |
+| `interference` | 是否屬於干涉型效果 | `true` 表示轉變、封印等會被對手紀律或無敵阻擋的效果 |
 
 集中處理指定規則可以避免每張卡各自寫一套、最後出現範圍不一致。
 
@@ -395,7 +396,7 @@ MULLIGAN 換牌
 | `checkDoomsdayWin` | 檢查末日之書勝利 | 同一玩家場上達到 4 張末日之書便立即獲勝 |
 | `transformField` | 轉變立場 | 保留實體身分，替換立場定義、費用、關鍵字與計數器，再檢查勝利 |
 
-轉變不等於消滅：不進棄堆、不發動原卡死亡之聲。紀律或無敵可以阻止轉變。成功轉變手下後，引擎也會通知相關轉變光環，例如瘟疫之書增加標記。
+轉變不等於消滅：不進棄堆、不發動原卡死亡之聲。無敵會阻止轉變；紀律會阻止對手效果造成的轉變，但允許我方與自身效果。成功轉變手下後，引擎也會通知相關轉變光環，例如瘟疫之書增加標記。
 
 ---
 

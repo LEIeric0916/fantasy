@@ -57,7 +57,7 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
       type: "MECHANICAL_TECHNIQUE",
       cost: 3,
       effects: [
-        { type: "SET_HAND_CARD_COST_ZERO", count: 2, cardType: "FIELD", subtype: "ARTIFACT" },
+        { type: "SET_HAND_CARD_COST_ZERO", count: 2, subtypes: ["ARTIFACT", "ARTIFACT_SPELL"] },
         { type: "SUMMON", definitionId: "TOKEN_MACHINE_EMPIRE_SOLDIER", count: 1 },
       ],
     },
@@ -89,6 +89,7 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
           "TOKEN_MACHINE_DIVINE_ENDYMION",
         ],
         count: 2,
+        upTo: true,
       }],
     },
   ],
@@ -151,7 +152,7 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
     { type: "SEGMENT_BREAK" },
     {
       type: "CONDITIONAL",
-      condition: { type: "SUMMONED_THIS_GAME_AT_LEAST", value: 10 },
+      condition: { type: "SUMMONED_THIS_GAME_AT_LEAST", value: 15 },
       effects: [{ type: "SUMMON", definitionId: "TOKEN_ALLIANCE_ROYAL_WARRIOR", count: 1 }],
     },
   ],
@@ -161,7 +162,7 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
     { type: "SEGMENT_BREAK" },
     {
       type: "CONDITIONAL",
-      condition: { type: "SUMMONED_THIS_GAME_AT_LEAST", value: 15 },
+      condition: { type: "SUMMONED_THIS_GAME_AT_LEAST", value: 20 },
       effects: [{ type: "DAMAGE_ENEMY_HERO", value: 4 }],
     },
   ],
@@ -315,8 +316,16 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
   ],
   UNDEAD_008: [
     { type: "DISCARD_HAND", count: 1 },
-    { type: "DRAW", value: 2 },
-    { type: "SEAL_TARGET_ENEMY_MINION" },
+    {
+      type: "CHOOSE_DISTINCT_GENERATED_FIELDS",
+      definitionIds: [
+        "TOKEN_UNDEAD_BOOK_IMMORTAL",
+        "TOKEN_UNDEAD_BOOK_PLAGUE",
+        "TOKEN_UNDEAD_BOOK_REVENGE",
+        "TOKEN_UNDEAD_BOOK_DOOM_PRELUDE",
+      ],
+      count: 2,
+    },
   ],
   UNDEAD_009: [{ type: "REVIVE_FRIENDLY_GRAVE_MINION", minOriginalCost: 5 }],
   UNDEAD_010: [{ type: "SUMMON", definitionId: "TOKEN_UNDEAD_PREACHER", count: 1 }],
@@ -347,7 +356,8 @@ const enterFieldEffects: Record<string, EffectDefinition[]> = {
     definitionId: "TOKEN_UNDEAD_GIANT",
     count: 2,
     fieldDefinitionId: "TOKEN_UNDEAD_DOOMSDAY_BOOK",
-    keyword: "CHARGE",
+    keyword: "DIVINE_SHIELD",
+    additionalKeywords: ["CHARGE"],
   }],
 };
 
@@ -489,6 +499,7 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
   UNDEAD_003: {
     DEATHRATTLE: [{ type: "SUMMON", definitionId: "TOKEN_UNDEAD_SPIRIT", count: 2 }],
     ON_REVIVE: [{ type: "MODIFY_SELF_ATTACK_UNTIL_LEAVES", value: 2 }],
+    ON_DISCARD: [{ type: "GAIN_NECROMANCY", value: 2 }, { type: "DRAW", value: 1 }],
   },
   UNDEAD_004: {
     DEATHRATTLE: [{ type: "SUMMON_FIELD", definitionId: "TOKEN_UNDEAD_BOOK_DOOM_PRELUDE", count: 1 }],
@@ -544,7 +555,10 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
     END_TURN: [{ type: "TRANSFORM_ENEMY_MINIONS", count: 1, definitionId: "TOKEN_UNDEAD_GENERIC", maxHealth: 3 }],
   },
   UNDEAD_008: {
-    ON_DISCARD: [{ type: "GAIN_NECROMANCY", value: 2 }, { type: "DRAW", value: 1 }],
+    END_TURN: [
+      { type: "HEAL_HERO", value: 3 },
+      { type: "GRANT_TARGET_FRIENDLY_MINION_KEYWORD", keyword: "DIVINE_SHIELD" },
+    ],
   },
 };
 
@@ -569,7 +583,7 @@ const dynamicCosts: Record<string, CardDefinition["dynamicCost"]> = {
   MACHINE_014: { type: "FRIENDLY_FIELD_SUBTYPE_COUNT", subtype: "ARTIFACT" },
   ALLIANCE_007: { type: "ENEMY_MINION_COUNT" },
   ALLIANCE_009: { type: "TURN_AND_EXISTING_FRIENDLY_MINIONS", turnAtLeast: 5, minExistingMinions: 3, reduction: 5 },
-  ALLIANCE_010: { type: "SUMMONED_THIS_TURN_MULTIPLIER", multiplier: 2 },
+  ALLIANCE_010: { type: "SUMMONED_THIS_TURN_MULTIPLIER", multiplier: 2, turnAtLeast: 5 },
   ALLIANCE_011: { type: "ENEMY_MINION_COUNT" },
   TOKEN_ALLIANCE_HERO_AUGUSTIN: { type: "ENEMY_MINION_COUNT" },
   TOKEN_ALLIANCE_HERO_VALENTINE: { type: "FRIENDLY_MINION_COUNT" },
@@ -629,7 +643,7 @@ const damageCapAuras: Record<string, CardDefinition["damageCapAura"]> = {
 };
 
 const friendlySummonAuras: Record<string, CardDefinition["friendlySummonAura"]> = {
-  ALLIANCE_003: { effects: [{ type: "DRAW", value: 1 }], maxPerTurn: 2 },
+  ALLIANCE_003: { effects: [{ type: "DRAW", value: 1 }], maxPerTurn: 1 },
 };
 
 const friendlyEffectDamageImmunityAuras: Record<string, CardDefinition["friendlyEffectDamageImmunityAura"]> = {
@@ -769,7 +783,7 @@ export function isCardImplemented(definition: CardDefinition): boolean {
     const structuralOnly = definition.effectsText
       .split(/[、，,。.\s]+/)
       .filter(Boolean)
-      .every((text) => ["嘲諷", "衝刺", "衝鋒", "聖盾術"].includes(text));
+      .every((text) => ["嘲諷", "衝刺", "衝鋒", "聖盾術", "庇護"].includes(text));
     return Boolean(definition.effects?.length)
       || Boolean(definition.enterFieldEffects?.length)
       || Boolean(definition.triggeredEffects)

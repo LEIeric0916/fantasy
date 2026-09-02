@@ -85,6 +85,21 @@ export function destroyCardOnField(state: GameState, card: CardInstance, reason 
   if (effects.length > 0) enqueueTriggeredEffects(state, card, effects, `${reason}:${triggeredKeyword}`, timingContext, true, true);
   if (!card.sealed && card.keywords.includes("RECYCLE")) {
     moveCard(state, card, "DECK", `${reason}:RECYCLE`);
+    const resetDefinition = getCardDefinition(card.originalDefinitionId);
+    card.definitionId = card.originalDefinitionId;
+    card.currentCost = resetDefinition.originalCost;
+    card.currentAttack = resetDefinition.attack;
+    card.currentHealth = resetDefinition.health;
+    card.maxHealth = resetDefinition.health;
+    card.damageTaken = 0;
+    card.keywords = [...resetDefinition.keywords];
+    card.counters = { ...resetDefinition.initialCounters };
+    card.flags = {};
+    card.attacksUsedThisTurn = 0;
+    card.summonedOnTurn = null;
+    delete card.necroRevivedTurn;
+    card.silenced = false;
+    card.sealed = false;
     const deck = state.players[card.controllerId].deck;
     const returned = deck.pop();
     if (returned) deck.unshift(returned);

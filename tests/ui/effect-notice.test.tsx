@@ -74,6 +74,24 @@ describe("效果未發動介面提示", () => {
     container.remove();
   });
 
+  it("多重防護以不同顏色與圖形徽章並排顯示", () => {
+    const state = mainState();
+    const protectedMinion = putCard(state, "P1", "DRAGON_007", "MINION", "protection-emblems");
+    protectedMinion.keywords.push("TAUNT", "DIVINE_SHIELD", "SANCTUARY");
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
+    const rendered = container.querySelector(`[data-instance-id="${protectedMinion.instanceId}"]`)!;
+    expect(rendered.classList.contains("has-protection-emblems")).toBe(true);
+    expect(rendered.querySelector('[aria-label="嘲諷盾牌"]')).not.toBeNull();
+    expect(rendered.querySelector('[aria-label="聖盾術金環"]')).toBeNull();
+    expect(rendered.querySelector('[aria-label="紀律徽章"]')).not.toBeNull();
+    expect(rendered.querySelector('[aria-label="庇護白盾"]')).not.toBeNull();
+    act(() => root.unmount());
+    container.remove();
+  });
+
 
   it("直接向玩家顯示卡牌名稱與未發動原因", () => {
     const state = mainState();
@@ -129,7 +147,7 @@ describe("效果未發動介面提示", () => {
       card.dispatchEvent(new Event("pointerdown", { bubbles: true }));
       vi.advanceTimersByTime(560);
     });
-    expect(container.querySelector('[role="dialog"]')?.textContent).toContain("不朽的追憶者");
+    expect(container.querySelector('[role="dialog"]')?.textContent).toContain("殘光渡扉者 亞恩");
     act(() => root.unmount());
     container.remove();
     vi.useRealTimers();
@@ -232,9 +250,9 @@ describe("效果未發動介面提示", () => {
     const root = createRoot(container);
     act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
     const card = container.querySelector(`[data-instance-id="${minion.instanceId}"]`)!;
-    expect(card.querySelector(".attack-stat")?.textContent).toContain("4");
-    expect(card.querySelector(".health-stat")?.textContent).toContain("3");
-    expect(card.querySelector(".status-strip")?.textContent).toContain("聖盾術");
+    expect(card.querySelector(".attack-stat")?.textContent).toContain("3");
+    expect(card.querySelector(".health-stat")?.textContent).toContain("7");
+    expect(card.querySelector(".status-strip")?.textContent).toContain("嘲諷");
     act(() => root.unmount());
     container.remove();
   });

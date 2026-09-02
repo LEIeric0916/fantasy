@@ -56,7 +56,7 @@ export function dealDamageToMinion(
     .reduce<number | undefined>((lowest, value) => lowest === undefined ? value : Math.min(lowest, value), undefined);
   const actual = damageCap === undefined ? amount : Math.min(amount, damageCap);
   card.damageTaken += actual;
-  card.currentHealth -= actual;
+  card.currentHealth = Math.max(0, card.currentHealth - actual);
   revealStealthDamageSource(state, source, actual);
   addLog(state, "COMBAT", `${card.definitionId} 受到 ${actual} 點${kind === "COMBAT" ? "戰斗" : "效果"}傷害`, {
     source,

@@ -73,6 +73,7 @@ describe("資料驅動檢索", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const dragon = putCard(state, "P1", "DRAGON_007", "HAND", "judgment");
+    expect(dragon.keywords).toContain("DISCIPLINE");
     const spell = state.players.P1.deck.find((card) => getCardDefinition(card.definitionId).cardType === "SPELL")!;
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: dragon.instanceId }).state;
     expect(state.players.P1.hand.some((card) => card.definitionId === "TOKEN_DRAGON_JUDGMENT")).toBe(true);

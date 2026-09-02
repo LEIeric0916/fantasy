@@ -29,13 +29,18 @@ describe("機械前期卡與回收", () => {
 
   it("機械帝國牧師回合結束光環增加回收充能並賦予機械軍隊聖盾術", () => {
     let state = mainState();
-    putCard(state, "P1", "TOKEN_MACHINE_PRIEST", "MINION", "priest");
+    const priest = putCard(state, "P1", "TOKEN_MACHINE_PRIEST", "MINION", "priest");
+    const cultist = putCard(state, "P1", "MACHINE_002", "MINION", "cultist");
     const soldier = putCard(state, "P1", "TOKEN_MACHINE_EMPIRE_SOLDIER", "MINION", "soldier");
+    const destroyer = putCard(state, "P1", "TOKEN_MACHINE_DESTROYER", "MINION", "destroyer");
 
     state = applyAction(state, { type: "END_TURN", playerId: "P1" }).state;
 
     expect(state.players.P1.resources.recycleCharge).toBe(1);
+    expect(state.players.P1.minions.find((card) => card.instanceId === priest.instanceId)?.keywords).toContain("DIVINE_SHIELD");
     expect(state.players.P1.minions.find((card) => card.instanceId === soldier.instanceId)?.keywords).toContain("DIVINE_SHIELD");
+    expect(state.players.P1.minions.find((card) => card.instanceId === destroyer.instanceId)?.keywords).toContain("DIVINE_SHIELD");
+    expect(state.players.P1.minions.find((card) => card.instanceId === cultist.instanceId)?.keywords).not.toContain("DIVINE_SHIELD");
   });
 
   it("機械軍技師增加2充能，有神器時召喚齒輪", () => {

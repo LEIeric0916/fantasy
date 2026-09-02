@@ -46,26 +46,34 @@ describe("亡靈指定與延後觸發", () => {
     expect(state.players.P1.deck).toHaveLength(deckBefore - 2);
   });
 
-  it("追憶者完整結算戰吼後，才執行被棄追憶者的觸發效果", () => {
+  it("亞恩選完兩種黑暗之書後，才執行被棄烏比斯的觸發效果", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const played = putCard(state, "P1", "UNDEAD_008", "HAND", "played");
-    const discarded = putCard(state, "P1", "UNDEAD_008", "HAND", "discarded");
-    const target = putCard(state, "P2", "DRAGON_012", "MINION", "seal-target");
+    const discarded = putCard(state, "P1", "UNDEAD_003", "HAND", "discarded");
     const deckBefore = state.players.P1.deck.length;
 
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: played.instanceId }).state;
     state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [discarded.instanceId] }).state;
 
     expect(state.players.P1.resources.necromancy).toBe(0);
-    expect(state.players.P1.deck).toHaveLength(deckBefore - 2);
+    expect(state.players.P1.deck).toHaveLength(deckBefore);
     expect(state.pendingEffects).toHaveLength(1);
-    expect(state.pendingChoice?.type).toBe("EFFECT_CARDS");
+    expect(state.pendingChoice?.type).toBe("EFFECT_OPTION");
 
-    state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [target.instanceId] }).state;
-    expect(state.players.P2.minions.find((card) => card.instanceId === target.instanceId)?.sealed).toBe(true);
+    state = applyAction(state, { type: "SELECT_EFFECT_OPTION", playerId: "P1", optionId: "TOKEN_UNDEAD_BOOK_IMMORTAL" }).state;
+    expect(state.pendingChoice?.type).toBe("EFFECT_OPTION");
+    if (state.pendingChoice?.type === "EFFECT_OPTION") {
+      expect(state.pendingChoice.options.map((option) => option.id)).not.toContain("TOKEN_UNDEAD_BOOK_IMMORTAL");
+    }
+
+    state = applyAction(state, { type: "SELECT_EFFECT_OPTION", playerId: "P1", optionId: "TOKEN_UNDEAD_BOOK_PLAGUE" }).state;
+    expect(state.players.P1.fields.map((card) => card.definitionId)).toEqual([
+      "TOKEN_UNDEAD_BOOK_IMMORTAL",
+      "TOKEN_UNDEAD_BOOK_PLAGUE",
+    ]);
     expect(state.players.P1.resources.necromancy).toBe(2);
-    expect(state.players.P1.deck).toHaveLength(deckBefore - 3);
+    expect(state.players.P1.deck).toHaveLength(deckBefore - 1);
     expect(state.pendingEffects).toHaveLength(0);
   });
 });

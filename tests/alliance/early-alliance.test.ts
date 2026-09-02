@@ -33,7 +33,7 @@ describe("聯盟前期卡", () => {
     expect(played.keywords).toContain("CHARGE");
   });
 
-  it("賈維斯戰吼召喚民兵觸發自身光環，加上戰吼抽牌合計抽2；每回合最多觸發光環2次", () => {
+  it("賈維斯戰吼召喚民兵觸發自身光環，加上戰吼抽牌合計抽2；每回合最多觸發光環1次", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const jarvis = putCard(state, "P1", "ALLIANCE_003", "HAND", "jarvis");
@@ -43,9 +43,9 @@ describe("聯盟前期卡", () => {
 
     const first = putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_GUARD", "HAND", "first");
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: first.instanceId }).state;
-    expect(state.players.P1.deck).toHaveLength(deckSize - 3);
+    expect(state.players.P1.deck).toHaveLength(deckSize - 2);
     const second = putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_GUARD", "HAND", "second");
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: second.instanceId }).state;
-    expect(state.players.P1.deck).toHaveLength(deckSize - 3);
+    expect(state.players.P1.deck).toHaveLength(deckSize - 2);
   });
 });

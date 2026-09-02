@@ -103,7 +103,8 @@ describe("AI 公開局面評分", () => {
     putCard(state, "P1", "ALLIANCE_010", "HAND", "expensive-warrior");
     putCard(state, "P1", "ALLIANCE_002", "HAND", "extra-minion");
     for (let index = 0; index < 4; index += 1) {
-      putCard(state, "P2", "TOKEN_MACHINE_DESTROYER", "MINION", `enemy-${index}`);
+      const enemy = putCard(state, "P2", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", `minor-enemy-${index}`);
+      enemy.currentAttack = 0;
     }
     for (const definitionId of ["ALLIANCE_002", "ALLIANCE_004", "ALLIANCE_006"]) {
       state.players.P1.deck.push(createCardInstance(getCardDefinition(definitionId), "P1", "DECK", `P1-${definitionId}-deck`));
@@ -116,6 +117,258 @@ describe("AI 公開局面評分", () => {
       type: "PLAY_CARD",
       playerId: "P1",
       instanceId: das.instanceId,
+    });
+  });
+
+  it("困難聯盟 AI 滿血且我方手下生命都不超過4時，不會優先打出瓦倫泰", () => {
+    const state = mainState();
+    state.players.P1.faction = "ALLIANCE";
+    state.players.P1.hand = [];
+    state.players.P1.heroHp = state.players.P1.heroMaxHp;
+    state.players.P1.mana = 10;
+    state.players.P1.maxMana = 10;
+    const lowHealthAlly = putCard(state, "P1", "ALLIANCE_002", "MINION", "low-health-ally");
+    lowHealthAlly.currentHealth = 4;
+    const highDamageThreat = putCard(state, "P2", "UNDEAD_012", "MINION", "high-damage-threat");
+    highDamageThreat.currentAttack = 6;
+    putCard(state, "P1", "TOKEN_ALLIANCE_HERO_VALENTINE", "HAND", "low-value-valentine");
+    const useful = putCard(state, "P1", "ALLIANCE_002", "HAND", "useful-development");
+    refreshHandCosts(state);
+
+    const decision = chooseSearchAction(state, "P1", 222);
+    expect(decision.action).toEqual({
+      type: "PLAY_CARD",
+      playerId: "P1",
+      instanceId: useful.instanceId,
+    });
+  });
+
+  it("困難不朽 AI 會把亞恩的聖盾術給高價值手下而不是普通不朽者", () => {
+    let state = mainState();
+    state.players.P1.heroHp = 20;
+    const yaan = putCard(state, "P1", "UNDEAD_008", "MINION", "shield-source");
+    putCard(state, "P1", "TOKEN_UNDEAD_GENERIC", "MINION", "weak-target");
+
+    state = applyAction(state, { type: "END_TURN", playerId: "P1" }).state;
+    expect(chooseSearchAction(state, "P1", 303).action).toEqual({
+      type: "SELECT_EFFECT_CARDS",
+      playerId: "P1",
+      instanceIds: [yaan.instanceId],
+    });
+  });
+
+  it("困難聯盟 AI 會把焰騎士長的聖盾術給高價值手下而不是1/1皇家衛兵", () => {
+    let state = mainState();
+    const captain = putCard(state, "P1", "ALLIANCE_005", "MINION", "shield-captain");
+    captain.keywords = captain.keywords.filter((keyword) => keyword !== "DIVINE_SHIELD");
+    putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", "weak-guard");
+
+    state = applyAction(state, { type: "END_TURN", playerId: "P1" }).state;
+    expect(chooseSearchAction(state, "P1", 304).action).toEqual({
+      type: "SELECT_EFFECT_CARDS",
+      playerId: "P1",
+      instanceIds: [captain.instanceId],
+    });
+  });
+
+  it("困難不朽 AI 不會在對手空場時花幸運幣打出沉默者浪費戰吼", () => {
+    const state = mainState();
+    state.players.P1.faction = "UNDEAD";
+    state.players.P1.hand = [];
+    state.players.P1.mana = 1;
+    state.players.P1.maxMana = 1;
+    putCard(state, "P1", "TOKEN_COIN", "HAND", "coin");
+    putCard(state, "P1", "UNDEAD_002", "HAND", "silencer");
+    putCard(state, "P1", "DRAGON_012", "HAND", "discard-cost");
+    refreshHandCosts(state);
+
+    expect(chooseSearchAction(state, "P1", 305).action).toEqual({ type: "END_TURN", playerId: "P1" });
+  });
+
+  it("困難機械 AI 會先建立神器再打出依賴神器的機械神教徒", () => {
+    const state = mainState();
+    state.players.P1.faction = "MACHINE";
+    state.players.P1.hand = [];
+    state.players.P1.mana = 2;
+    state.players.P1.maxMana = 2;
+    const artifact = putCard(state, "P1", "MACHINE_005", "HAND", "artifact-first");
+    putCard(state, "P1", "MACHINE_002", "HAND", "cultist-second");
+    refreshHandCosts(state);
+
+    expect(chooseSearchAction(state, "P1", 306).action).toEqual({
+      type: "PLAY_CARD",
+      playerId: "P1",
+      instanceId: artifact.instanceId,
+    });
+  });
+
+  it("困難機械 AI 前期可直接打考爾時不會浪費降神術把考爾降為0費", () => {
+    const state = mainState();
+    state.players.P1.faction = "MACHINE";
+    state.players.P1.hand = [];
+    state.players.P1.mana = 3;
+    state.players.P1.maxMana = 3;
+    state.players.P1.turnsStarted = 3;
+    const kaor = putCard(state, "P1", "MACHINE_006", "HAND", "direct-kaor");
+    putCard(state, "P1", "MACHINE_007", "HAND", "wasteful-descent");
+    putCard(state, "P1", "MACHINE_009", "HAND", "valuable-card-one");
+    putCard(state, "P1", "MACHINE_010", "HAND", "valuable-card-two");
+    refreshHandCosts(state);
+
+    expect(chooseSearchAction(state, "P1", 307).action).toEqual({
+      type: "PLAY_CARD",
+      playerId: "P1",
+      instanceId: kaor.instanceId,
+    });
+  });
+
+  it("困難機械 AI 前期已打出降神術時不會為減費洗回兩張高價值牌", () => {
+    let state = mainState();
+    state.players.P1.faction = "MACHINE";
+    state.players.P1.hand = [];
+    state.players.P1.mana = 3;
+    state.players.P1.maxMana = 3;
+    state.players.P1.turnsStarted = 3;
+    const descent = putCard(state, "P1", "MACHINE_007", "HAND", "played-descent");
+    putCard(state, "P1", "MACHINE_006", "HAND", "kept-kaor");
+    putCard(state, "P1", "MACHINE_009", "HAND", "kept-value-one");
+    putCard(state, "P1", "MACHINE_010", "HAND", "kept-value-two");
+    refreshHandCosts(state);
+
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: descent.instanceId }).state;
+    expect(chooseSearchAction(state, "P1", 308).action).toEqual({
+      type: "SELECT_EFFECT_CARDS",
+      playerId: "P1",
+      instanceIds: [],
+    });
+  });
+
+  it("困難機械 AI 能同回合打出神器與慕留斯時會先建立神器", () => {
+    let state = mainState();
+    state.players.P1.faction = "MACHINE";
+    state.players.P1.hand = [];
+    state.players.P1.mana = 10;
+    state.players.P1.maxMana = 10;
+    for (let index = 0; index < 4; index += 1) {
+      putCard(state, "P1", "TOKEN_MACHINE_ARTIFACT_BOX", "FIELD", `existing-artifact-${index}`);
+    }
+    const collector = putCard(state, "P1", "MACHINE_005", "HAND", "collector-before-mulius");
+    const mulius = putCard(state, "P1", "MACHINE_014", "HAND", "delayed-mulius");
+    putCard(state, "P2", "TOKEN_MACHINE_DESTROYER", "MINION", "mulius-target");
+    refreshHandCosts(state);
+
+    expect(chooseSearchAction(state, "P1", 312).action).toEqual({
+      type: "PLAY_CARD",
+      playerId: "P1",
+      instanceId: collector.instanceId,
+    });
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: collector.instanceId }).state;
+    expect(chooseSearchAction(state, "P1", 315).action).toEqual({
+      type: "PLAY_CARD",
+      playerId: "P1",
+      instanceId: mulius.instanceId,
+    });
+  });
+
+  it("困難機械 AI 後期不會用降神術只為了把3費考爾降成0費", () => {
+    let state = mainState();
+    state.players.P1.faction = "MACHINE";
+    state.players.P1.hand = [];
+    state.players.P1.mana = 10;
+    state.players.P1.maxMana = 10;
+    state.players.P1.turnsStarted = 8;
+    const kaor = putCard(state, "P1", "MACHINE_006", "HAND", "late-kaor");
+    const descent = putCard(state, "P1", "MACHINE_007", "HAND", "late-wasteful-descent");
+    putCard(state, "P1", "DRAGON_001", "HAND", "late-return-one");
+    putCard(state, "P1", "DRAGON_002", "HAND", "late-return-two");
+    refreshHandCosts(state);
+
+    expect(chooseSearchAction(state, "P1", 313).action).not.toEqual({
+      type: "PLAY_CARD",
+      playerId: "P1",
+      instanceId: descent.instanceId,
+    });
+
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: descent.instanceId }).state;
+    expect(chooseSearchAction(state, "P1", 314).action).toEqual({
+      type: "SELECT_EFFECT_CARDS",
+      playerId: "P1",
+      instanceIds: [],
+    });
+  });
+
+  it("困難 AI 場地接近滿且互換能保留額外召喚時會先攻擊騰出空位", () => {
+    const state = mainState();
+    state.players.P1.faction = "ALLIANCE";
+    state.players.P1.hand = [];
+    state.players.P1.deck = [];
+    state.players.P1.mana = 9;
+    state.players.P1.maxMana = 9;
+    state.players.P1.turnsStarted = 5;
+    state.players.P1.summonedThisGame = 15;
+    state.players.P1.summonedThisTurn = 0;
+
+    const attacker = putCard(state, "P1", "ALLIANCE_004", "MINION", "space-trader");
+    attacker.currentAttack = 8;
+    attacker.currentHealth = 8;
+    attacker.maxHealth = 8;
+    for (let index = 0; index < 5; index += 1) {
+      putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", `occupied-${index}`);
+    }
+    const threat = putCard(state, "P2", "TOKEN_MACHINE_DESTROYER", "MINION", "large-threat");
+    threat.currentAttack = 8;
+    threat.currentHealth = 8;
+    threat.maxHealth = 8;
+    putCard(state, "P1", "ALLIANCE_010", "HAND", "board-expander");
+    refreshHandCosts(state);
+
+    const tradeAction = {
+      type: "ATTACK" as const,
+      playerId: "P1" as const,
+      attackerId: attacker.instanceId,
+      target: { type: "MINION" as const, instanceId: threat.instanceId },
+    };
+    expect(chooseSearchAction(state, "P1", 309).action).toEqual(tradeAction);
+  });
+
+  it("困難聯盟 AI 局面安全且本回合能補足協作15時會先累積協作再打皇家戰士", () => {
+    const state = mainState();
+    state.players.P1.faction = "ALLIANCE";
+    state.players.P1.hand = [];
+    state.players.P1.deck = [];
+    state.players.P1.mana = 10;
+    state.players.P1.maxMana = 10;
+    state.players.P1.turnsStarted = 5;
+    state.players.P1.summonedThisGame = 13;
+    const setup = putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_GUARD", "HAND", "collaboration-setup");
+    putCard(state, "P1", "ALLIANCE_010", "HAND", "waiting-warrior");
+    refreshHandCosts(state);
+
+    expect(chooseSearchAction(state, "P1", 310).action).toEqual({
+      type: "PLAY_CARD",
+      playerId: "P1",
+      instanceId: setup.instanceId,
+    });
+  });
+
+  it("困難聯盟 AI 場面壓力高時即使協作未達15仍會直接召喚皇家戰士", () => {
+    const state = mainState();
+    state.players.P1.faction = "ALLIANCE";
+    state.players.P1.hand = [];
+    state.players.P1.deck = [];
+    state.players.P1.mana = 9;
+    state.players.P1.maxMana = 9;
+    state.players.P1.turnsStarted = 5;
+    state.players.P1.summonedThisGame = 7;
+    const warrior = putCard(state, "P1", "ALLIANCE_010", "HAND", "pressure-warrior");
+    putCard(state, "P2", "TOKEN_MACHINE_DESTROYER", "MINION", "pressure-one");
+    putCard(state, "P2", "TOKEN_MACHINE_DESTROYER", "MINION", "pressure-two");
+    refreshHandCosts(state);
+
+    expect(chooseSearchAction(state, "P1", 311).action).toEqual({
+      type: "PLAY_CARD",
+      playerId: "P1",
+      instanceId: warrior.instanceId,
     });
   });
 });

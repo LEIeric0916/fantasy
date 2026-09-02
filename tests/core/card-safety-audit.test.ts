@@ -76,9 +76,9 @@ describe("全卡牌卡死風險靜態稽核", () => {
           expect(effect.options.length, `${card.id} 的選項不可為空`).toBeGreaterThan(0);
           expect(new Set(effect.options.map((option) => option.id)).size, `${card.id} 的選項 ID 不可重複`).toBe(effect.options.length);
         }
-        if (effect.type === "CHOOSE_DISTINCT_GENERATED_MINIONS") {
-          expect(new Set(effect.definitionIds).size, `${card.id} 的神造物候選不可重複`).toBe(effect.definitionIds.length);
-          expect(effect.definitionIds.length, `${card.id} 的神造物候選不足`).toBeGreaterThanOrEqual(effect.count);
+        if (effect.type === "CHOOSE_DISTINCT_GENERATED_MINIONS" || effect.type === "CHOOSE_DISTINCT_GENERATED_FIELDS") {
+          expect(new Set(effect.definitionIds).size, `${card.id} 的衍生卡候選不可重複`).toBe(effect.definitionIds.length);
+          expect(effect.definitionIds.length, `${card.id} 的衍生卡候選不足`).toBeGreaterThanOrEqual(effect.count);
         }
       }
     }
@@ -92,7 +92,7 @@ describe("全卡牌卡死風險靜態稽核", () => {
       for (const effect of walkEffects(rootEffects(card))) {
         if (effect.type === "SUMMON" || effect.type === "SUMMON_WITH_KEYWORD_IF_FIELD") expectType(card.id, effect.definitionId, "MINION");
         if (effect.type === "SUMMON_FIELD") expectType(card.id, effect.definitionId, "FIELD");
-        if (effect.type === "CHOOSE_GENERATED_FIELD") {
+        if (effect.type === "CHOOSE_GENERATED_FIELD" || effect.type === "CHOOSE_DISTINCT_GENERATED_FIELDS") {
           for (const definitionId of effect.definitionIds) expectType(card.id, definitionId, "FIELD");
         }
         if (effect.type === "CHOOSE_DISTINCT_GENERATED_MINIONS") {

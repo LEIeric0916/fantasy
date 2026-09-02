@@ -60,7 +60,7 @@ describe("睿智神龍伊爾多斯", () => {
     expect(state.players.P1.minions.find((card) => card.instanceId === wise.instanceId)?.keywords).toContain("DIVINE_SHIELD");
     const disciplineAfter = state.players.P1.minions.find((card) => card.instanceId === disciplined.instanceId)!;
     expect(disciplineAfter.currentHealth).toBe(5);
-    expect(disciplineAfter.keywords).not.toContain("DIVINE_SHIELD");
+    expect(disciplineAfter.keywords).toContain("DIVINE_SHIELD");
   });
 
   it("死亡之聲使下一張原始費用10以上龍族手下費用-5", () => {

@@ -64,7 +64,11 @@ function undeadScore(player: PlayerState, opponent: PlayerState): number {
 function machineScore(player: PlayerState): number {
   const artifacts = subtypeCount(player.fields, "ARTIFACT");
   const army = subtypeCount(player.minions, "ARMY");
-  return player.resources.recycleCharge * 1.3
+  const charge = player.resources.recycleCharge;
+  return charge * 1.3
+    + (charge >= 3 ? 4 : 0)
+    + (charge >= 6 ? 7 : 0)
+    + (charge >= 15 ? 12 : 0)
     + artifacts * 5
     + player.fields.length * 1.5
     + army * (artifacts > 0 ? 3 : 1.5);

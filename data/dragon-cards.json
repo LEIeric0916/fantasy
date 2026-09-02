@@ -103,8 +103,8 @@
       "attack": 5,
       "health": 7,
       "deckCount": 2,
-      "keywords": ["CHARGE", "LETHAL", "BATTLECRY"],
-      "effectsText": "戰吼：新增1張「審判者裁決」到手牌，檢索1張法術卡。",
+      "keywords": ["CHARGE", "LETHAL", "DISCIPLINE", "BATTLECRY"],
+      "effectsText": "紀律。戰吼：新增1張「審判者裁決」到手牌，檢索1張法術卡。",
       "generatedOnly": false,
       "notes": ""
     },

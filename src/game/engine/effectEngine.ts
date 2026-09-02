@@ -104,9 +104,17 @@ export function canExecuteEffect(state: GameState, playerId: PlayerId, source: C
       const limit = state.rulesConfig.fieldLimits[state.players[playerId].faction];
       return limit === null || limit === undefined || state.players[playerId].fields.length < limit;
     }
-    case "CHOOSE_DISTINCT_GENERATED_MINIONS":
+    case "CHOOSE_DISTINCT_GENERATED_FIELDS": {
+      const limit = state.rulesConfig.fieldLimits[state.players[playerId].faction];
       return effect.definitionIds.length >= effect.count
-        && state.players[playerId].minions.length + effect.count <= state.rulesConfig.minionLimit;
+        && (limit === null || limit === undefined || state.players[playerId].fields.length + effect.count <= limit);
+    }
+    case "CHOOSE_DISTINCT_GENERATED_MINIONS": {
+      const availableSlots = state.rulesConfig.minionLimit - state.players[playerId].minions.length;
+      return effect.upTo
+        ? effect.definitionIds.length > 0 && availableSlots > 0
+        : effect.definitionIds.length >= effect.count && availableSlots >= effect.count;
+    }
     case "DAMAGE_TARGET_ENEMY_MINION":
     case "DESTROY_TARGET_ENEMY_MINION":
     case "SEAL_TARGET_ENEMY_MINION":
@@ -118,11 +126,12 @@ export function canExecuteEffect(state: GameState, playerId: PlayerId, source: C
       return state.players[playerId].resources.necromancy >= effect.cost
         && effect.effects.some((nested) => canExecuteEffect(state, playerId, source, nested));
     case "SET_HAND_CARD_COST_ZERO":
-      return state.players[playerId].hand.filter((card) => {
+      return state.players[playerId].hand.some((card) => {
         const definition = getCardDefinition(card.definitionId);
         return (!effect.cardType || definition.cardType === effect.cardType)
-          && (!effect.subtype || definition.subtype.includes(effect.subtype));
-      }).length >= effect.count;
+          && (!effect.subtype || definition.subtype.includes(effect.subtype))
+          && (!effect.subtypes || effect.subtypes.some((subtype) => definition.subtype.includes(subtype)));
+      });
     default: return true;
   }
 }
@@ -187,8 +196,8 @@ function resolveEffectList(
         break;
       }
       case "MODIFY_SELF_HEALTH":
-        if (hasActiveKeyword(source, "DISCIPLINE") || hasActiveKeyword(source, "INVINCIBLE")) {
-          addLog(state, "PROTECTION", `${source.definitionId} 的紀律阻擋自身生命改值`, { instanceId: source.instanceId });
+        if (hasActiveKeyword(source, "INVINCIBLE")) {
+          addLog(state, "PROTECTION", `${source.definitionId} 的無敵阻擋自身生命改值`, { instanceId: source.instanceId });
           break;
         }
         if (source.currentHealth === null || source.maxHealth === null) {
@@ -199,8 +208,8 @@ function resolveEffectList(
         addLog(state, "RESOURCE", `${source.definitionId} +0/+${effect.value}`, { instanceId: source.instanceId });
         break;
       case "MODIFY_SELF_ATTACK":
-        if (hasActiveKeyword(source, "DISCIPLINE") || hasActiveKeyword(source, "INVINCIBLE")) {
-          addLog(state, "PROTECTION", `${source.definitionId} 的紀律阻擋自身攻擊改值`, { instanceId: source.instanceId });
+        if (hasActiveKeyword(source, "INVINCIBLE")) {
+          addLog(state, "PROTECTION", `${source.definitionId} 的無敵阻擋自身攻擊改值`, { instanceId: source.instanceId });
           break;
         }
         if (source.currentAttack === null) {
@@ -210,8 +219,8 @@ function resolveEffectList(
         addLog(state, "RESOURCE", `${source.definitionId} +${effect.value}/+0`, { instanceId: source.instanceId });
         break;
       case "MODIFY_SELF_ATTACK_UNTIL_LEAVES":
-        if (hasActiveKeyword(source, "DISCIPLINE") || hasActiveKeyword(source, "INVINCIBLE")) {
-          addLog(state, "PROTECTION", `${source.definitionId} 的紀律阻擋自身攻擊改值`, { instanceId: source.instanceId });
+        if (hasActiveKeyword(source, "INVINCIBLE")) {
+          addLog(state, "PROTECTION", `${source.definitionId} 的無敵阻擋自身攻擊改值`, { instanceId: source.instanceId });
           break;
         }
         if (source.currentAttack === null) {
@@ -222,8 +231,8 @@ function resolveEffectList(
         addLog(state, "RESOURCE", `${source.definitionId} +${effect.value}/+0（離場時還原）`, { instanceId: source.instanceId });
         break;
       case "MODIFY_SELF_STATS":
-        if (hasActiveKeyword(source, "DISCIPLINE") || hasActiveKeyword(source, "INVINCIBLE")) {
-          addLog(state, "PROTECTION", `${source.definitionId} 的紀律阻擋自身面板改值`, { instanceId: source.instanceId });
+        if (hasActiveKeyword(source, "INVINCIBLE")) {
+          addLog(state, "PROTECTION", `${source.definitionId} 的無敵阻擋自身面板改值`, { instanceId: source.instanceId });
           break;
         }
         if (source.currentAttack === null || source.currentHealth === null || source.maxHealth === null) {
@@ -344,6 +353,7 @@ function resolveEffectList(
         const enemies = [...state.players[opponentOf(playerId)].minions];
         let transformedCount = 0;
         for (const enemy of enemies) {
+          if (hasActiveKeyword(enemy, "DISCIPLINE")) continue;
           if (transformMinion(state, enemy, effect.transformDefinitionId)) transformedCount += 1;
         }
         const damageTargets = [...state.players[opponentOf(playerId)].minions];
@@ -383,25 +393,53 @@ function resolveEffectList(
           remainingEffects,
         };
         return false;
-      case "CHOOSE_DISTINCT_GENERATED_MINIONS": {
+      case "CHOOSE_DISTINCT_GENERATED_FIELDS": {
         if (effect.count <= 0 || effect.definitionIds.length < effect.count) break;
         state.pendingChoice = {
           type: "EFFECT_OPTION",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: `選擇機械神造物（尚需選擇${effect.count}種，不可重復）`,
+          prompt: `選擇黑暗之書（尚需選擇${effect.count}種，不可重複）`,
           options: effect.definitionIds.map((definitionId) => ({
             id: definitionId,
             label: getCardDefinition(definitionId).name,
             effects: [
-              { type: "SUMMON", definitionId, count: 1 },
+              { type: "SUMMON_FIELD", definitionId, count: 1 },
               ...(effect.count > 1 ? [{
-                type: "CHOOSE_DISTINCT_GENERATED_MINIONS" as const,
+                type: "CHOOSE_DISTINCT_GENERATED_FIELDS" as const,
                 definitionIds: effect.definitionIds.filter((candidate) => candidate !== definitionId),
                 count: effect.count - 1,
               }] : []),
             ],
           })),
+          remainingEffects,
+        };
+        return false;
+      }
+      case "CHOOSE_DISTINCT_GENERATED_MINIONS": {
+        const availableSlots = state.rulesConfig.minionLimit - state.players[playerId].minions.length;
+        const choiceCount = effect.upTo ? Math.min(effect.count, availableSlots) : effect.count;
+        if (choiceCount <= 0 || effect.definitionIds.length < choiceCount) break;
+        const options: { id: string; label: string; effects: EffectDefinition[] }[] = effect.definitionIds.map((definitionId) => ({
+          id: definitionId,
+          label: getCardDefinition(definitionId).name,
+          effects: [
+            { type: "SUMMON", definitionId, count: 1 },
+            ...(choiceCount > 1 ? [{
+              type: "CHOOSE_DISTINCT_GENERATED_MINIONS" as const,
+              definitionIds: effect.definitionIds.filter((candidate) => candidate !== definitionId),
+              count: choiceCount - 1,
+              upTo: effect.upTo,
+            }] : []),
+          ],
+        }));
+        if (effect.upTo) options.push({ id: "STOP", label: "不再召喚", effects: [] });
+        state.pendingChoice = {
+          type: "EFFECT_OPTION",
+          playerId,
+          sourceInstanceId: source.instanceId,
+          prompt: `選擇最多${choiceCount}種機械神造物（不可重復）`,
+          options,
           remainingEffects,
         };
         return false;
@@ -419,7 +457,11 @@ function resolveEffectList(
           const before = state.players[playerId].minions.length;
           if (!summonGeneratedMinion(state, playerId, effect.definitionId)) continue;
           const summoned = state.players[playerId].minions[before];
-          if (grant && summoned && !summoned.keywords.includes(effect.keyword)) summoned.keywords.push(effect.keyword);
+          if (grant && summoned) {
+            for (const keyword of [effect.keyword, ...(effect.additionalKeywords ?? [])]) {
+              if (!summoned.keywords.includes(keyword)) summoned.keywords.push(keyword);
+            }
+          }
         }
         break;
       }
@@ -498,8 +540,8 @@ function resolveEffectList(
         for (let count = 0; count < effect.draw && !state.winner; count += 1) drawCard(state, playerId, `EFFECT:${source.definitionId}`);
         if (source.zone === "MINION" && source.currentAttack !== null && source.currentHealth !== null && source.maxHealth !== null) {
           source.currentAttack -= enemyCount;
-          source.currentHealth -= enemyCount;
-          source.maxHealth -= enemyCount;
+          source.currentHealth = Math.max(0, source.currentHealth - enemyCount);
+          source.maxHealth = Math.max(0, source.maxHealth - enemyCount);
           addLog(state, "RESOURCE", `${source.definitionId} 依戰吼開始快照 -${enemyCount}/-${enemyCount}`, { instanceId: source.instanceId, enemyCount });
           if (source.currentHealth <= 0) destroyMinion(state, source, "SELF_STAT_ZERO", timingContext);
         }
@@ -576,8 +618,8 @@ function resolveEffectList(
         for (const target of state.players[playerId].minions) {
           const definition = getCardDefinition(target.definitionId);
           if (effect.subtypes && !effect.subtypes.every((subtype) => definition.subtype.includes(subtype))) continue;
-          if (hasActiveKeyword(target, "DISCIPLINE") || hasActiveKeyword(target, "INVINCIBLE")) {
-            addLog(state, "PROTECTION", `${target.definitionId} 的紀律阻擋獲得 ${effect.keyword}`, { source: source.instanceId });
+          if (hasActiveKeyword(target, "INVINCIBLE")) {
+            addLog(state, "PROTECTION", `${target.definitionId} 的無敵阻擋獲得 ${effect.keyword}`, { source: source.instanceId });
             continue;
           }
           if (!target.keywords.includes(effect.keyword)) target.keywords.push(effect.keyword);
@@ -588,10 +630,10 @@ function resolveEffectList(
         const candidates = state.players[playerId].minions.filter((card) => {
           const definition = getCardDefinition(card.definitionId);
           return (!effect.subtypes || effect.subtypes.every((subtype) => definition.subtype.includes(subtype)))
-            && !hasActiveKeyword(card, "DISCIPLINE") && !hasActiveKeyword(card, "INVINCIBLE");
+            && !hasActiveKeyword(card, "INVINCIBLE");
         });
         if (candidates.length === 0) {
-          notifyEffectSkipped(state, playerId, source, "我方場上沒有符合條件且不受紀律阻擋的手下");
+          notifyEffectSkipped(state, playerId, source, "我方場上沒有符合條件的手下");
           return false;
         }
         state.pendingChoice = {
@@ -607,8 +649,8 @@ function resolveEffectList(
         return false;
       }
       case "GAIN_SELF_KEYWORD":
-        if (hasActiveKeyword(source, "DISCIPLINE") || hasActiveKeyword(source, "INVINCIBLE")) {
-          addLog(state, "PROTECTION", `${source.definitionId} 的紀律阻擋自身獲得 ${effect.keyword}`);
+        if (hasActiveKeyword(source, "INVINCIBLE")) {
+          addLog(state, "PROTECTION", `${source.definitionId} 的無敵阻擋自身獲得 ${effect.keyword}`);
         } else if (!source.keywords.includes(effect.keyword)) {
           source.keywords.push(effect.keyword);
           addLog(state, "ACTION", `${source.definitionId} 獲得 ${effect.keyword}`, { instanceId: source.instanceId });
@@ -1125,18 +1167,21 @@ function resolveEffectList(
         const candidates = state.players[playerId].hand.filter((card) => {
           const definition = getCardDefinition(card.definitionId);
           return (!effect.cardType || definition.cardType === effect.cardType)
-            && (!effect.subtype || definition.subtype.includes(effect.subtype));
+            && (!effect.subtype || definition.subtype.includes(effect.subtype))
+            && (!effect.subtypes || effect.subtypes.some((subtype) => definition.subtype.includes(subtype)));
         });
-        if (candidates.length < effect.count) {
-          notifyEffectSkipped(state, playerId, source, `符合條件的手牌不足 ${effect.count} 張（目前 ${candidates.length} 張）`);
+        if (candidates.length === 0) {
+          notifyEffectSkipped(state, playerId, source, "手中沒有可指定的神器");
           break;
         }
+        const maxCount = Math.min(effect.count, candidates.length);
         state.pendingChoice = {
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: `指定${effect.count}張手牌使費用變為0`,
-          count: effect.count,
+          prompt: `指定最多${maxCount}張手牌使費用變為0`,
+          count: maxCount,
+          minCount: 0,
           candidateInstanceIds: candidates.map((card) => card.instanceId),
           resolution: { type: "SET_CARD_COST_ZERO" },
           remainingEffects,

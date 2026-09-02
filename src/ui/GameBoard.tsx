@@ -74,13 +74,14 @@ function describeActionAnimation(state: GameState, action: GameAction): ActionAn
 interface Props {
   initialState: GameState;
   onRestart: () => void;
+  tutorialLevel?: 1;
   aiPlayerId?: PlayerId;
   aiDifficulty?: AiDifficulty;
   aiPlayers?: Partial<Record<PlayerId, AiDifficulty>>;
   spectatorViewMode?: "FOLLOW_ACTION" | "FIXED";
 }
 
-export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = "RANDOM", aiPlayers, spectatorViewMode = "FOLLOW_ACTION" }: Props) {
+export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, aiDifficulty = "RANDOM", aiPlayers, spectatorViewMode = "FOLLOW_ACTION" }: Props) {
   const [state, setState] = useState(() => {
     const readyState = structuredClone(initialState);
     refreshHandCosts(readyState);
@@ -97,12 +98,14 @@ export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = 
   const [fixedSpectatorPlayerId, setFixedSpectatorPlayerId] = useState<PlayerId>("P1");
   const [draggedHandCardId, setDraggedHandCardId] = useState<string>();
   const [actionAnimation, setActionAnimation] = useState<ActionAnimation>();
+  const [tutorialStep, setTutorialStep] = useState<number | undefined>(tutorialLevel === 1 ? 0 : undefined);
   const aiSeed = useRef((initialState.rngSeed ^ 0xa17a17) >>> 0);
   const aiStepCount = useRef(0);
   const actingPlayerId = getActingPlayerId(state);
   const aiDifficulties: Partial<Record<PlayerId, AiDifficulty>> = aiPlayers ?? (aiPlayerId ? { [aiPlayerId]: aiDifficulty } : {});
   const actingAiDifficulty = actingPlayerId ? aiDifficulties[actingPlayerId] : undefined;
   const aiActing = Boolean(actingPlayerId && actingAiDifficulty);
+  const firstTutorial = tutorialLevel === 1;
   const aiVsAi = Boolean(aiDifficulties.P1 && aiDifficulties.P2);
   const fixedSpectatorView = aiVsAi && spectatorViewMode === "FIXED";
   const perspectivePlayerId: PlayerId = aiVsAi
@@ -206,6 +209,7 @@ export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = 
   }, [actingAiDifficulty, actingPlayerId, aiActing, aiPaused, state]);
 
   function canPlay(card: CardInstance): boolean {
+    if (firstTutorial && tutorialStep !== 6) return false;
     if (aiActing || state.activePlayerId !== active.id || state.phase !== "MAIN" || state.pendingChoice || card.currentCost === null || card.currentCost > active.mana) return false;
     const definition = getCardDefinition(card.definitionId);
     if (!isCardImplemented(definition)) return false;
@@ -255,6 +259,10 @@ export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = 
     setMessage(result.error ? `${result.error.code}：${result.error.message}` : "");
     setAiAnnouncement("");
     if (!result.error) {
+      if (firstTutorial && tutorialStep === 6 && action.type === "PLAY_CARD") {
+        const playedCard = state.players[action.playerId].hand.find((card) => card.instanceId === action.instanceId);
+        if (playedCard?.definitionId === "TOKEN_ALLIANCE_ROYAL_GUARD") setTutorialStep(7);
+      }
       showActionAnimation(action);
       setSelected([]);
       setAttackerId(undefined);
@@ -313,10 +321,10 @@ export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = 
   } : undefined;
 
   return (
-    <main className="game-board">
+    <main className={`game-board ${firstTutorial ? `tutorial-board tutorial-step-${tutorialStep}` : ""}`}>
       <header className="game-header">
-        <div><p className="eyebrow">TURN {state.turnNumber} · {state.phase}</p><h1>戰記 <span>規則驗證臺</span></h1></div>
-        <div className="actions"><button className="quiet" onClick={onRestart}>重新開始</button>{fixedSpectatorView && <button className="quiet" onClick={toggleFixedSpectator}>切換到{fixedSpectatorPlayerId === "P1" ? "P2" : "P1"}視角</button>}{Object.keys(aiDifficulties).length > 0 && <button className="quiet" onClick={() => setAiPaused((paused) => !paused)}>{aiPaused ? "開始AI" : "暫停AI"}</button>}{fixedSpectatorView && <span className="ai-thinking">固定視角：{fixedSpectatorPlayerId}</span>}{aiActing && <span className="ai-thinking">{aiPaused ? "AI 已暫停" : "AI 思考中…"}</span>}{!aiActing && state.activePlayerId === active.id && state.phase === "MAIN" && !state.pendingChoice && <button onClick={() => dispatch({ type: "END_TURN", playerId: active.id })}>結束回合</button>}</div>
+        <div><p className="eyebrow">{firstTutorial ? "新手教學 · 第一關" : `TURN ${state.turnNumber} · ${state.phase}`}</p><h1>戰記 <span>{firstTutorial ? "怎麼玩遊戲" : "規則驗證臺"}</span></h1></div>
+        <div className="actions"><button className="quiet" onClick={onRestart}>{firstTutorial ? "離開教學" : "重新開始"}</button>{fixedSpectatorView && <button className="quiet" onClick={toggleFixedSpectator}>切換到{fixedSpectatorPlayerId === "P1" ? "P2" : "P1"}視角</button>}{Object.keys(aiDifficulties).length > 0 && <button className="quiet" onClick={() => setAiPaused((paused) => !paused)}>{aiPaused ? "開始AI" : "暫停AI"}</button>}{fixedSpectatorView && <span className="ai-thinking">固定視角：{fixedSpectatorPlayerId}</span>}{aiActing && <span className="ai-thinking">{aiPaused ? "AI 已暫停" : "AI 思考中…"}</span>}{!firstTutorial && !aiActing && state.activePlayerId === active.id && state.phase === "MAIN" && !state.pendingChoice && <button onClick={() => dispatch({ type: "END_TURN", playerId: active.id })}>結束回合</button>}</div>
       </header>
       {actionAnimation && <div className={`action-animation ${actionAnimation.type === "PLAY" ? "play-animation" : "attack-animation"}`} role="status" aria-live="polite">
         <span className="action-trajectory" style={actionLineStyle} aria-hidden="true"><i /></span>
@@ -460,12 +468,40 @@ export function GameBoard({ initialState, onRestart, aiPlayerId, aiDifficulty = 
         })}
         <details className="log"><summary>Game Log · {state.log.length}</summary>{[...state.log].reverse().map((entry) => <div key={entry.index}><time>#{entry.index} T{entry.turn}</time><strong>{entry.type}</strong><span>{formatLogMessage(entry.message)}</span></div>)}</details>
         <details><summary>Zone 檢視</summary><pre>{JSON.stringify({ active: { graveyard: active.graveyard.map((c) => c.definitionId), removed: active.removed.map((c) => c.definitionId), extraDeck: active.extraDeck.map((c) => c.definitionId) }, opponent: { graveyard: opponent.graveyard.map((c) => c.definitionId), removed: opponent.removed.map((c) => c.definitionId), extraDeck: opponent.extraDeck.map((c) => c.definitionId) } }, null, 2)}</pre></details>
-        {state.phase === "MAIN" && <details className="debug"><summary>Debug 召喚</summary><p>序列化 Debug Action，僅用於驗證召喚、戰斗及關鍵詞。</p><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: active.id, definitionId: "TOKEN_DRAGON_HELLFIRE" })}>我方：地獄炎龍</button><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: active.id, definitionId: "TOKEN_UNDEAD_SPIRIT" })}>我方：不朽者之靈</button><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: opponentId, definitionId: "TOKEN_ALLIANCE_ROYAL_WARRIOR" })}>對手：皇家戰士</button></details>}
+        {!firstTutorial && state.phase === "MAIN" && <details className="debug"><summary>Debug 召喚</summary><p>序列化 Debug Action，僅用於驗證召喚、戰斗及關鍵詞。</p><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: active.id, definitionId: "TOKEN_DRAGON_HELLFIRE" })}>我方：地獄炎龍</button><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: active.id, definitionId: "TOKEN_UNDEAD_SPIRIT" })}>我方：不朽者之靈</button><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: opponentId, definitionId: "TOKEN_ALLIANCE_ROYAL_WARRIOR" })}>對手：皇家戰士</button></details>}
       </section>
       {inspectedCard && <CardDetailModal card={inspectedCard} onClose={() => setInspectedCard(undefined)} />}
       {viewedGraveyardPlayerId && <GraveyardModal playerId={viewedGraveyardPlayerId} cards={state.players[viewedGraveyardPlayerId].graveyard} onInspect={(card) => { setViewedGraveyardPlayerId(undefined); setInspectedCard(card); }} onClose={() => setViewedGraveyardPlayerId(undefined)} />}
+      {firstTutorial && tutorialStep !== undefined && <FirstTutorialOverlay step={tutorialStep} onContinue={() => tutorialStep < 6 ? setTutorialStep(tutorialStep + 1) : tutorialStep === 7 ? onRestart() : undefined} />}
     </main>
   );
+}
+
+const firstTutorialContent = [
+  { title: "場地區：手下與立場", text: "畫面中央是雙方的場地。手下區在前方，用來放置手下並進行戰鬥；立場區在後方，用來放置會持續存在的立場卡。手下與立場使用不同格子。" },
+  { title: "配置：牌組與手牌", text: "牌組保存尚未抽到的卡牌；抽出的牌會進入畫面下方的手牌。玩家資訊區會顯示目前的牌組與手牌數量。" },
+  { title: "玩家資訊區", text: "玩家資訊區顯示生命、水晶、手牌數、牌組數與棄堆數，也會顯示牌組的獨立紀錄。聯盟牌組的獨立紀錄是本場累積召喚的「協作數」。" },
+  { title: "先看看你的手牌", text: "你的手牌現在只有一張「皇家衛兵」。手牌會顯示卡牌費用、名稱與攻擊／生命數值。" },
+  { title: "查看卡牌詳細資訊", text: "想完整閱讀卡牌時，可以點卡牌上的「詳細」，也可以點一下或長按卡牌，開啟放大的資訊欄。" },
+  { title: "確認費用與水晶", text: "皇家衛兵的費用是 1；你現在有 1／1 水晶，因此費用符合，可以打出。能打出的手牌會以發光邊框提示。" },
+  { title: "請親自打出皇家衛兵", text: "按住下方的皇家衛兵，把它拖曳到我方場地後放開。完成正確操作後，教學才會繼續。" },
+  { title: "第一關完成！", text: "你已經認識場地、牌組、手牌、玩家資訊與水晶，並成功從手牌打出一名手下。點擊任意位置返回模式選擇。" },
+] as const;
+
+function FirstTutorialOverlay({ step, onContinue }: { step: number; onContinue: () => void }) {
+  const content = firstTutorialContent[step];
+  if (!content) return null;
+  const waitingForAction = step === 6;
+  return <>
+    <div className={`tutorial-overlay tutorial-overlay-step-${step} ${waitingForAction ? "tutorial-action-step" : ""}`} role="presentation" onClick={waitingForAction ? undefined : onContinue} />
+    <section className={`tutorial-dialog tutorial-dialog-step-${step} ${waitingForAction ? "tutorial-action-dialog" : ""}`} role="dialog" aria-modal={!waitingForAction} aria-label={content.title} onClick={waitingForAction ? undefined : onContinue}>
+      <p className="eyebrow">新手教學 · {Math.min(step + 1, 7)} / 7</p>
+      <h2>{content.title}</h2>
+      <p>{content.text}</p>
+      <small>{waitingForAction ? "等待你完成拖曳出牌" : step === 7 ? "點擊任意位置完成教學" : "準備好時，點擊任意位置繼續"}</small>
+    </section>
+    {step < 7 && <span className={`tutorial-arrow tutorial-arrow-step-${step}`} aria-hidden="true">➜</span>}
+  </>;
 }
 
 interface ZoneProps {

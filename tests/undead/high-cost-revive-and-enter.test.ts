@@ -39,18 +39,23 @@ describe("進擊死靈進場效果", () => {
     state.players.P1.hand = [];
     const source = putCard(state, "P1", "UNDEAD_011", "HAND", "normal-enter");
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: source.instanceId }).state;
-    expect(state.players.P1.minions.filter((card) => card.definitionId === "TOKEN_UNDEAD_GIANT")).toHaveLength(2);
+    const giants = state.players.P1.minions.filter((card) => card.definitionId === "TOKEN_UNDEAD_GIANT");
+    expect(giants).toHaveLength(2);
+    expect(giants.every((card) => card.currentAttack === 3 && card.currentHealth === 5)).toBe(true);
+    expect(giants.every((card) => card.keywords.includes("SANCTUARY"))).toBe(true);
   });
 
-  it("我方有末日之書時，新召喚的兩名巨靈獲得沖鋒", () => {
+  it("我方有末日之書時，新召喚的兩名巨靈獲得聖盾術與衝鋒", () => {
     let state = mainState();
     state.players.P1.hand = [];
     putCard(state, "P1", "TOKEN_UNDEAD_DOOMSDAY_BOOK", "FIELD", "doom-book");
-    const source = putCard(state, "P1", "UNDEAD_011", "HAND", "charge-enter");
+    const source = putCard(state, "P1", "UNDEAD_011", "HAND", "shield-enter");
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: source.instanceId }).state;
     const giants = state.players.P1.minions.filter((card) => card.definitionId === "TOKEN_UNDEAD_GIANT");
     expect(giants).toHaveLength(2);
+    expect(giants.every((card) => card.keywords.includes("DIVINE_SHIELD"))).toBe(true);
     expect(giants.every((card) => card.keywords.includes("CHARGE"))).toBe(true);
+    expect(giants.every((card) => card.keywords.includes("SANCTUARY"))).toBe(true);
   });
 
   it("死靈復活進入場上時同樣觸發進場效果", () => {

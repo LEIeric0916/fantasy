@@ -92,13 +92,17 @@ describe("B. 戰斗與防護", () => {
     expect(after.currentHealth).toBe(1);
     expect(after.keywords).not.toContain("DIVINE_SHIELD");
   });
-  it("B06｜紀律阻擋正負改值但不擋傷害", () => {
+  it("B06｜紀律只阻擋對手效果，允許我方與自身效果", () => {
     const state = mainState();
     const disciplined = putCard(state, "P1", "TOKEN_MACHINE_DIVINE_ENDYMION", "MINION", "discipline");
-    const before = [disciplined.currentAttack, disciplined.currentHealth];
+    const friendly = putCard(state, "P1", "DRAGON_001", "MINION", "friendly-effect");
+    const enemy = putCard(state, "P2", "DRAGON_001", "MINION", "enemy-effect");
+    const beforeAttack = disciplined.currentAttack!;
+    const beforeHealth = disciplined.currentHealth!;
     resolveEffects(state, "P1", disciplined, [{ type: "MODIFY_SELF_STATS", attack: 2, health: 2 }]);
-    expect([disciplined.currentAttack, disciplined.currentHealth]).toEqual(before);
-    expect(dealDamageToMinion(state, disciplined, 3, "test", "EFFECT")).toBe(3);
+    expect([disciplined.currentAttack, disciplined.currentHealth]).toEqual([beforeAttack + 2, beforeHealth + 2]);
+    expect(dealDamageToMinion(state, disciplined, 3, enemy.instanceId, "EFFECT")).toBe(3);
+    expect(dealDamageToMinion(state, disciplined, 3, friendly.instanceId, "EFFECT")).toBe(3);
   });
   it("B07｜庇護、無敵與消失", () => {
     const state = mainState();
@@ -175,11 +179,29 @@ describe("D. 回收與機械術", () => {
   it("D01｜回收", () => {
     const state = mainState();
     const card = putCard(state, "P1", "MACHINE_002", "MINION", "recycle");
+    card.currentAttack = -2;
+    card.currentHealth = -7;
+    card.maxHealth = -7;
+    card.damageTaken = 20;
     destroyMinion(state, card, "TEST");
     resolvePendingEffects(state);
     expect(state.players.P1.deck[0].instanceId).toBe(card.instanceId);
+    expect(card).toMatchObject({ currentAttack: 1, currentHealth: 1, maxHealth: 1, damageTaken: 0 });
     expect(state.players.P1.resources.recycleCharge).toBe(1);
     expect(state.players.P1.graveyard).not.toContainEqual(expect.objectContaining({ instanceId: card.instanceId }));
+  });
+  it.each([
+    ["ALLIANCE_009", 4, 12],
+    ["MACHINE_011", 4, 5],
+  ])("D01b｜%s 回收後恢復原始體質", (definitionId, attack, health) => {
+    const state = mainState();
+    const card = putCard(state, "P1", definitionId, "MINION", "recycle-stats");
+    card.currentAttack = -3;
+    card.currentHealth = -9;
+    card.maxHealth = -9;
+    card.damageTaken = 99;
+    destroyMinion(state, card, "TEST");
+    expect(card).toMatchObject({ zone: "DECK", currentAttack: attack, currentHealth: health, maxHealth: health, damageTaken: 0 });
   });
   it("D02｜回收與其他死亡效果", () => {
     const state = mainState();

@@ -22,7 +22,7 @@ describe("卡牌資料", () => {
 
   it("最後修正：皇家神騎士消滅對手最多3手下", () => {
     const definition = cardDefinitions.find((card) => card.id === "ALLIANCE_012")!;
-    expect(definition.effectsText).toContain("消滅對手最多3手下。協作15");
+    expect(definition.effectsText).toContain("消滅對手最多3手下。協作20");
   });
 
   it("CardInstance 與不可變 CardDefinition 分離", () => {
@@ -41,7 +41,7 @@ describe("卡牌資料", () => {
     const card = cardDefinitions.find((item) => item.id === "TOKEN_MACHINE_PRIEST")!;
     expect(card.originalCost).toBe(2);
     expect(getRuleUndefinedInventory().some((issue) => issue.ruleId === "CARD_DATA_NULL")).toBe(false);
-    expect(getRuleUndefinedInventory().filter((issue) => issue.ruleId === "CARD_DATA_NOTE")).toHaveLength(77);
+    expect(getRuleUndefinedInventory().filter((issue) => issue.ruleId === "CARD_DATA_NOTE")).toHaveLength(76);
   });
 
   it("卡牌文字中的主要關鍵效果都有可執行資料", () => {

@@ -5,7 +5,7 @@ import { destroyMinion } from "../../src/game/engine/zoneEngine";
 import { mainState, putCard } from "../helpers";
 
 describe("災厄洪流", () => {
-  it("X只計算實際轉變數；紀律擋轉變但仍受到後續X點范圍傷害", () => {
+  it("X只計算實際轉變數；紀律擋轉變但仍受到後續范圍傷害", () => {
     let state = mainState();
     state.players.P1.hand = [];
     state.players.P1.heroHp = 25;

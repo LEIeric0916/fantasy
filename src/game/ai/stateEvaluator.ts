@@ -17,7 +17,7 @@ const keywordValues: Partial<Record<Keyword, number>> = {
   WINDFURY: 2,
 };
 
-function publicCardValue(card: CardInstance): number {
+export function evaluatePublicCardValue(card: CardInstance): number {
   const definition = getCardDefinition(card.definitionId);
   const attack = card.currentAttack ?? 0;
   const health = card.currentHealth ?? 0;
@@ -52,8 +52,8 @@ function threatPenalty(player: PlayerState, opponent: PlayerState): number {
 }
 
 function publicPlayerValue(player: PlayerState, opponent: PlayerState): number {
-  const board = player.minions.reduce((sum, card) => sum + publicCardValue(card), 0);
-  const fields = player.fields.reduce((sum, card) => sum + 3 + publicCardValue(card) * 0.2, 0);
+  const board = player.minions.reduce((sum, card) => sum + evaluatePublicCardValue(card), 0);
+  const fields = player.fields.reduce((sum, card) => sum + 3 + evaluatePublicCardValue(card) * 0.2, 0);
   return player.heroHp * 5
     + (player.heroDivineShield ? 5 : 0)
     + board
