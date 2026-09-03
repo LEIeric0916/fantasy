@@ -3,7 +3,7 @@ import { applyAction } from "../../src/game/engine/gameEngine";
 import { mainState, putCard } from "../helpers";
 
 describe("不朽者戰吼", () => {
-  it("頂部3張沒有發現目標時結束發現，不查看牌組深處；黑暗之書的獨立效果仍會結算", () => {
+  it("頂部3張沒有發現目標時改為抽1張，不查看牌組深處；黑暗之書的獨立效果仍會結算", () => {
     let state = mainState();
     state.players.P1.hand = [];
     putCard(state, "P1", "TOKEN_UNDEAD_BOOK_IMMORTAL", "FIELD", "book");
@@ -17,11 +17,13 @@ describe("不朽者戰吼", () => {
       state.players.P1.deck.splice(state.players.P1.deck.indexOf(card), 1);
       state.players.P1.deck.push(card);
     }
+    const fallbackDraw = state.players.P1.deck.at(-1)!;
     const source = putCard(state, "P1", "UNDEAD_001", "HAND", "fallback");
     const deckBefore = state.players.P1.deck.length;
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: source.instanceId }).state;
     expect(state.pendingChoice).toBeUndefined();
-    expect(state.players.P1.deck).toHaveLength(deckBefore);
+    expect(state.players.P1.deck).toHaveLength(deckBefore - 1);
+    expect(state.players.P1.hand.some((card) => card.instanceId === fallbackDraw.instanceId)).toBe(true);
     expect(state.players.P1.deck.some((card) => card.instanceId === deeperTarget.instanceId)).toBe(true);
     expect(state.players.P1.minions.some((card) => card.definitionId === "TOKEN_UNDEAD_GENERIC")).toBe(true);
   });

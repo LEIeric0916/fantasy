@@ -3,10 +3,10 @@
   "faction": "ALLIANCE",
   "deckStatus": {
     "declaredMainDeckSize": 40,
-    "listedMainDeckSize": 35,
-    "missingCards": 5,
+    "listedMainDeckSize": 38,
+    "missingCards": 2,
     "status": "INCOMPLETE",
-    "notes": "目前只有35張主牌，尚缺5張；禁止自行補齊。"
+    "notes": "目前只有38張主牌，尚缺2張；禁止自行補齊。"
   },
   "cards": [
     {
@@ -105,7 +105,7 @@
       "faction": "ALLIANCE",
       "cardType": "MINION",
       "subtype": ["HUMAN", "ARMY"],
-      "originalCost": 4,
+      "originalCost": 5,
       "attack": 3,
       "health": 3,
       "deckCount": 3,
@@ -155,9 +155,9 @@
       "health": 5,
       "deckCount": 3,
       "keywords": ["RUSH", "DIVINE_SHIELD", "BATTLECRY"],
-      "effectsText": "減費2X：第5回合以上時，X為我方這回合召喚手下次數。戰吼：檢索1張主牌「皇家戰士」；協作15：另從衍生牌庫召喚1名衍生「皇家戰士」。",
+      "effectsText": "減費2X：第5回合以上時，X為我方這回合召喚手下次數。戰吼：協作10：檢索1張主牌「皇家戰士」；協作15：從衍生牌庫召喚1名衍生「皇家戰士」。",
       "generatedOnly": false,
-      "notes": "主牌檢索與未指定來源召喚已明確區分。"
+      "notes": "協作10才檢索主牌；協作15才召喚衍生牌，兩者的來源已明確區分。"
     },
     {
       "id": "ALLIANCE_011",
@@ -188,6 +188,21 @@
       "effectsText": "戰吼：消滅對手最多3手下。協作20：給予對手玩家4點傷害。死亡之聲：召喚2名「皇家聖騎兵」。",
       "generatedOnly": false,
       "notes": "最後修正確認：消滅對手最多3手下，可指定0～3個不同CardInstance；協作20為句號式獨立效果。"
+    },
+    {
+      "id": "ALLIANCE_013",
+      "name": "革命戰線 銀彈克加魯",
+      "faction": "ALLIANCE",
+      "cardType": "MINION",
+      "subtype": ["HUMAN", "ARMY"],
+      "originalCost": 3,
+      "attack": 3,
+      "health": 3,
+      "deckCount": 3,
+      "keywords": ["EFFECT_SUMMON", "RUSH", "BATTLECRY", "DEATHRATTLE"],
+      "effectsText": "效果召喚：協作10時，若此牌以通常抽牌以外的方式加入手牌，將其效果召喚。衝刺。戰吼：給予1名敵方手下3點傷害。死亡之聲：抽1張牌。",
+      "generatedOnly": false,
+      "notes": ""
     }
   ]
 }

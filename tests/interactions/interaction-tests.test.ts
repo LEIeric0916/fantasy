@@ -83,6 +83,23 @@ describe("B. 戰斗與防護", () => {
     state = applyAction(state, { type: "ATTACK", playerId: "P1", attackerId: attacker.instanceId, target: { type: "MINION", instanceId: defender.instanceId } }).state;
     expect(state.players.P2.extraDeck.some((card) => card.instanceId === defender.instanceId)).toBe(true);
   });
+  it("B04-1｜庇護阻擋必殺，聖印龍失去聖盾後不會被皇家匕首直接消滅", () => {
+    let state = mainState();
+    state.activePlayerId = "P2";
+    const sacredSealDragon = putCard(state, "P1", "DRAGON_006", "MINION", "sanctuary-lethal-target");
+    const royalCorps = putCard(state, "P2", "ALLIANCE_001", "MINION", "shield-breaker");
+    const royalDagger = putCard(state, "P2", "ALLIANCE_002", "MINION", "lethal-attacker");
+
+    state = applyAction(state, { type: "ATTACK", playerId: "P2", attackerId: royalCorps.instanceId, target: { type: "MINION", instanceId: sacredSealDragon.instanceId } }).state;
+    const afterShield = state.players.P1.minions.find((card) => card.instanceId === sacredSealDragon.instanceId)!;
+    expect(afterShield.keywords).not.toContain("DIVINE_SHIELD");
+    expect(afterShield.currentHealth).toBe(5);
+
+    state = applyAction(state, { type: "ATTACK", playerId: "P2", attackerId: royalDagger.instanceId, target: { type: "MINION", instanceId: sacredSealDragon.instanceId } }).state;
+    const afterLethal = state.players.P1.minions.find((card) => card.instanceId === sacredSealDragon.instanceId)!;
+    expect(afterLethal.currentHealth).toBe(4);
+    expect(afterLethal.zone).toBe("MINION");
+  });
   it("B05｜聖盾術", () => {
     let state = mainState();
     const attacker = putCard(state, "P1", "DRAGON_012", "MINION", "shield-hit");
@@ -273,7 +290,7 @@ describe("E. 死靈、棄牌與復活", () => {
   });
   it("E03｜死靈復活：由場上死亡", () => {
     const state = mainState();
-    state.players.P1.resources.necromancy = 3;
+    state.players.P1.resources.necromancy = 4;
     const minion = putCard(state, "P1", "UNDEAD_009", "MINION", "field-revive");
     destroyMinion(state, minion, "TEST");
     resolvePendingEffects(state);
@@ -283,7 +300,7 @@ describe("E. 死靈、棄牌與復活", () => {
   it("E04｜死靈復活：由其他區域送棄堆", () => {
     let state = mainState();
     state.players.P1.hand = [];
-    state.players.P1.resources.necromancy = 4;
+    state.players.P1.resources.necromancy = 5;
     const source = putCard(state, "P1", "UNDEAD_002", "HAND", "discard-necro-source");
     const revived = putCard(state, "P1", "UNDEAD_009", "HAND", "discard-necro-target");
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: source.instanceId }).state;
@@ -298,7 +315,7 @@ describe("E. 死靈、棄牌與復活", () => {
     destroyMinion(state, minion, "FIRST"); resolvePendingEffects(state);
     destroyMinion(state, minion, "SECOND"); resolvePendingEffects(state);
     expect(minion.zone).toBe("GRAVEYARD");
-    expect(state.players.P1.resources.necromancy).toBe(8);
+    expect(state.players.P1.resources.necromancy).toBe(7);
   });
   it("E06｜復活觸發", () => {
     const state = mainState();

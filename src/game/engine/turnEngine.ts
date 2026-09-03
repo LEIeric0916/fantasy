@@ -8,7 +8,7 @@ import { InvalidActionError } from "./errors";
 import { moveCard } from "./zoneEngine";
 import { processCountdownPhase } from "./countdownEngine";
 import { clearTemporaryHandCosts } from "./costEngine";
-import { enqueueStartTurnEffectSummons, enqueueStateBasedEffectSummons } from "./effectSummonEngine";
+import { enqueueStartTurnEffectSummons, enqueueStateBasedEffectSummons, markHandEntryForEffectSummon } from "./effectSummonEngine";
 import { resolvePendingEffects, shouldEnqueueTriggeredEffectList } from "./effectEngine";
 import { createTimingContext } from "./simultaneousEngine";
 import { enqueueTriggeredEffects } from "./triggerEngine";
@@ -33,6 +33,7 @@ export function drawCard(state: GameState, playerId: PlayerId, reason = "NORMAL_
   }
   card.zone = "HAND";
   player.hand.push(card);
+  markHandEntryForEffectSummon(state, playerId, card, reason);
   addLog(state, "ZONE", `${playerId} 抽 1 張牌`, { instanceId: card.instanceId, reason });
   return card;
 }

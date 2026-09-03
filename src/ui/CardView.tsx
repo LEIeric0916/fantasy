@@ -54,7 +54,7 @@ export function CardView({
     ...(card.keywords.includes("WARD") && !card.sealed ? [{ key: "ward", label: "光紋" }] : []),
     ...(card.keywords.includes("DISCIPLINE") && !card.sealed ? [{ key: "discipline", label: "紀律" }] : []),
     ...(card.keywords.includes("AURA") && !card.sealed ? [{ key: "aura", label: "光環" }] : []),
-    ...(card.keywords.includes("SANCTUARY") && !card.sealed ? [{ key: "sanctuary", label: "庇護", description: "不會被卡牌效果直接消滅；仍會受到傷害與消失" }] : []),
+    ...(card.keywords.includes("SANCTUARY") && !card.sealed ? [{ key: "sanctuary", label: "庇護", description: "不會被效果或必殺直接消滅；仍會受到傷害與消失" }] : []),
     ...(card.keywords.includes("INVINCIBLE") && !card.sealed ? [{ key: "invincible", label: "無敵" }] : []),
     ...(card.counters.damageCap !== undefined ? [{ key: "damage-cap", label: `減傷≤${card.counters.damageCap}` }] : []),
   ] : [];
@@ -141,7 +141,7 @@ export function CardView({
         <span className="cost">{card.currentCost ?? "?"}</span>
         <strong>{definition.name}</strong>
         {!handSummary && <small>{definition.subtype.join(" · ") || definition.cardType}</small>}
-        {definition.cardType === "MINION" && !isBattleMinion && <span className="stats">{card.currentAttack ?? "?"} / {card.currentHealth ?? "?"}</span>}
+        {definition.cardType === "MINION" && !isBattleMinion && <span className="stats"><b className="hand-attack">{card.currentAttack ?? "?"}</b><i> / </i><b className="hand-health">{card.currentHealth ?? "?"}</b></span>}
         {!handSummary && <small>{keywordText.map((keyword) => keyword.label).join(" · ") || "—"}</small>}
         {!handSummary && card.counters.countdown !== undefined && <small className="countdown-counter">倒數 {card.counters.countdown}</small>}
         {!handSummary && <span className="effect">{definition.effectsText || "無卡牌效果"}</span>}

@@ -2,10 +2,10 @@ import { getCardDefinition } from "../cards/cardRegistry";
 import type { CardInstance, PlayerId, Zone } from "../cards/cardTypes";
 import type { GameState, PlayerState } from "../state/GameState";
 import { addLog } from "../utils/gameLog";
-import { NotImplementedError } from "./errors";
+import { NotImplementedError, RuleUndefinedError } from "./errors";
 import { enqueueTriggeredEffects } from "./triggerEngine";
 import type { TimingContext } from "./simultaneousEngine";
-import { enqueueStateBasedEffectSummons } from "./effectSummonEngine";
+import { enqueueStateBasedEffectSummons, markHandEntryForEffectSummon } from "./effectSummonEngine";
 
 const zoneKey: Record<Zone, keyof Pick<PlayerState, "deck" | "hand" | "minions" | "fields" | "graveyard" | "removed" | "extraDeck">> = {
   DECK: "deck",
@@ -51,6 +51,7 @@ export function moveCard(
   }
   card.controllerId = destinationPlayerId;
   state.players[destinationPlayerId][zoneKey[destination]].push(card);
+  if (destination === "HAND") markHandEntryForEffectSummon(state, destinationPlayerId, card, reason);
   addLog(state, "ZONE", `${card.definitionId}: ${from} → ${destination}`, { instanceId: card.instanceId, reason });
 }
 
@@ -79,10 +80,36 @@ export function destroyCardOnField(state: GameState, card: CardInstance, reason 
   if (!card.sealed && card.zone === "MINION") {
     if (card.keywords.includes("NECRO_REVIVE_4")) effects.push({ type: "NECRO_REVIVE_SELF" as const, value: 4 });
     if (card.keywords.includes("NECRO_REVIVE_5")) effects.push({ type: "NECRO_REVIVE_SELF" as const, value: 5 });
+    if (card.keywords.includes("NECRO_REVIVE_6")) effects.push({ type: "NECRO_REVIVE_SELF" as const, value: 6 });
   }
   if (!card.sealed && card.keywords.includes("RECYCLE")) effects.push({ type: "GAIN_RECYCLE_CHARGE" as const, value: 1 });
   // 同時離場一律依場上原順序自動進入結算隊列，不要求玩家排列棄堆順序。
   if (effects.length > 0) enqueueTriggeredEffects(state, card, effects, `${reason}:${triggeredKeyword}`, timingContext, true, true);
+  if (card.zone === "MINION") {
+    for (const field of [...state.players[card.controllerId].fields]) {
+      if (field.sealed) continue;
+      const aura = getCardDefinition(field.definitionId).friendlyMinionDestroyedCountdownAura;
+      if (!aura) continue;
+      if (field.counters.friendlyDestroyedCountdownTurn !== state.turnNumber) {
+        field.counters.friendlyDestroyedCountdownTurn = state.turnNumber;
+        field.counters.friendlyDestroyedCountdownUses = 0;
+      }
+      if ((field.counters.friendlyDestroyedCountdownUses ?? 0) >= aura.maxPerTurn) continue;
+      const current = field.counters.countdown;
+      if (current === undefined) {
+        throw new RuleUndefinedError("COUNTDOWN_INITIAL_VALUE", "手下被消滅時要減少倒數，但光環來源缺少倒數初值", field.definitionId);
+      }
+      field.counters.friendlyDestroyedCountdownUses = (field.counters.friendlyDestroyedCountdownUses ?? 0) + 1;
+      field.counters.countdown = current - aura.amount;
+      addLog(state, "RESOURCE", `${field.definitionId} 因我方手下被消滅，倒數 ${current} → ${field.counters.countdown}`, {
+        sourceInstanceId: card.instanceId,
+        fieldInstanceId: field.instanceId,
+      });
+      if (field.counters.countdown <= 0) {
+        destroyCardOnField(state, field, "AURA_COUNTDOWN_FINISHED", timingContext);
+      }
+    }
+  }
   if (!card.sealed && card.keywords.includes("RECYCLE")) {
     moveCard(state, card, "DECK", `${reason}:RECYCLE`);
     const resetDefinition = getCardDefinition(card.originalDefinitionId);

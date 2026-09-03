@@ -32,7 +32,7 @@ describe("皇家圣騎槍衛與戰爭兵器先鋒號", () => {
     const state = mainState();
     const guard = putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_HONOR_GUARD", "MINION", "guard");
     expect(guard.currentAttack).toBe(3);
-    expect(guard.currentHealth).toBe(5);
+    expect(guard.currentHealth).toBe(4);
     const ally = putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", "ally");
     expect(dealDamageToMinion(state, ally, 5, "effect", "EFFECT")).toBe(0);
     expect(dealDamageToMinion(state, guard, 2, "effect", "EFFECT")).toBe(2);

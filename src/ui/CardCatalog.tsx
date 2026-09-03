@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { cardDefinitions } from "../game/cards/cardRegistry";
+import { cardDefinitions, cardRegistry } from "../game/cards/cardRegistry";
 import type { CardDefinition, CardType, Faction } from "../game/cards/cardTypes";
 import { getKeywordText } from "../game/cards/keywordText";
+import { GlossaryText, KeywordGlossaryButton } from "./GlossaryTerm";
 
 const factionLabels: Record<Faction, string> = {
   DRAGON: "龍族",
@@ -18,6 +19,79 @@ const cardTypeLabels: Record<CardType, string> = {
 };
 
 const deckFactions: Faction[] = ["DRAGON", "UNDEAD", "MACHINE", "ALLIANCE"];
+type CatalogSectionKind = "DECK" | "RESERVE" | "GENERATED";
+
+type RelationKind = "GENERATED" | "SEARCH" | "TRANSFORM" | "REFERENCE";
+
+interface CardRelation {
+  card: CardDefinition;
+  labels: string[];
+}
+
+function relationKind(effectType: string, key: string, target: CardDefinition): RelationKind {
+  if (effectType.includes("SEARCH")) return "SEARCH";
+  if (effectType.includes("TRANSFORM") || key.toLocaleLowerCase().includes("transform")) return "TRANSFORM";
+  if (target.generatedOnly || effectType.includes("SUMMON") || effectType.includes("GENERATED")) return "GENERATED";
+  return "REFERENCE";
+}
+
+function collectCardReferences(card: CardDefinition): Map<string, Set<RelationKind>> {
+  const references = new Map<string, Set<RelationKind>>();
+  const roots = [card.effects, card.triggeredEffects, card.enterFieldEffects, card.alternatePlay, card.activatedEffect, card.transformAura, card.friendlySummonAura];
+  const visit = (value: unknown, key = "", inheritedType = "") => {
+    if (typeof value === "string") {
+      if (!/definitionIds?$/i.test(key) || value === card.id) return;
+      const target = cardRegistry.get(value);
+      if (!target) return;
+      const kinds = references.get(value) ?? new Set<RelationKind>();
+      kinds.add(relationKind(inheritedType, key, target));
+      references.set(value, kinds);
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((item) => visit(item, key, inheritedType));
+      return;
+    }
+    if (!value || typeof value !== "object") return;
+    const record = value as Record<string, unknown>;
+    const effectType = typeof record.type === "string" ? record.type : inheritedType;
+    Object.entries(record).forEach(([childKey, child]) => visit(child, childKey, effectType));
+  };
+  roots.forEach((root) => visit(root));
+  return references;
+}
+
+const cardReferences = new Map(cardDefinitions.map((card) => [card.id, collectCardReferences(card)]));
+
+function relationLabel(kind: RelationKind, direction: "OUTGOING" | "INCOMING"): string {
+  if (direction === "OUTGOING") {
+    if (kind === "GENERATED") return "衍生／召喚對象";
+    if (kind === "SEARCH") return "檢索對象";
+    if (kind === "TRANSFORM") return "轉變對象";
+    return "效果指定";
+  }
+  if (kind === "GENERATED") return "產生此牌";
+  if (kind === "SEARCH") return "檢索此牌";
+  if (kind === "TRANSFORM") return "轉變為此牌";
+  return "指定此牌";
+}
+
+function getCardRelations(card: CardDefinition, direction: "OUTGOING" | "INCOMING"): CardRelation[] {
+  const relations = new Map<string, Set<string>>();
+  if (direction === "OUTGOING") {
+    for (const [targetId, kinds] of cardReferences.get(card.id) ?? []) {
+      relations.set(targetId, new Set([...kinds].map((kind) => relationLabel(kind, direction))));
+    }
+  } else {
+    for (const source of cardDefinitions) {
+      const kinds = cardReferences.get(source.id)?.get(card.id);
+      if (source.id === card.id || !kinds) continue;
+      relations.set(source.id, new Set([...kinds].map((kind) => relationLabel(kind, direction))));
+    }
+  }
+  return [...relations].map(([id, labels]) => ({ card: cardRegistry.get(id)!, labels: [...labels] }))
+    .sort((left, right) => left.card.name.localeCompare(right.card.name, "zh-Hant"));
+}
 
 interface Props {
   onBack: () => void;
@@ -29,11 +103,10 @@ export function CardCatalog({ onBack }: Props) {
   const [query, setQuery] = useState("");
   const [inspectedCard, setInspectedCard] = useState<CardDefinition>();
 
-  const cards = useMemo(() => cardDefinitions
-    .filter((card) => Boolean(faction) && !card.generatedOnly && card.faction === faction && card.deckCount > 0)
+  const normalizedQuery = query.trim().toLocaleLowerCase("zh-Hant");
+  const filterVisibleCards = (cards: CardDefinition[]) => cards
     .filter((card) => cardType === "ALL" || card.cardType === cardType)
     .filter((card) => {
-      const normalizedQuery = query.trim().toLocaleLowerCase("zh-Hant");
       if (!normalizedQuery) return true;
       return [card.name, card.effectsText, card.subtype.join(" "), ...card.keywords.map((keyword) => getKeywordText(keyword).label)]
         .join(" ")
@@ -43,7 +116,13 @@ export function CardCatalog({ onBack }: Props) {
     .sort((left, right) => {
       const costDifference = (left.originalCost ?? Number.MAX_SAFE_INTEGER) - (right.originalCost ?? Number.MAX_SAFE_INTEGER);
       return costDifference || left.name.localeCompare(right.name, "zh-Hant");
-    }), [cardType, faction, query]);
+    });
+  const deckCards = useMemo(() => filterVisibleCards(cardDefinitions
+    .filter((card) => Boolean(faction) && !card.generatedOnly && card.faction === faction && card.deckCount > 0)), [cardType, faction, normalizedQuery]);
+  const reserveCards = useMemo(() => filterVisibleCards(cardDefinitions
+    .filter((card) => Boolean(faction) && !card.generatedOnly && card.faction === faction && card.deckCount === 0)), [cardType, faction, normalizedQuery]);
+  const generatedCards = useMemo(() => filterVisibleCards(cardDefinitions
+    .filter((card) => Boolean(faction) && card.generatedOnly && card.faction === faction)), [cardType, faction, normalizedQuery]);
 
   return <main className="card-catalog">
     <header className="catalog-header">
@@ -79,25 +158,41 @@ export function CardCatalog({ onBack }: Props) {
           {(Object.keys(cardTypeLabels) as CardType[]).map((item) => <option value={item} key={item}>{cardTypeLabels[item]}</option>)}
         </select></label>
       </section>
-      <p className="catalog-summary"><strong>{factionLabels[faction]}</strong>牌組 · 顯示 {cards.length} 種卡牌</p>
-    {cards.length === 0 ? <p className="empty-zone-message">沒有符合條件的卡牌。</p> : <section className="catalog-grid">
-      {cards.map((card) => <button className={`catalog-card faction-${card.faction.toLowerCase()}`} key={card.id} onClick={() => setInspectedCard(card)} aria-label={`檢視 ${card.name}`}>
-        <span className="catalog-cost">{card.originalCost ?? "?"}</span>
-        <small>{factionLabels[card.faction]} · {cardTypeLabels[card.cardType]}</small>
-        <strong>{card.name}</strong>
-        <span className="catalog-subtype">{card.subtype.join(" · ") || "無種族"}</span>
-        {card.cardType === "MINION" && <span className="catalog-stats"><b>⚔ {card.attack ?? "?"}</b><b>♥ {card.health ?? "?"}</b></span>}
-        <span className="catalog-keywords">{card.keywords.map((keyword) => getKeywordText(keyword).label).join(" · ") || "無關鍵字"}</span>
-        <span className="catalog-effect">{card.effectsText || "無卡牌效果"}</span>
-        <small className="catalog-count">{card.generatedOnly ? "衍生卡" : `牌組放入 ${card.deckCount} 張`}</small>
-      </button>)}
-    </section>}</>}
-    {inspectedCard && <CatalogCardModal card={inspectedCard} onClose={() => setInspectedCard(undefined)} />}
+      <p className="catalog-summary"><strong>{factionLabels[faction]}</strong>牌組 · {deckCards.length} 種牌組卡 · {reserveCards.length} 種預備卡 · {generatedCards.length} 種衍生卡</p>
+      <CatalogSection title="牌組卡" description="目前編入這副牌的卡牌" cards={deckCards} onInspect={setInspectedCard} kind="DECK" />
+      <CatalogSection title="預備卡表" description="暫時從主牌組下放的卡牌；不計入正式牌組張數" cards={reserveCards} onInspect={setInspectedCard} kind="RESERVE" />
+      <CatalogSection title="衍生卡" description="由這副牌的效果產生、召喚或轉變而來的卡牌" cards={generatedCards} onInspect={setInspectedCard} kind="GENERATED" />
+    </>}
+    {inspectedCard && <CatalogCardModal card={inspectedCard} onInspect={setInspectedCard} onClose={() => setInspectedCard(undefined)} />}
   </main>;
 }
 
-function CatalogCardModal({ card, onClose }: { card: CardDefinition; onClose: () => void }) {
-  const keywords = card.keywords.map(getKeywordText);
+function CatalogSection({ title, description, cards, kind, onInspect }: { title: string; description: string; cards: CardDefinition[]; kind: CatalogSectionKind; onInspect: (card: CardDefinition) => void }) {
+  const eyebrow = kind === "GENERATED" ? "EXTRA CARDS" : kind === "RESERVE" ? "RESERVE CARDS" : "DECK CARDS";
+  return <section className={`catalog-section ${kind.toLocaleLowerCase()}-section`} aria-label={title}>
+    <div className="catalog-section-heading"><div><p className="eyebrow">{eyebrow}</p><h2>{title}</h2></div><span>{description} · {cards.length} 種</span></div>
+    {cards.length === 0 ? <p className="empty-zone-message">沒有符合條件的卡牌。</p> : <section className="catalog-grid">
+      {cards.map((card) => <CatalogCardButton card={card} kind={kind} onInspect={onInspect} key={card.id} />)}
+    </section>}
+  </section>;
+}
+
+function CatalogCardButton({ card, kind, onInspect }: { card: CardDefinition; kind: CatalogSectionKind; onInspect: (card: CardDefinition) => void }) {
+  return <button className={`catalog-card faction-${card.faction.toLowerCase()}`} onClick={() => onInspect(card)} aria-label={`檢視 ${card.name}`}>
+    <span className="catalog-cost">{card.originalCost ?? "?"}</span>
+    <small>{factionLabels[card.faction]} · {cardTypeLabels[card.cardType]}</small>
+    <strong>{card.name}</strong>
+    <span className="catalog-subtype">{card.subtype.join(" · ") || "無種族"}</span>
+    {card.cardType === "MINION" && <span className="catalog-stats"><b>⚔ {card.attack ?? "?"}</b><b>♥ {card.health ?? "?"}</b></span>}
+    <span className="catalog-keywords">{card.keywords.map((keyword) => getKeywordText(keyword).label).join(" · ") || "無關鍵字"}</span>
+    <span className="catalog-effect">{card.effectsText || "無卡牌效果"}</span>
+    <small className="catalog-count">{kind === "GENERATED" ? "衍生卡" : kind === "RESERVE" ? "預備卡" : `牌組放入 ${card.deckCount} 張`}</small>
+  </button>;
+}
+
+function CatalogCardModal({ card, onInspect, onClose }: { card: CardDefinition; onInspect: (card: CardDefinition) => void; onClose: () => void }) {
+  const outgoingRelations = getCardRelations(card, "OUTGOING");
+  const incomingRelations = getCardRelations(card, "INCOMING");
   return <div className="card-modal-backdrop" role="presentation" onClick={onClose}>
     <section className="card-modal" role="dialog" aria-modal="true" aria-label={`${card.name} 卡牌資訊`} onClick={(event) => event.stopPropagation()}>
       <button className="modal-close" onClick={onClose} aria-label="關閉卡牌資訊">×</button>
@@ -110,11 +205,28 @@ function CatalogCardModal({ card, onClose }: { card: CardDefinition; onClose: ()
       <div className="card-modal-effect">
         <strong>效果：</strong>
         <div className="effect-keyword-list">
-          {card.keywords.map((keyword, index) => <span className={`effect-keyword keyword-${keyword.toLowerCase().replaceAll("_", "-")}`} title={keywords[index].description} key={`${keyword}-${index}`}>{keywords[index].label}</span>)}
+          {card.keywords.map((keyword, index) => <KeywordGlossaryButton keyword={keyword} key={`${keyword}-${index}`} />)}
         </div>
-        {card.effectsText ? <p className="printed-effect">{card.effectsText}</p> : <p>無卡牌效果</p>}
+        {card.effectsText ? <p className="printed-effect"><GlossaryText text={card.effectsText} /></p> : <p>無卡牌效果</p>}
       </div>
       {card.notes && <p className="catalog-notes"><strong>資料備註：</strong>{card.notes}</p>}
+      <section className="card-relations" aria-label="相關卡牌">
+        <h3>相關卡牌</h3>
+        <RelationGroup title="這張牌會關聯" relations={outgoingRelations} onInspect={onInspect} />
+        <RelationGroup title="關聯到這張牌" relations={incomingRelations} onInspect={onInspect} />
+        {outgoingRelations.length === 0 && incomingRelations.length === 0 && <p className="empty-relation">目前沒有直接指名的相關卡牌。</p>}
+      </section>
     </section>
   </div>;
+}
+
+function RelationGroup({ title, relations, onInspect }: { title: string; relations: CardRelation[]; onInspect: (card: CardDefinition) => void }) {
+  if (relations.length === 0) return null;
+  return <section className="relation-group"><h4>{title}</h4><div className="relation-list">
+    {relations.map(({ card, labels }) => <button key={card.id} onClick={() => onInspect(card)} aria-label={`查看關聯卡 ${card.name}`}>
+      <span className="relation-cost">{card.originalCost ?? "?"}</span>
+      <span><strong>{card.name}</strong><small>{labels.join(" · ")} · {cardTypeLabels[card.cardType]}</small></span>
+      {card.cardType === "MINION" && <em>⚔ {card.attack ?? "?"}　♥ {card.health ?? "?"}</em>}
+    </button>)}
+  </div></section>;
 }

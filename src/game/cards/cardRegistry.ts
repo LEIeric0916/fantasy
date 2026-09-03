@@ -2,6 +2,7 @@ import dragonData from "../../../data/dragon-cards.json";
 import undeadData from "../../../data/undead-cards.json";
 import machineData from "../../../data/machine-cards.json";
 import allianceData from "../../../data/alliance-cards.json";
+import neutralData from "../../../data/neutral-cards.json";
 import tokenData from "../../../data/token-cards.json";
 import type { CardDefinition, EffectDefinition, Faction, Keyword } from "./cardTypes";
 import type { RuleUndefined } from "../state/GameState";
@@ -11,6 +12,7 @@ type CardFile = { cards: RawCard[] };
 
 const implementedEffects: Record<string, EffectDefinition[]> = {
   TOKEN_COIN: [{ type: "GAIN_MANA", value: 1 }],
+  NEUTRAL_001: [{ type: "DRAW", value: 1 }],
   MACHINE_001: [{ type: "ADD_GENERATED_TO_HAND", definitionId: "TOKEN_MACHINE_ARTIFACT_BOX", count: 2 }],
   MACHINE_002: [
     { type: "GAIN_RECYCLE_CHARGE", value: 1 },
@@ -100,7 +102,7 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
     { type: "SUMMON", definitionId: "TOKEN_MACHINE_EMPIRE_REAPER", count: 2 },
     { type: "GRANT_ALL_FRIENDLY_KEYWORD", keyword: "TAUNT", subtypes: ["MACHINE"] },
   ],
-  TOKEN_MACHINE_DIVINE_ELIAS: [{ type: "DESTROY_UP_TO_ENEMY_MINIONS", maxCount: 4 }],
+  TOKEN_MACHINE_DIVINE_ELIAS: [{ type: "DESTROY_ALL_ENEMY_MINIONS" }],
   TOKEN_MACHINE_DIVINE_LUCIFER: [
     { type: "HEAL_HERO", value: 4 },
     { type: "SEGMENT_BREAK" },
@@ -148,12 +150,18 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
     { type: "SUMMON", definitionId: "TOKEN_ALLIANCE_ROYAL_HONOR_GUARD", count: 1 },
   ],
   ALLIANCE_010: [
-    { type: "SEARCH_DECK", definitionId: "ALLIANCE_010" },
-    { type: "SEGMENT_BREAK" },
     {
       type: "CONDITIONAL",
-      condition: { type: "SUMMONED_THIS_GAME_AT_LEAST", value: 15 },
-      effects: [{ type: "SUMMON", definitionId: "TOKEN_ALLIANCE_ROYAL_WARRIOR", count: 1 }],
+      condition: { type: "SUMMONED_THIS_GAME_AT_LEAST", value: 10 },
+      effects: [
+        { type: "SEARCH_DECK", definitionId: "ALLIANCE_010" },
+        { type: "SEGMENT_BREAK" },
+        {
+          type: "CONDITIONAL",
+          condition: { type: "SUMMONED_THIS_GAME_AT_LEAST", value: 15 },
+          effects: [{ type: "SUMMON", definitionId: "TOKEN_ALLIANCE_ROYAL_WARRIOR", count: 1 }],
+        },
+      ],
     },
   ],
   ALLIANCE_011: [{ type: "SNAPSHOT_ENEMY_COUNT_AOE_HERO_DRAW_SELF_DEBUFF", aoeDamage: 4, heroDamage: 3, draw: 2 }],
@@ -166,6 +174,7 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
       effects: [{ type: "DAMAGE_ENEMY_HERO", value: 4 }],
     },
   ],
+  ALLIANCE_013: [{ type: "DAMAGE_TARGET_ENEMY_MINION", value: 3 }],
   TOKEN_ALLIANCE_HEROIC_GLORY: [{
     type: "HEROIC_GLORY",
     heroDefinitionIds: ["TOKEN_ALLIANCE_HERO_AUGUSTIN", "TOKEN_ALLIANCE_HERO_DION", "TOKEN_ALLIANCE_HERO_VALENTINE"],
@@ -275,7 +284,7 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
     { type: "RESTORE_MANA" },
   ],
   UNDEAD_001: [
-    { type: "DISCOVER_TOP", count: 1, cardType: "MINION", subtype: "UNDEAD" },
+    { type: "DISCOVER_TOP", count: 1, cardType: "MINION", subtype: "UNDEAD", fallbackEffects: [{ type: "DRAW", value: 1 }] },
     { type: "SEGMENT_BREAK" },
     {
       type: "CONDITIONAL",
@@ -351,6 +360,15 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
 
 const enterFieldEffects: Record<string, EffectDefinition[]> = {
   TOKEN_UNDEAD_DOOMSDAY_BOOK: [{ type: "SUMMON", definitionId: "TOKEN_UNDEAD_DOOM_KNIGHT", count: 1 }],
+  TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL: [
+    { type: "VANISH_SELF_IF_NO_FRIENDLY_FIELD", definitionId: "TOKEN_UNDEAD_DOOMSDAY_BOOK" },
+    { type: "REDUCE_SELF_COUNTDOWN_BY_TURN_NUMBER" },
+  ],
+  TOKEN_UNDEAD_FINAL_KING_HACHIGOKU: [
+    { type: "DAMAGE_ALL_ENEMY_MINIONS", value: 5 },
+    { type: "HEAL_HERO", value: 3 },
+    { type: "NECROMANCY", cost: 10, effects: [{ type: "DAMAGE_ENEMY_HERO", value: 5 }] },
+  ],
   UNDEAD_011: [{
     type: "SUMMON_WITH_KEYWORD_IF_FIELD",
     definitionId: "TOKEN_UNDEAD_GIANT",
@@ -456,6 +474,9 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
   ALLIANCE_012: {
     DEATHRATTLE: [{ type: "SUMMON", definitionId: "TOKEN_ALLIANCE_ROYAL_PALADIN", count: 2 }],
   },
+  ALLIANCE_013: {
+    DEATHRATTLE: [{ type: "DRAW", value: 1 }],
+  },
   TOKEN_ALLIANCE_HERO_AUGUSTIN: {
     DEATHRATTLE: [{ type: "RETURN_SELF_TO_HAND" }],
   },
@@ -554,6 +575,12 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
   TOKEN_UNDEAD_BOOK_PLAGUE: {
     END_TURN: [{ type: "TRANSFORM_ENEMY_MINIONS", count: 1, definitionId: "TOKEN_UNDEAD_GENERIC", maxHealth: 3 }],
   },
+  TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL: {
+    LAST_WORDS: [
+      { type: "SUMMON", definitionId: "TOKEN_UNDEAD_FINAL_KING_HACHIGOKU", count: 1 },
+      { type: "RETURN_SELF_TO_FIELD_AND_TRANSFORM", definitionId: "TOKEN_UNDEAD_DOOMSDAY_BOOK" },
+    ],
+  },
   UNDEAD_008: {
     END_TURN: [
       { type: "HEAL_HERO", value: 3 },
@@ -564,6 +591,7 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
 
 const initialCounters: Record<string, Record<string, number>> = {
   TOKEN_UNDEAD_BOOK_PLAGUE: { plagueMarks: 0 },
+  TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL: { countdown: 15 },
   MACHINE_005: { countdown: 3 },
   MACHINE_008: { countdown: 3 },
   MACHINE_012: { countdown: 2 },
@@ -620,6 +648,7 @@ const effectSummons: Record<string, CardDefinition["effectSummon"]> = {
   DRAGON_010: { event: "START_TURN_MAX_MANA_AT_LEAST", value: 8 },
   UNDEAD_010: { event: "NECROMANCY_AT_LEAST", value: 10 },
   MACHINE_011: { event: "RECYCLE_CHARGE_AT_LEAST", value: 6 },
+  ALLIANCE_013: { event: "NON_NORMAL_HAND_ENTRY_SUMMONED_THIS_GAME_AT_LEAST", value: 10 },
 };
 
 const activatedEffects: Record<string, CardDefinition["activatedEffect"]> = {};
@@ -646,6 +675,14 @@ const friendlySummonAuras: Record<string, CardDefinition["friendlySummonAura"]> 
   ALLIANCE_003: { effects: [{ type: "DRAW", value: 1 }], maxPerTurn: 1 },
 };
 
+const friendlyMinionDestroyedCountdownAuras: Record<string, CardDefinition["friendlyMinionDestroyedCountdownAura"]> = {
+  TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL: { amount: 1, maxPerTurn: 1 },
+};
+
+const maxCopiesOnField: Record<string, number> = {
+  TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL: 1,
+};
+
 const friendlyEffectDamageImmunityAuras: Record<string, CardDefinition["friendlyEffectDamageImmunityAura"]> = {
   TOKEN_ALLIANCE_ROYAL_HONOR_GUARD: { excludeSelf: true },
 };
@@ -662,7 +699,7 @@ const maxFriendlyCombatKillTriggersPerTurn: Record<string, number> = {
   UNDEAD_010: 3,
 };
 
-const rawFiles = [dragonData, undeadData, machineData, allianceData, tokenData] as unknown as CardFile[];
+const rawFiles = [dragonData, undeadData, machineData, allianceData, neutralData, tokenData] as unknown as CardFile[];
 
 export const cardDefinitions: CardDefinition[] = rawFiles.flatMap((file) =>
   file.cards.map((card) => ({
@@ -678,6 +715,8 @@ export const cardDefinitions: CardDefinition[] = rawFiles.flatMap((file) =>
     grantOnFriendlyEnterAura: grantOnFriendlyEnterAuras[card.id],
     damageCapAura: damageCapAuras[card.id],
     friendlySummonAura: friendlySummonAuras[card.id],
+    friendlyMinionDestroyedCountdownAura: friendlyMinionDestroyedCountdownAuras[card.id],
+    maxCopiesOnField: maxCopiesOnField[card.id],
     friendlyEffectDamageImmunityAura: friendlyEffectDamageImmunityAuras[card.id],
     selfKeywordWhileOtherFriendlySubtypes: selfKeywordWhileOtherFriendlySubtypes[card.id],
     fieldWinCondition: fieldWinConditions[card.id],
@@ -746,6 +785,7 @@ export function validateCardData(): CardDataIssue[] {
       || card.grantOnFriendlyEnterAura
       || card.damageCapAura
       || card.friendlySummonAura
+      || card.friendlyMinionDestroyedCountdownAura
       || card.friendlyEffectDamageImmunityAura
       || card.selfKeywordWhileOtherFriendlySubtypes
       || card.triggeredEffects?.ON_FRIENDLY_COMBAT_KILL?.length
@@ -756,7 +796,7 @@ export function validateCardData(): CardDataIssue[] {
       issues.push({ code: "MISSING_EFFECT_IMPLEMENTATION", cardId: card.id, message: "光環只有文字，尚未連接持續或觸發效果" });
     }
   }
-  const expected: Partial<Record<Faction, number>> = { DRAGON: 40, UNDEAD: 40, MACHINE: 40, ALLIANCE: 35 };
+  const expected: Partial<Record<Faction, number>> = { DRAGON: 40, UNDEAD: 40, MACHINE: 40, ALLIANCE: 38 };
   for (const [faction, count] of Object.entries(expected) as [Faction, number][]) {
     const actual = getMainDeckDefinitions(faction).reduce((sum, card) => sum + card.deckCount, 0);
     if (actual !== count) issues.push({ code: "DECK_SIZE_MISMATCH", message: `${faction}: expected ${count}, got ${actual}` });

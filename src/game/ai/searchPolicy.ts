@@ -43,6 +43,35 @@ function targetedBattlecryWaste(state: GameState, playerId: PlayerId, definition
   return alsoDiscards ? -34 : -14;
 }
 
+function effectsIncreaseMaxMana(effects: readonly EffectDefinition[] | undefined): boolean {
+  return effects?.some((effect) => {
+    if (effect.type === "INCREASE_MAX_MANA") return true;
+    if (effect.type === "CONDITIONAL" || effect.type === "MECHANICAL_TECHNIQUE" || effect.type === "NECROMANCY") {
+      return effectsIncreaseMaxMana(effect.effects);
+    }
+    return false;
+  }) ?? false;
+}
+
+function cardActionIncreasesMaxMana(state: GameState, playerId: PlayerId, action: GameAction): boolean {
+  if (action.type !== "PLAY_CARD" && action.type !== "PLAY_ALTERNATE") return false;
+  const card = state.players[playerId].hand.find((candidate) => candidate.instanceId === action.instanceId);
+  if (!card) return false;
+  const definition = getCardDefinition(card.definitionId);
+  return effectsIncreaseMaxMana(action.type === "PLAY_ALTERNATE" ? definition.alternatePlay?.effects : definition.effects);
+}
+
+function dragonRampTimingScore(state: GameState, playerId: PlayerId, action: GameAction): number {
+  const player = state.players[playerId];
+  if (player.faction !== "DRAGON" || player.maxMana >= state.rulesConfig.normalMaxMana || !cardActionIncreasesMaxMana(state, playerId, action)) return 0;
+  const opponent = state.players[playerId === "P1" ? "P2" : "P1"];
+  const incomingAttack = opponent.minions.reduce((sum, card) => sum + Math.max(0, card.currentAttack ?? 0), 0);
+  const emergency = player.heroHp <= 10 || incomingAttack >= player.heroHp || (opponent.minions.length >= 3 && incomingAttack >= 8);
+  if (emergency) return 6;
+  const remainingGrowth = state.rulesConfig.normalMaxMana - player.maxMana;
+  return 28 + remainingGrowth * 3 + (action.type === "PLAY_ALTERNATE" ? 8 : 0);
+}
+
 function coinTimingWaste(state: GameState, playerId: PlayerId, coinInstanceId: string): number {
   const player = state.players[playerId];
   const coin = player.hand.find((card) => card.instanceId === coinInstanceId);
@@ -53,10 +82,117 @@ function coinTimingWaste(state: GameState, playerId: PlayerId, coinInstanceId: s
   const followUps = player.hand.filter((card) =>
     card.instanceId !== coinInstanceId
     && card.currentCost !== null
+    && card.currentCost > player.mana
     && card.currentCost <= player.mana + manaGain,
   );
   const hasWorthwhileFollowUp = followUps.some((card) => targetedBattlecryWaste(state, playerId, card.definitionId) === 0);
-  return hasWorthwhileFollowUp ? 0 : -24;
+  if (!hasWorthwhileFollowUp) return -32;
+  if (player.faction !== "DRAGON" || player.maxMana > 3) return 0;
+  const enablesRamp = followUps.some((card) => effectsIncreaseMaxMana(getCardDefinition(card.definitionId).effects));
+  if (enablesRamp) return 10;
+  const opponent = state.players[playerId === "P1" ? "P2" : "P1"];
+  const incomingAttack = opponent.minions.reduce((sum, card) => sum + Math.max(0, card.currentAttack ?? 0), 0);
+  const emergency = player.heroHp <= 10 || incomingAttack >= 6 || opponent.minions.length >= 3;
+  if (followUps.some((card) => card.definitionId === "DRAGON_001")) return emergency ? -8 : -58;
+  return emergency ? -4 : -36;
+}
+
+function findMinion(state: GameState, instanceId: string) {
+  return state.players.P1.minions.find((card) => card.instanceId === instanceId)
+    ?? state.players.P2.minions.find((card) => card.instanceId === instanceId);
+}
+
+function attackOutcomeScore(state: GameState, resultingState: GameState, playerId: PlayerId, action: GameAction): number {
+  if (action.type !== "ATTACK") return 0;
+  const attacker = state.players[playerId].minions.find((card) => card.instanceId === action.attackerId);
+  if (!attacker) return 0;
+  const attack = Math.max(0, attacker.currentAttack ?? 0);
+  const hasAttackTrigger = !attacker.sealed && Boolean(
+    getCardDefinition(attacker.definitionId).triggeredEffects?.ON_ATTACK?.length
+    || getCardDefinition(attacker.definitionId).triggeredEffects?.ON_SELF_COMBAT_START?.length,
+  );
+  if (attack === 0 && !hasAttackTrigger) return -120;
+  if (action.target.type === "HERO") return attack === 0 ? -120 : 0;
+
+  const defender = findMinion(state, action.target.instanceId);
+  if (!defender) return 0;
+  const resultingAttacker = findMinion(resultingState, attacker.instanceId);
+  const resultingDefender = findMinion(resultingState, defender.instanceId);
+  const defenderHealthLost = resultingDefender ? Math.max(0, (defender.currentHealth ?? 0) - (resultingDefender.currentHealth ?? 0)) : defender.currentHealth ?? 0;
+  const defenderShieldBroken = !defender.sealed && defender.keywords.includes("DIVINE_SHIELD")
+    && !(resultingDefender && !resultingDefender.sealed && resultingDefender.keywords.includes("DIVINE_SHIELD"));
+  const attackerShieldConsumed = !attacker.sealed && attacker.keywords.includes("DIVINE_SHIELD")
+    && !(resultingAttacker && !resultingAttacker.sealed && resultingAttacker.keywords.includes("DIVINE_SHIELD"));
+  let score = resultingDefender ? defenderHealthLost * 1.5 + (defenderShieldBroken ? 3 : 0) : 24 + evaluatePublicCardValue(defender) * 0.3;
+  if (defenderHealthLost === 0 && !defenderShieldBroken && resultingDefender) score -= 80;
+  if (attackerShieldConsumed && resultingDefender && defenderHealthLost < Math.max(1, (defender.currentHealth ?? 1) / 2)) score -= 24;
+  if (!resultingAttacker) score -= 8;
+  return score;
+}
+
+function effectDamageChoiceScore(state: GameState, resultingState: GameState, playerId: PlayerId, action: GameAction): number {
+  if (action.type !== "SELECT_EFFECT_CARDS" || state.pendingChoice?.type !== "EFFECT_CARDS") return 0;
+  const resolution = state.pendingChoice.resolution;
+  if (resolution.type !== "DAMAGE_MINION" && resolution.type !== "REPEAT_DAMAGE_MINION"
+    && resolution.type !== "REPEAT_DAMAGE_MINION_OR_HERO" && resolution.type !== "DAMAGE_MINIONS_REWARD_KILLS") return 0;
+  const value = resolution.value;
+  const targets = action.instanceIds.map((id) => findMinion(state, id)).filter((card) => card !== undefined);
+  let kills = 0;
+  let actualImpact = 0;
+  for (const target of targets) {
+    const after = findMinion(resultingState, target.instanceId);
+    if (!after) {
+      kills += 1;
+      actualImpact += evaluatePublicCardValue(target);
+      continue;
+    }
+    actualImpact += Math.max(0, (target.currentHealth ?? 0) - (after.currentHealth ?? 0)) * 2;
+    if (!target.sealed && target.keywords.includes("DIVINE_SHIELD") && (after.sealed || !after.keywords.includes("DIVINE_SHIELD"))) actualImpact += 3;
+  }
+  const killWasAvailable = state.pendingChoice.candidateInstanceIds.some((id) => {
+    const candidate = findMinion(state, id);
+    if (!candidate || candidate.sealed) return Boolean(candidate && (candidate.currentHealth ?? Number.POSITIVE_INFINITY) <= value);
+    return !candidate.keywords.includes("DIVINE_SHIELD")
+      && !candidate.keywords.includes("INVINCIBLE")
+      && (candidate.currentHealth ?? Number.POSITIVE_INFINITY) <= value;
+  });
+  if (actualImpact === 0) return -100;
+  return actualImpact * 0.45 + kills * 22 - (killWasAvailable && kills === 0 ? 48 : 0);
+}
+
+function necroReviveCost(keywords: readonly string[]): number | undefined {
+  const keyword = keywords.find((candidate) => candidate.startsWith("NECRO_REVIVE_"));
+  if (!keyword) return undefined;
+  const cost = Number(keyword.slice("NECRO_REVIVE_".length));
+  return Number.isFinite(cost) ? cost : undefined;
+}
+
+function undeadDiscardChoiceScore(state: GameState, playerId: PlayerId, action: GameAction): number {
+  if (action.type !== "SELECT_EFFECT_CARDS" || state.pendingChoice?.type !== "EFFECT_CARDS"
+    || state.pendingChoice.resolution.type !== "DISCARD_HAND" || state.players[playerId].faction !== "UNDEAD") return 0;
+  const player = state.players[playerId];
+  const opponent = state.players[playerId === "P1" ? "P2" : "P1"];
+  const incomingAttack = opponent.minions.reduce((sum, card) => sum + Math.max(0, card.currentAttack ?? 0), 0);
+  const underPressure = player.heroHp <= 12 || incomingAttack >= player.heroHp
+    || (opponent.minions.length >= player.minions.length + 2 && incomingAttack >= 7);
+
+  return action.instanceIds.reduce((score, instanceId) => {
+    const card = player.hand.find((candidate) => candidate.instanceId === instanceId);
+    if (!card) return score;
+    const definition = getCardDefinition(card.definitionId);
+    const hasDiscardEffect = !card.sealed && card.keywords.includes("ON_DISCARD")
+      && Boolean(definition.triggeredEffects?.ON_DISCARD?.length);
+    const reviveCost = card.sealed ? undefined : necroReviveCost(card.keywords);
+    const canReviveNow = reviveCost !== undefined
+      && player.resources.necromancy >= reviveCost
+      && player.minions.length < state.rulesConfig.minionLimit;
+    let cardScore = hasDiscardEffect ? 52 : 0;
+    cardScore += canReviveNow ? 64 : reviveCost !== undefined ? 8 : 0;
+    cardScore -= evaluatePublicCardValue(card) * (hasDiscardEffect || canReviveNow ? 0.05 : 0.22);
+    if (underPressure && !canReviveNow && definition.cardType === "MINION"
+      && card.keywords.some((keyword) => keyword === "TAUNT" || keyword === "RUSH" || keyword === "CHARGE")) cardScore -= 22;
+    return score + cardScore;
+  }, 0);
 }
 
 function isArtifact(definitionId: string): boolean {
@@ -272,9 +408,13 @@ function lowCostSetupScore(state: GameState, playerId: PlayerId, instanceId: str
   return enablesFollowUp ? 45 : 0;
 }
 
-function tacticalActionScore(state: GameState, playerId: PlayerId, action: GameAction): number {
+export function tacticalActionScore(state: GameState, playerId: PlayerId, action: GameAction, resultingState: GameState): number {
   const descentChoiceScore = machineDescentChoiceScore(state, playerId, action);
   if (descentChoiceScore !== 0) return descentChoiceScore;
+  const discardChoiceScore = undeadDiscardChoiceScore(state, playerId, action);
+  if (discardChoiceScore !== 0) return discardChoiceScore;
+  const damageChoiceScore = effectDamageChoiceScore(state, resultingState, playerId, action);
+  if (damageChoiceScore !== 0) return damageChoiceScore;
   if (action.type === "SELECT_EFFECT_CARDS" && state.pendingChoice?.type === "EFFECT_CARDS"
     && state.pendingChoice.resolution.type === "GRANT_MINION_KEYWORD") {
     const grantedKeyword = state.pendingChoice.resolution.keyword;
@@ -286,7 +426,7 @@ function tacticalActionScore(state: GameState, playerId: PlayerId, action: GameA
       return sum + evaluatePublicCardValue(card) * 0.22;
     }, 0);
   }
-  if (action.type === "ATTACK") return boardSpaceActionScore(state, playerId, action);
+  if (action.type === "ATTACK") return boardSpaceActionScore(state, playerId, action) + attackOutcomeScore(state, resultingState, playerId, action);
   if (action.type !== "PLAY_CARD" && action.type !== "PLAY_ALTERNATE") return 0;
   const card = state.players[playerId].hand.find((candidate) => candidate.instanceId === action.instanceId);
   if (!card) return 0;
@@ -295,6 +435,7 @@ function tacticalActionScore(state: GameState, playerId: PlayerId, action: GameA
     + machinePlayTimingScore(state, playerId, card.instanceId)
     + lowCostSetupScore(state, playerId, card.instanceId)
     + royalWarriorTimingScore(state, playerId, card.instanceId)
+    + dragonRampTimingScore(state, playerId, action)
     + boardSpaceActionScore(state, playerId, action);
 }
 
@@ -323,6 +464,7 @@ function actionPlanningPriority(state: GameState, playerId: PlayerId, action: Ga
   if (opensFollowUp && cost <= 1) priority += 36;
   if (player.faction === "ALLIANCE" && definition.cardType === "MINION") priority += 5;
   if (definition.id === "TOKEN_ALLIANCE_HERO_VALENTINE") priority += valentineTimingAdjustment(state, playerId);
+  if (cardActionIncreasesMaxMana(state, playerId, action)) priority += 22;
   priority += machinePlayTimingScore(state, playerId, card.instanceId);
   priority += royalWarriorTimingScore(state, playerId, card.instanceId);
   if (definition.dynamicCost?.type === "SUMMONED_THIS_TURN_MULTIPLIER" && player.hand.some((candidate) => {
@@ -347,7 +489,7 @@ function candidates(state: GameState, playerId: PlayerId, budget: SearchBudget):
       action,
       state: applied.state,
       score: evaluatePublicState(applied.state, playerId),
-      tacticalScore: tacticalActionScore(state, playerId, action),
+      tacticalScore: tacticalActionScore(state, playerId, action, applied.state),
     });
   }
   return result;

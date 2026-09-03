@@ -21,14 +21,17 @@ describe("機械神造物光環與戰吼", () => {
     expect(reaper.keywords).toContain("DIVINE_SHIELD");
   });
 
-  it("伊利亞斯最多指定4名敵人消滅，且在場時機械軍隊單次傷害上限為3", () => {
+  it("伊利亞斯消滅全部敵方手下，且在場時機械軍隊單次傷害上限為3", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const elias = putCard(state, "P1", "TOKEN_MACHINE_DIVINE_ELIAS", "HAND", "elias");
-    const enemy = putCard(state, "P2", "TOKEN_MACHINE_DESTROYER", "MINION", "enemy");
+    for (let index = 0; index < state.rulesConfig.minionLimit; index += 1) {
+      putCard(state, "P2", "TOKEN_MACHINE_DESTROYER", "MINION", `enemy-${index}`);
+    }
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: elias.instanceId }).state;
-    expect(state.pendingChoice).toMatchObject({ type: "EFFECT_CARDS", minCount: 0, candidateInstanceIds: [enemy.instanceId] });
-    state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [] }).state;
+    expect(state.pendingChoice).toBeUndefined();
+    expect(state.players.P2.minions).toHaveLength(0);
+    expect(state.players.P2.extraDeck).toHaveLength(state.rulesConfig.minionLimit);
 
     const ally = putCard(state, "P1", "TOKEN_MACHINE_EMPIRE_SOLDIER", "MINION", "ally");
     expect(dealDamageToMinion(state, ally, 12, "test", "EFFECT")).toBe(3);

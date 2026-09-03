@@ -18,7 +18,7 @@ describe("蓋德爾斯戰吼", () => {
 
   it("死靈復活屬於自身復活，復活後仍觸發戰吼", () => {
     let state = mainState();
-    state.players.P1.resources.necromancy = 3;
+    state.players.P1.resources.necromancy = 4;
     const target = putCard(state, "P1", "DRAGON_005", "MINION", "necro-battlecry-target");
     moveCard(state, target, "GRAVEYARD", "TEST_SETUP");
     const source = putCard(state, "P1", "UNDEAD_009", "MINION", "necro-battlecry-source");
@@ -41,7 +41,7 @@ describe("進擊死靈進場效果", () => {
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: source.instanceId }).state;
     const giants = state.players.P1.minions.filter((card) => card.definitionId === "TOKEN_UNDEAD_GIANT");
     expect(giants).toHaveLength(2);
-    expect(giants.every((card) => card.currentAttack === 3 && card.currentHealth === 5)).toBe(true);
+    expect(giants.every((card) => card.currentAttack === 2 && card.currentHealth === 6)).toBe(true);
     expect(giants.every((card) => card.keywords.includes("SANCTUARY"))).toBe(true);
   });
 
@@ -60,7 +60,7 @@ describe("進擊死靈進場效果", () => {
 
   it("死靈復活進入場上時同樣觸發進場效果", () => {
     const state = mainState();
-    state.players.P1.resources.necromancy = 4;
+    state.players.P1.resources.necromancy = 5;
     const source = putCard(state, "P1", "UNDEAD_011", "MINION", "necro-enter");
     destroyMinion(state, source, "TEST");
     resolvePendingEffects(state);

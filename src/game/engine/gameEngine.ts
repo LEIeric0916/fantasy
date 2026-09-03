@@ -93,6 +93,10 @@ function playCard(state: GameState, playerId: PlayerId, instanceId: string): voi
     const limit = state.rulesConfig.fieldLimits[player.faction];
     if (limit === undefined) throw new RuleUndefinedError("FIELD_LIMIT", `${player.faction} 的立場上限尚未定義`);
     if (limit !== null && player.fields.length >= limit) throw new InvalidActionError(`立場區已滿（${limit}/${limit}）`);
+    if (definition.maxCopiesOnField !== undefined
+      && player.fields.filter((field) => field.definitionId === definition.id).length >= definition.maxCopiesOnField) {
+      throw new InvalidActionError(`${definition.name} 在場上最多只能存在 ${definition.maxCopiesOnField} 張`);
+    }
   }
   player.mana -= card.currentCost;
   if (definition.cardType === "MINION" && player.nextMinionTemporaryCostReduction > 0) {

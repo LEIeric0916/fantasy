@@ -10,7 +10,7 @@ import { grantTemporaryCostReduction, refreshHandCosts } from "./costEngine";
 import { shuffleSeeded } from "../utils/rng";
 import { summonFromHandByEffect, summonGeneratedField, summonGeneratedMinion } from "./summonEngine";
 import { drawCard, opponentOf } from "./turnEngine";
-import { destroyMinion, findCard } from "./zoneEngine";
+import { destroyCardOnField, destroyMinion, findCard } from "./zoneEngine";
 import { createTimingContext } from "./simultaneousEngine";
 import { getCardDefinition } from "../cards/cardRegistry";
 import { moveCard } from "./zoneEngine";
@@ -18,7 +18,7 @@ import { enqueueTriggeredEffects } from "./triggerEngine";
 import { getLegalEnemyEffectTargets } from "./targetingEngine";
 import { transformField, transformMinion } from "./transformEngine";
 import { reviveMinion } from "./reviveEngine";
-import { enqueueStateBasedEffectSummons } from "./effectSummonEngine";
+import { enqueueStateBasedEffectSummons, markHandEntryForEffectSummon } from "./effectSummonEngine";
 
 function notifyEffectSkipped(state: GameState, playerId: PlayerId, source: CardInstance, reason: string): void {
   const sourceName = getCardDefinition(source.definitionId).name;
@@ -102,7 +102,10 @@ export function canExecuteEffect(state: GameState, playerId: PlayerId, source: C
     case "SUMMON": return state.players[playerId].minions.length < state.rulesConfig.minionLimit;
     case "SUMMON_FIELD": {
       const limit = state.rulesConfig.fieldLimits[state.players[playerId].faction];
-      return limit === null || limit === undefined || state.players[playerId].fields.length < limit;
+      const definition = getCardDefinition(effect.definitionId);
+      const belowCopyLimit = definition.maxCopiesOnField === undefined
+        || state.players[playerId].fields.filter((field) => field.definitionId === effect.definitionId).length < definition.maxCopiesOnField;
+      return belowCopyLimit && (limit === null || limit === undefined || state.players[playerId].fields.length < limit);
     }
     case "CHOOSE_DISTINCT_GENERATED_FIELDS": {
       const limit = state.rulesConfig.fieldLimits[state.players[playerId].faction];
@@ -495,11 +498,46 @@ function resolveEffectList(
       case "TRANSFORM_SELF_FIELD":
         transformField(state, source, effect.definitionId);
         break;
+      case "VANISH_SELF_IF_NO_FRIENDLY_FIELD": {
+        const hasRequiredField = state.players[playerId].fields.some((field) => field.definitionId === effect.definitionId);
+        if (hasRequiredField) break;
+        if (source.zone === "FIELD") {
+          const destination = getCardDefinition(source.definitionId).generatedOnly ? "EXTRA_DECK" : "REMOVED";
+          moveCard(state, source, destination, "VANISH_NO_REQUIRED_FIELD");
+          addLog(state, "ACTION", `${getCardDefinition(source.definitionId).name} 因我方場上沒有指定立場而消失`, {
+            requiredDefinitionId: effect.definitionId,
+            instanceId: source.instanceId,
+          });
+        }
+        return false;
+      }
+      case "REDUCE_SELF_COUNTDOWN_BY_TURN_NUMBER": {
+        if (source.zone !== "FIELD") return false;
+        const current = source.counters.countdown;
+        if (current === undefined) {
+          throw new RuleUndefinedError("COUNTDOWN_INITIAL_VALUE", "入場曲要減少倒數，但此卡缺少倒數初值", source.definitionId);
+        }
+        source.counters.countdown = current - state.turnNumber;
+        addLog(state, "RESOURCE", `${source.definitionId} 因當前回合數倒數 ${current} → ${source.counters.countdown}`, {
+          instanceId: source.instanceId,
+          turnNumber: state.turnNumber,
+        });
+        if (source.counters.countdown <= 0) {
+          destroyCardOnField(state, source, "ENTER_FIELD_COUNTDOWN_FINISHED", createTimingContext(state, `ENTER_FIELD_COUNTDOWN:${source.instanceId}`));
+        }
+        break;
+      }
+      case "RETURN_SELF_TO_FIELD_AND_TRANSFORM": {
+        if (source.zone !== "FIELD") moveCard(state, source, "FIELD", "LAST_WORDS_RETURN_FOR_TRANSFORM");
+        transformField(state, source, effect.definitionId);
+        break;
+      }
       case "ADD_GENERATED_TO_HAND":
         for (let count = 0; count < effect.count; count += 1) {
           const definition = getCardDefinition(effect.definitionId);
           const card = createCardInstance(definition, playerId, "HAND", `${playerId}-${effect.definitionId}-created-${state.turnNumber}-${state.log.length}-${count}`);
           state.players[playerId].hand.push(card);
+          markHandEntryForEffectSummon(state, playerId, card, "CREATE_TO_HAND");
           addLog(state, "ZONE", `${playerId} 獲得 ${definition.name}`, { instanceId: card.instanceId, reason: "CREATE_TO_HAND" });
         }
         break;
@@ -959,6 +997,13 @@ function resolveEffectList(
         });
         if (candidates.length < effect.count) {
           notifyEffectSkipped(state, playerId, source, `翻開的 ${revealed.length} 張牌中沒有足夠的發現目標（需要 ${effect.count} 張，目前 ${candidates.length} 張）`);
+          if (effect.fallbackEffects?.length) {
+            addLog(state, "ACTION", `${getCardDefinition(source.definitionId).name} 沒有發現目標，改為執行替代效果`, {
+              source: source.instanceId,
+            });
+            resolveEffects(state, playerId, source, [...effect.fallbackEffects, ...remainingEffects]);
+            return false;
+          }
           const boundary = skipCommaChain(effectIndex);
           if (boundary === undefined) return false;
           effectIndex = boundary;
@@ -1114,6 +1159,7 @@ function resolveEffectList(
           card.currentCost = effect.fixedCost;
         }
         state.players[playerId].hand.push(card);
+        markHandEntryForEffectSummon(state, playerId, card, "CHOICE_CREATE_TO_HAND");
         addLog(state, "ZONE", `${playerId} 取得 ${definition.name}`, { instanceId: card.instanceId, historyKey: effect.historyKey });
         break;
       }
@@ -1340,6 +1386,7 @@ export function selectEffectCards(state: GameState, playerId: PlayerId, instance
       const graveEntryEffects: EffectDefinition[] = [...(discardEffects ?? [])];
       if (!definition.generatedOnly && card.keywords.includes("NECRO_REVIVE_4")) graveEntryEffects.push({ type: "NECRO_REVIVE_SELF", value: 4 });
       if (!definition.generatedOnly && card.keywords.includes("NECRO_REVIVE_5")) graveEntryEffects.push({ type: "NECRO_REVIVE_SELF", value: 5 });
+      if (!definition.generatedOnly && card.keywords.includes("NECRO_REVIVE_6")) graveEntryEffects.push({ type: "NECRO_REVIVE_SELF", value: 6 });
       if (graveEntryEffects.length > 0) enqueueTriggeredEffects(state, card, graveEntryEffects, "EFFECT_DISCARD:GRAVE_ENTRY", timingContext);
     }
   } else if (choice.resolution.type === "SET_CARD_COST_ZERO") {

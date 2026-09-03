@@ -1,5 +1,5 @@
 import { getCardDefinition } from "../cards/cardRegistry";
-import type { PlayerId } from "../cards/cardTypes";
+import type { CardInstance, PlayerId } from "../cards/cardTypes";
 import type { GameState } from "../state/GameState";
 import { createTimingContext } from "./simultaneousEngine";
 import { enqueueTriggeredEffects } from "./triggerEngine";
@@ -7,7 +7,10 @@ import { enqueueTriggeredEffects } from "./triggerEngine";
 function enqueueGroups(state: GameState, playerId: PlayerId, sources: GameState["players"][PlayerId]["hand"], cause: string): void {
   if (sources.length === 0) return;
   const timing = createTimingContext(state, cause);
-  for (const source of sources) source.flags[`effectSummonQueuedTurn:${state.turnNumber}`] = true;
+  for (const source of sources) {
+    source.flags[`effectSummonQueuedTurn:${state.turnNumber}`] = true;
+    delete source.flags.effectSummonEligibleFromNonNormalHandEntry;
+  }
   const groups = new Map<string, typeof sources>();
   for (const source of sources) {
     const group = groups.get(source.definitionId) ?? [];
@@ -36,9 +39,19 @@ export function enqueueStateBasedEffectSummons(state: GameState, playerId: Playe
     return !player.effectSummonUsedThisTurn.includes(card.definitionId)
       && card.flags[`effectSummonQueuedTurn:${state.turnNumber}`] !== true
       && ((rule?.event === "NECROMANCY_AT_LEAST" && player.resources.necromancy >= rule.value)
-        || (rule?.event === "RECYCLE_CHARGE_AT_LEAST" && player.resources.recycleCharge >= rule.value));
+        || (rule?.event === "RECYCLE_CHARGE_AT_LEAST" && player.resources.recycleCharge >= rule.value)
+        || (rule?.event === "NON_NORMAL_HAND_ENTRY_SUMMONED_THIS_GAME_AT_LEAST" && card.flags.effectSummonEligibleFromNonNormalHandEntry === true));
   });
   enqueueGroups(state, playerId, sources, `EFFECT_SUMMON:STATE_BASED:${state.turnNumber}:${state.log.length}`);
+}
+
+export function markHandEntryForEffectSummon(state: GameState, playerId: PlayerId, card: CardInstance, reason: string): void {
+  delete card.flags.effectSummonEligibleFromNonNormalHandEntry;
+  const rule = getCardDefinition(card.definitionId).effectSummon;
+  if (rule?.event !== "NON_NORMAL_HAND_ENTRY_SUMMONED_THIS_GAME_AT_LEAST") return;
+  if (reason === "NORMAL_DRAW" || reason === "MULLIGAN_REPLACEMENT") return;
+  if (state.players[playerId].summonedThisGame < rule.value) return;
+  card.flags.effectSummonEligibleFromNonNormalHandEntry = true;
 }
 
 export function enqueueSpellPlayedEffectSummons(state: GameState, playerId: PlayerId, originalCost: number): void {

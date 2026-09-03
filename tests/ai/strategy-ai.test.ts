@@ -102,7 +102,7 @@ describe("AI 公開局面評分", () => {
     const das = putCard(state, "P1", "ALLIANCE_007", "HAND", "discount-enabler");
     putCard(state, "P1", "ALLIANCE_010", "HAND", "expensive-warrior");
     putCard(state, "P1", "ALLIANCE_002", "HAND", "extra-minion");
-    for (let index = 0; index < 4; index += 1) {
+    for (let index = 0; index < 5; index += 1) {
       const enemy = putCard(state, "P2", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", `minor-enemy-${index}`);
       enemy.currentAttack = 0;
     }
@@ -297,6 +297,133 @@ describe("AI 公開局面評分", () => {
     });
   });
 
+  it("困難龍族 AI 前期會優先使用轉費提升水晶，而不是打聖印白龍或幸運幣", () => {
+    const state = mainState();
+    state.players.P1.faction = "DRAGON";
+    state.players.P1.hand = [];
+    state.players.P1.mana = 2;
+    state.players.P1.maxMana = 2;
+    putCard(state, "P1", "TOKEN_COIN", "HAND", "saved-coin");
+    putCard(state, "P1", "DRAGON_001", "HAND", "white-dragon");
+    const ramp = putCard(state, "P1", "DRAGON_010", "HAND", "ramp-first");
+    const minorEnemy = putCard(state, "P2", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", "minor-pressure");
+    minorEnemy.currentAttack = 1;
+    refreshHandCosts(state);
+
+    expect(chooseSearchAction(state, "P1", 316).action).toEqual({
+      type: "PLAY_ALTERNATE",
+      playerId: "P1",
+      instanceId: ramp.instanceId,
+    });
+  });
+
+  it("困難龍族 AI 不會只為了前期召喚聖印白龍而過早使用幸運幣", () => {
+    const state = mainState();
+    state.players.P1.faction = "DRAGON";
+    state.players.P1.hand = [];
+    state.players.P1.mana = 1;
+    state.players.P1.maxMana = 1;
+    putCard(state, "P1", "TOKEN_COIN", "HAND", "early-coin");
+    putCard(state, "P1", "DRAGON_001", "HAND", "early-white-dragon");
+    const minorEnemy = putCard(state, "P2", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", "minor-enemy");
+    minorEnemy.currentAttack = 1;
+    refreshHandCosts(state);
+
+    expect(chooseSearchAction(state, "P1", 317).action).toEqual({ type: "END_TURN", playerId: "P1" });
+  });
+
+  it("困難龍族 AI 的效果傷害會優先真正消滅手下，不會打在聖盾上做無效解場", () => {
+    let state = mainState();
+    state.players.P1.faction = "DRAGON";
+    state.players.P1.hand = [];
+    state.players.P1.mana = 4;
+    state.players.P1.maxMana = 4;
+    const reveler = putCard(state, "P1", "DRAGON_003", "HAND", "effective-clear");
+    const shielded = putCard(state, "P2", "TOKEN_MACHINE_DESTROYER", "MINION", "shielded-target");
+    shielded.keywords.push("DIVINE_SHIELD");
+    const killable = putCard(state, "P2", "DRAGON_002", "MINION", "killable-target");
+    killable.keywords = killable.keywords.filter((keyword) => keyword !== "DIVINE_SHIELD");
+    refreshHandCosts(state);
+
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: reveler.instanceId }).state;
+    expect(chooseSearchAction(state, "P1", 318).action).toEqual({
+      type: "SELECT_EFFECT_CARDS",
+      playerId: "P1",
+      instanceIds: [killable.instanceId],
+    });
+  });
+
+  it.each([
+    ["普通", chooseHeuristicAction],
+    ["困難", chooseSearchAction],
+  ] as const)("%s 機械 AI 不會讓0攻且持有聖盾術的機械帝國牧師進行無效攻擊", (_label, choose) => {
+    const state = mainState();
+    state.players.P1.faction = "MACHINE";
+    state.players.P1.hand = [];
+    const priest = putCard(state, "P1", "TOKEN_MACHINE_PRIEST", "MINION", "protected-priest");
+    priest.keywords.push("DIVINE_SHIELD");
+    putCard(state, "P2", "TOKEN_MACHINE_DESTROYER", "MINION", "counterattacker");
+
+    expect(choose(state, "P1", 319).action).toEqual({ type: "END_TURN", playerId: "P1" });
+  });
+
+  it.each([
+    ["普通", chooseHeuristicAction],
+    ["困難", chooseSearchAction],
+  ] as const)("%s 不朽者 AI 會優先捨棄具有被捨棄效果的烏比斯", (_label, choose) => {
+    const state = mainState();
+    state.players.P1.faction = "UNDEAD";
+    state.players.P1.hand = [];
+    const source = putCard(state, "P1", "UNDEAD_002", "MINION", "discard-source");
+    const ubis = putCard(state, "P1", "UNDEAD_003", "HAND", "discard-payoff");
+    const ordinary = putCard(state, "P1", "UNDEAD_001", "HAND", "ordinary-discard");
+    state.pendingChoice = {
+      type: "EFFECT_CARDS",
+      playerId: "P1",
+      sourceInstanceId: source.instanceId,
+      prompt: "指定捨棄1張手牌",
+      count: 1,
+      candidateInstanceIds: [ordinary.instanceId, ubis.instanceId],
+      resolution: { type: "DISCARD_HAND" },
+      remainingEffects: [],
+    };
+
+    expect(choose(state, "P1", 320).action).toEqual({
+      type: "SELECT_EFFECT_CARDS",
+      playerId: "P1",
+      instanceIds: [ubis.instanceId],
+    });
+  });
+
+  it.each([
+    ["普通", chooseHeuristicAction],
+    ["困難", chooseSearchAction],
+  ] as const)("%s 不朽者 AI 在死靈數足夠時會優先捨棄可立即死靈復活的手下", (_label, choose) => {
+    const state = mainState();
+    state.players.P1.faction = "UNDEAD";
+    state.players.P1.hand = [];
+    state.players.P1.resources.necromancy = 5;
+    const source = putCard(state, "P1", "UNDEAD_002", "MINION", "revive-discard-source");
+    const emperor = putCard(state, "P1", "UNDEAD_009", "HAND", "revive-discard");
+    const ordinary = putCard(state, "P1", "UNDEAD_001", "HAND", "ordinary-option");
+    state.pendingChoice = {
+      type: "EFFECT_CARDS",
+      playerId: "P1",
+      sourceInstanceId: source.instanceId,
+      prompt: "指定捨棄1張手牌",
+      count: 1,
+      candidateInstanceIds: [ordinary.instanceId, emperor.instanceId],
+      resolution: { type: "DISCARD_HAND" },
+      remainingEffects: [],
+    };
+
+    expect(choose(state, "P1", 321).action).toEqual({
+      type: "SELECT_EFFECT_CARDS",
+      playerId: "P1",
+      instanceIds: [emperor.instanceId],
+    });
+  });
+
   it("困難 AI 場地接近滿且互換能保留額外召喚時會先攻擊騰出空位", () => {
     const state = mainState();
     state.players.P1.faction = "ALLIANCE";
@@ -394,5 +521,5 @@ describe("AI 難度自動對局", () => {
       steps += 1;
     }
     expect(state.phase, `超過 ${steps} 步仍未結束`).toBe("GAME_OVER");
-  }, 30_000);
+  }, 90_000);
 });

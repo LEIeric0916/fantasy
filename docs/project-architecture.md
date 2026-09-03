@@ -24,7 +24,7 @@ UI 不應自行改血量、移動卡牌或判斷勝負。所有遊戲結果都�
 
 - `docs/game-rules.md`：遊戲共通規則及關鍵字定義。
 - `docs/interaction-tests.md`：容易互相影響的規則案例，是實作時的重要驗收依據。
-- `data/dragon-cards.json` 等五份 JSON：卡名、費用、攻擊、生命、卡牌文字、關鍵字與牌組張數。
+- `data/dragon-cards.json` 等六份 JSON：卡名、費用、攻擊、生命、卡牌文字、關鍵字與牌組張數；其中 `neutral-cards.json` 是可持續擴充的中立牌庫。
 - `src/game/cards/cardTypes.ts`：程式允許的關鍵字、效果型別及卡牌資料結構。
 - `src/game/cards/cardRegistry.ts`：用卡牌 ID 把 JSON 文字資料接到真正可執行的 Effect、TriggeredEffect、動態費用、轉費與光環。
 
@@ -73,7 +73,7 @@ TOKEN_DRAGON_TIDAL_EMPEROR: {
 
 ## 關鍵字「庇護」
 
-程式代碼是 `SANCTUARY`，中文統一顯示為「庇護」。它防止手下被卡牌效果直接消滅，但不阻止：
+程式代碼是 `SANCTUARY`，中文統一顯示為「庇護」。它防止手下被卡牌效果或必殺直接消滅，但不阻止：
 
 - 數值傷害；生命降至 0 仍會被消滅。
 - 「消失」；消失不是消滅。

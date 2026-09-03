@@ -4,6 +4,7 @@ import type { GameState } from "../state/GameState";
 import { getLegalActions } from "./legalActionEngine";
 import { nextAiRandom, type RandomDecision } from "./randomPolicy";
 import { evaluatePublicState } from "./stateEvaluator";
+import { tacticalActionScore } from "./searchPolicy";
 
 function actionBias(action: GameAction, hasAlternative: boolean): number {
   if (action.type === "END_TURN" && hasAlternative) return -0.2;
@@ -19,7 +20,9 @@ export function chooseHeuristicAction(state: GameState, playerId: PlayerId, seed
   for (const action of actions) {
     const result = applyAction(state, action);
     if (result.error) continue;
-    const score = evaluatePublicState(result.state, playerId) + actionBias(action, actions.length > 1);
+    const score = evaluatePublicState(result.state, playerId)
+      + tacticalActionScore(state, playerId, action, result.state)
+      + actionBias(action, actions.length > 1);
     if (score > bestScore + Number.EPSILON) {
       bestScore = score;
       bestActions = [action];

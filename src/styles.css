@@ -87,8 +87,8 @@ h2 { margin: 1.1rem 0 .5rem; font-size: .78rem; letter-spacing: .12em; text-tran
 .hand-panel h2 > span { margin-left: 1rem; color: #d7ff55; font-size: .65rem; letter-spacing: 0; text-transform: none; }
 .hand { flex: 1; margin-bottom: 0; }
 .game-board .hand { display: flex; justify-content: safe center; gap: .3rem; overflow-x: auto; overflow-y: hidden; }
-.game-board .hand > .card { flex: 0 0 clamp(86px, 7.5vw, 108px); width: clamp(86px, 7.5vw, 108px); }
-.card { position: relative; min-width: 0; min-height: 0; width: 100%; height: 100%; color: #e8edf2; background: #29333b; border: 1px solid #66737d; border-radius: 5px; overflow: hidden; transition: border-color .18s, box-shadow .18s, transform .18s; }
+.game-board .hand > .card { flex: 0 0 clamp(104px, 8vw, 128px); width: clamp(104px, 8vw, 128px); }
+.card { position: relative; min-width: 0; min-height: 0; width: 100%; height: 100%; color: #f4f7f9; background: #3c4852; border: 1px solid #81909b; border-radius: 5px; overflow: hidden; transition: border-color .18s, box-shadow .18s, transform .18s; }
 .card-surface { width: 100%; height: 100%; display: flex; min-width: 0; min-height: 72px; flex-direction: column; gap: .16rem; align-items: stretch; text-align: left; padding: .38rem; color: inherit; background: transparent; border: 0; border-radius: 0; overflow: hidden; }
 .card:hover, .card.selected { border-color: #d7ff55; box-shadow: inset 0 0 0 1px #d7ff55; }
 .card.playable { border-color: #87eaff; box-shadow: 0 0 7px #53d9ff, inset 0 0 10px #53d9ff30; }
@@ -147,8 +147,10 @@ h2 { margin: 1.1rem 0 .5rem; font-size: .78rem; letter-spacing: .12em; text-tran
 .minion-zone .inspect-card { right: 50%; bottom: .2rem; transform: translateX(50%); }
 .card .effect { display: block; max-height: 2.45em; padding-right: 2.3rem; font-size: clamp(.48rem, .55vw, .62rem); color: #d3d8dc; overflow: hidden; }
 .hand-card .card-surface { min-height: 52px; padding: .32rem .38rem; }
-.hand-card strong { max-width: calc(100% - 1.75rem); font-size: clamp(.68rem, .82vw, .9rem); }
-.hand-card .stats { margin-top: auto; padding-right: 2.35rem; font-size: clamp(.78rem, 1vw, 1.05rem); }
+.hand-card strong { max-width: calc(100% - 1.75rem); font-size: clamp(.74rem, .88vw, .96rem); }
+.hand-card .stats { margin-top: auto; padding-right: 2.35rem; font-size: clamp(.84rem, 1.05vw, 1.1rem); }
+.hand-card .stats b { padding: 0; color: inherit; font: inherit; }
+.hand-card .stats i { padding-inline: .12rem; color: #aeb9c1; font-style: normal; }
 .hand-card .inspect-card { right: .16rem; bottom: .16rem; max-width: 2.3rem; }
 .slot { min-height: 70px; border: 1px dashed #3d4851; background: #151a1e80; }
 .divider { height: 2px; background: #87939d; margin: 1.4rem 0; }
@@ -164,7 +166,7 @@ summary { cursor: pointer; font-weight: 700; }
 .utility-bar details[open] { position: fixed; z-index: 20; left: 1rem; right: 1rem; bottom: 1rem; max-height: 45vh; overflow: auto; box-shadow: 0 8px 32px #000b; }
 .field-action { flex: 0 1 auto; max-width: 30rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-modal-backdrop { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 1rem; background: #07090ccc; backdrop-filter: blur(4px); }
-.card-modal { position: relative; width: min(560px, 94vw); max-height: 90vh; overflow: auto; padding: 1.5rem; border: 2px solid #d7ff55; border-radius: 12px; background: linear-gradient(145deg, #26313a, #15191d); box-shadow: 0 18px 60px #000d; }
+.card-modal { position: relative; width: min(720px, 94vw); max-height: 90vh; overflow: auto; padding: 1.5rem; border: 2px solid #d7ff55; border-radius: 12px; background: linear-gradient(145deg, #26313a, #15191d); box-shadow: 0 18px 60px #000d; }
 .card-modal h2 { margin: .15rem 0 1rem; color: #fff; font-family: Georgia, serif; font-size: clamp(1.8rem, 5vw, 3rem); letter-spacing: 0; text-transform: none; }
 .modal-close { position: absolute; top: .65rem; right: .65rem; width: 2.35rem; height: 2.35rem; padding: 0; font-size: 1.5rem; }
 .card-modal-stats { display: flex; gap: .65rem; margin-bottom: 1rem; }
@@ -173,8 +175,33 @@ summary { cursor: pointer; font-weight: 700; }
 .modal-plague-counter { display: inline-flex; align-items: baseline; gap: .35rem; padding: .55rem .8rem; border: 1px solid #cf73ff; background: #35104b; color: #f0c8ff; font-size: 1.1rem; }
 .modal-plague-counter strong { font-size: 1.8rem; }
 .card-modal-effect { margin: 0; padding: 1rem; border-left: 4px solid #72c7ff; background: #10161b; color: #f2f6f8; font-size: clamp(1.15rem, 2.2vw, 1.45rem); line-height: 1.65; }
+.card-relations { margin-top: 1.15rem; padding-top: 1rem; border-top: 1px solid #52616b; }
+.card-relations > h3 { margin: 0 0 .8rem; color: #fff; font-size: 1.15rem; }
+.relation-group + .relation-group { margin-top: 1rem; }
+.relation-group h4 { margin: 0 0 .45rem; color: #aebbc4; font-size: .78rem; letter-spacing: .08em; }
+.relation-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(235px, 1fr)); gap: .5rem; }
+.relation-list button { display: grid; grid-template-columns: 2.15rem 1fr auto; align-items: center; gap: .55rem; min-height: 58px; padding: .55rem; border: 1px solid #65747e; border-radius: 7px; color: #eef3f6; background: #1b242a; text-align: left; transition: border-color .15s, background .15s, transform .15s; }
+.relation-list button:hover { transform: translateY(-1px); border-color: #d7ff55; background: #27343c; }
+.relation-cost { display: grid; width: 2rem; height: 2rem; place-items: center; border-radius: 50%; color: #0c1820; background: #72c7ff; font-weight: 900; }
+.relation-list button > span:nth-child(2) { display: grid; gap: .15rem; }
+.relation-list strong { color: #fff; }
+.relation-list small { color: #aebbc4; font-size: .68rem; }
+.relation-list em { color: #ffd960; font-size: .74rem; font-style: normal; white-space: nowrap; }
+.empty-relation { margin: 0; color: #9eabb5; }
+.tutorial-modal-hint { margin: 0 2.7rem .85rem 0; padding: .55rem .75rem; border: 2px solid #ffe45c; border-radius: 7px; background: #3b3215; color: #fff3a3; font-size: .88rem; font-weight: 800; box-shadow: 0 0 14px #ffe45c55; }
 .effect-keyword-list { display: flex; flex-wrap: wrap; gap: .45rem; margin: .55rem 0 .85rem; }
 .effect-keyword { display: inline-flex; align-items: center; min-height: 1.9rem; padding: .15rem .65rem; border: 1px solid #74828c; border-radius: 999px; background: #29333a; color: #f5f8fa; font-size: .92rem; font-weight: 800; line-height: 1.2; }
+.effect-keyword .glossary-term-button { all: unset; color: inherit; font: inherit; cursor: help; }
+.glossary-term-wrap { position: relative; }
+.inline-glossary-term { display: inline; }
+.inline-glossary-term .glossary-term-button { all: unset; padding: 0 .08em; border-bottom: 2px dotted #72c7ff; color: #bfe8ff; font: inherit; font-weight: 800; cursor: help; }
+.glossary-term-button:focus-visible { outline: 2px solid #ffe45c; outline-offset: 3px; }
+.glossary-term-popover { position: fixed; z-index: 160; top: 50%; left: 50%; display: grid; width: min(360px, calc(100vw - 2rem)); gap: .45rem; padding: 1rem 1.1rem; border: 2px solid #72c7ff; border-radius: 10px; color: #edf5f8; background: #172229f7; box-shadow: 0 14px 50px #000e, 0 0 22px #45bfff66; transform: translate(-50%, -50%); white-space: normal; text-align: left; }
+.glossary-term-popover > small { color: #72c7ff; font-size: .68rem; letter-spacing: .1em; }
+.glossary-term-popover > strong { padding-right: 2rem; color: #fff; font-size: 1.3rem; }
+.glossary-term-popover > span { color: #dce7ec; font-size: .88rem; font-weight: 700; }
+.glossary-term-popover > em { padding-top: .5rem; border-top: 1px solid #52616b; color: #b9c7cf; font-size: .8rem; font-style: normal; font-weight: 400; line-height: 1.55; }
+.glossary-popover-close { position: absolute; top: .5rem; right: .5rem; width: 2rem; height: 2rem; padding: 0; border-radius: 50%; font-size: 1.2rem; }
 .effect-keyword.keyword-rush, .effect-keyword.keyword-charge, .effect-keyword.keyword-lethal, .effect-keyword.keyword-windfury, .effect-keyword.keyword-on-kill, .effect-keyword.keyword-headhunt, .effect-keyword.keyword-can-only-attack-hero, .effect-keyword.keyword-cannot-attack-hero { border-color: #ff8b71; background: #54251c; color: #ffd6cc; }
 .effect-keyword.keyword-taunt, .effect-keyword.keyword-divine-shield, .effect-keyword.keyword-stealth, .effect-keyword.keyword-deterrence, .effect-keyword.keyword-ward, .effect-keyword.keyword-discipline, .effect-keyword.keyword-sanctuary, .effect-keyword.keyword-invincible, .effect-keyword.keyword-immune-effect-damage, .effect-keyword.keyword-cannot-counterattack { border-color: #66c8ff; background: #173c53; color: #d2f1ff; }
 .effect-keyword.keyword-discipline { border-color: #43f58d; background: #123c27; color: #caffdc; }
@@ -202,6 +229,22 @@ summary { cursor: pointer; font-weight: 700; }
 .config select { width: 100%; padding: .65rem; color: #e8edf2; background: #111418; border: 1px solid #71808d; }
 .setup-actions { display: flex; flex-wrap: wrap; gap: .65rem; margin-top: 1.25rem; }
 .card-catalog { width: min(1440px, 100%); min-height: 100vh; }
+.glossary-page { width: min(1280px, 100%); min-height: 100vh; }
+.glossary-controls { display: grid; grid-template-columns: minmax(230px, .7fr) 1.3fr; gap: 1rem; margin: 1rem 0; padding: 1rem; border: 1px solid #56636d; background: #1c2328; }
+.glossary-controls label { display: grid; gap: .35rem; color: #b9c4cb; font-size: .78rem; }
+.glossary-controls input { width: 100%; padding: .65rem; border: 1px solid #71808d; color: #e8edf2; background: #111418; }
+.glossary-category-tabs { display: flex; flex-wrap: wrap; align-items: end; gap: .4rem; }
+.glossary-category-tabs button { padding: .55rem .8rem; color: #d7dfe4; background: #28333a; }
+.glossary-category-tabs button.selected { border-color: #d7ff55; color: #111418; background: #d7ff55; }
+.glossary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(285px, 1fr)); gap: .75rem; padding-bottom: 2rem; }
+.glossary-entry { display: grid; align-content: start; gap: .55rem; padding: 1rem; border: 1px solid #596873; border-top: 3px solid #72c7ff; border-radius: 8px; background: linear-gradient(145deg, #29343d, #171c20); }
+.glossary-entry > small { color: #72c7ff; font-size: .68rem; letter-spacing: .1em; }
+.glossary-entry h2 { margin: 0; color: #fff; font-size: 1.35rem; letter-spacing: 0; text-transform: none; }
+.glossary-entry > p { margin: 0; color: #dfe7eb; line-height: 1.5; }
+.glossary-entry > div { margin-top: .25rem; padding: .7rem; border-left: 3px solid #d7ff55; background: #10161b; }
+.glossary-entry > div strong { color: #d7ff55; font-size: .76rem; }
+.glossary-entry > div p { margin: .35rem 0 0; color: #b7c3ca; font-size: .82rem; line-height: 1.55; }
+.glossary-entry > em { color: #8f9da6; font-size: .7rem; font-style: normal; }
 .catalog-header { position: sticky; z-index: 12; top: 0; padding-top: .5rem; background: #111418ed; backdrop-filter: blur(8px); }
 .catalog-header h1 { font-size: clamp(2.2rem, 5vw, 3.7rem); }
 .deck-menu { display: grid; grid-template-columns: repeat(4, minmax(170px, 1fr)); gap: .75rem; margin-bottom: 1rem; overflow-x: auto; padding-bottom: .25rem; }
@@ -222,6 +265,16 @@ summary { cursor: pointer; font-weight: 700; }
 .catalog-controls input, .catalog-controls select { width: 100%; min-height: 2.55rem; padding: .55rem .65rem; border: 1px solid #71808d; border-radius: 4px; color: #eef4f8; background: #111418; font: inherit; font-size: .9rem; letter-spacing: 0; }
 .catalog-summary { margin: 1rem 0 .7rem; color: #9eabb5; }
 .catalog-summary strong { color: #d7ff55; }
+.catalog-section { margin-top: 1.25rem; }
+.catalog-section + .catalog-section { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid #56636d; }
+.catalog-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: .75rem; }
+.catalog-section-heading h2 { margin: .1rem 0 0; color: #fff; font-family: Georgia, "Noto Serif TC", serif; font-size: clamp(1.4rem, 2.4vw, 2rem); letter-spacing: 0; text-transform: none; }
+.catalog-section-heading > span { color: #9eabb5; font-size: .78rem; text-align: right; }
+.generated-section .catalog-section-heading h2 { color: #9edaff; }
+.generated-section .catalog-card { border-style: dashed; }
+.reserve-section .catalog-section-heading h2 { color: #ffd98a; }
+.reserve-section .empty-zone-message { border-color: #7c6948; background: #241f1799; color: #cfbd9d; }
+.reserve-section .catalog-card { border-style: dashed; border-color: #a98a52; }
 .catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .75rem; padding-bottom: 2rem; }
 .catalog-card { position: relative; display: flex; min-height: 285px; flex-direction: column; align-items: stretch; gap: .42rem; padding: 1rem; overflow: hidden; border: 1px solid #64727c; border-top: 4px solid #8d9aa4; border-radius: 9px; color: #edf3f7; background: linear-gradient(145deg, #29343d, #171c20); text-align: left; transition: transform .16s, border-color .16s, box-shadow .16s; }
 .catalog-card:hover { transform: translateY(-3px); border-color: #d7ff55; box-shadow: 0 10px 25px #0008, 0 0 12px #d7ff5538; }
@@ -240,38 +293,135 @@ summary { cursor: pointer; font-weight: 700; }
 .catalog-effect { flex: 1; padding: .65rem; border-left: 3px solid #72c7ff; background: #10161b; color: #dfe6ea; font-size: .86rem; line-height: 1.5; }
 .catalog-count { align-self: flex-end; }
 .catalog-notes { margin: 1rem 0 0; padding: .75rem; border: 1px solid #6d5b3a; background: #2b2116; color: #ffd9a3; }
-.tutorial-overlay { position: fixed; z-index: 90; inset: 0; background: #05070ac7; cursor: pointer; }
-.tutorial-dialog { position: fixed; z-index: 93; top: 4.2rem; left: 50%; width: min(520px, calc(100vw - 2rem)); padding: .85rem 1rem; border: 2px solid #d7ff55; border-radius: 11px; background: linear-gradient(145deg, #26313af7, #11161afa); box-shadow: 0 10px 34px #000d, 0 0 22px #d7ff5544; transform: translateX(-50%); cursor: pointer; }
+.tutorial-overlay { position: fixed; z-index: 90; inset: 0; background: #05070a52; cursor: pointer; }
+.tutorial-dialog { --tutorial-safe-shift-x: 0px; --tutorial-safe-shift-y: 0px; position: fixed; z-index: 93; top: 4.2rem; left: 50%; width: min(520px, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); padding: .85rem 1rem; overflow: auto; border: 2px solid #d7ff55; border-radius: 11px; background: linear-gradient(145deg, #26313af7, #11161afa); box-shadow: 0 10px 34px #000d, 0 0 22px #d7ff5544; translate: var(--tutorial-safe-shift-x) var(--tutorial-safe-shift-y); transform: translateX(-50%); cursor: pointer; }
 .tutorial-dialog h2 { margin: .1rem 0 .4rem; color: #fff; font-family: Georgia, "Noto Serif TC", serif; font-size: clamp(1.15rem, 2.6vw, 1.55rem); letter-spacing: 0; text-transform: none; }
 .tutorial-dialog p:not(.eyebrow) { margin-bottom: .35rem; color: #e4ebef; font-size: clamp(.82rem, 1.5vw, .96rem); line-height: 1.5; }
 .tutorial-dialog small { display: block; margin-top: .45rem; color: #d7ff55; font-size: .7rem; font-weight: 800; text-align: right; }
 .tutorial-arrow { position: fixed; z-index: 92; display: grid; place-items: center; width: 3rem; height: 3rem; color: #d7ff55; font-size: 2.8rem; line-height: 1; filter: drop-shadow(0 0 7px #111) drop-shadow(0 0 10px #d7ff55); pointer-events: none; animation: tutorial-arrow-point .75s ease-in-out infinite alternate; }
+.tutorial-attack-guide { position: fixed; z-index: 92; height: 5px; border-radius: 999px; background: linear-gradient(90deg, #ff514899, #ffb2ac 70%, #ff5148); box-shadow: 0 0 8px #ff5148, 0 0 18px #ff3027aa; transform-origin: 0 50%; pointer-events: none; animation: tutorial-attack-guide-pulse .7s ease-in-out infinite alternate; }
+.tutorial-attack-guide i { position: absolute; right: -1px; top: 50%; width: 20px; height: 20px; border-top: 6px solid #ffcac6; border-right: 6px solid #ffcac6; filter: drop-shadow(0 0 7px #ff5148); transform: translateY(-50%) rotate(45deg); }
 .tutorial-dialog-step-0 { top: auto; bottom: 1rem; }
+.tutorial-dialog-level-3.tutorial-dialog-step-0 { top: 4.2rem; bottom: auto; }
 .tutorial-arrow-step-0 { left: calc(50% - 1.5rem); bottom: 27%; transform: rotate(-90deg); }
 .tutorial-arrow-step-1 { left: calc(50% - 1.5rem); bottom: 15%; transform: rotate(90deg); }
 .tutorial-dialog-step-2 { top: 50%; left: 1rem; width: min(440px, calc(70vw - 2rem)); transform: translateY(-50%); }
 .tutorial-arrow-step-2 { right: 13%; top: calc(50% - 1.5rem); }
 .tutorial-arrow-step-3, .tutorial-arrow-step-4, .tutorial-arrow-step-5, .tutorial-arrow-step-6 { left: calc(50% - 1.5rem); bottom: 12%; transform: rotate(90deg); }
-.tutorial-overlay-step-7 { background: #05070ad6; }
-.tutorial-dialog-step-7 { top: 50%; transform: translate(-50%, -50%); }
-.tutorial-overlay.tutorial-action-step { top: 58px; bottom: 0; background: #05070ab8; pointer-events: none; }
-.tutorial-action-dialog { top: 4rem; width: min(720px, calc(100vw - 2rem)); padding: .75rem 1rem; border-color: #72c7ff; box-shadow: 0 8px 30px #000c, 0 0 20px #45bfff55; pointer-events: none; }
+.tutorial-arrow-step-7 { left: calc(50% - 1.5rem); bottom: 29%; transform: rotate(-90deg); }
+.tutorial-overlay-step-8 { background: #05070a66; }
+.tutorial-dialog-step-8 { top: 50%; transform: translate(-50%, -50%); }
+.tutorial-overlay.tutorial-action-step { top: 58px; bottom: 0; background: #05070a45; pointer-events: none; }
+.tutorial-action-dialog { top: 4rem; left: 50%; width: min(720px, calc(100vw - 2rem)); padding: .75rem 1rem; border-color: #72c7ff; box-shadow: 0 8px 30px #000c, 0 0 20px #45bfff55; transform: translateX(-50%); pointer-events: none; }
 .tutorial-action-dialog h2 { display: inline; margin-right: .65rem; font-size: 1.15rem; }
 .tutorial-action-dialog p:not(.eyebrow) { display: inline; font-size: .9rem; line-height: 1.35; }
 .tutorial-action-dialog small { margin-top: .35rem; color: #72c7ff; }
-.tutorial-step-0 .field-zone, .tutorial-step-0 .minion-zone,
-.tutorial-step-1 .hand-panel, .tutorial-step-1 .player-stats,
-.tutorial-step-2 .player-panel,
-.tutorial-step-3 .hand-panel, .tutorial-step-4 .hand-panel,
-.tutorial-step-5 .hand-panel, .tutorial-step-5 .mana-display,
-.tutorial-step-6 .hand-panel, .tutorial-step-6 .active-side { position: relative; z-index: 91; outline: 3px solid #d7ff55; outline-offset: -2px; background-color: #182127; box-shadow: 0 0 0 2px #111418, 0 0 24px #d7ff55aa; filter: brightness(1.18) saturate(1.12); pointer-events: none; }
-.tutorial-step-6 .hand-panel, .tutorial-step-6 .active-side { pointer-events: auto; }
-.tutorial-step-0 .board-side,
-.tutorial-step-1 .board-side,
-.tutorial-step-2 .board-side,
-.tutorial-step-5 .board-side { perspective: none; }
-.tutorial-step-6 .hand-panel { animation: ready-pulse 1.25s ease-in-out infinite; }
+.tutorial-dialog-placement-board { top: 48%; right: auto; bottom: auto; left: calc(50% + min(27vw, 420px)); width: min(390px, calc(48vw - 1.5rem)); transform: translate(-50%, -50%); }
+.tutorial-dialog-placement-hand { top: auto; right: auto; bottom: clamp(9.5rem, 21vh, 12.5rem); left: 50%; width: min(620px, calc(100vw - 2rem)); transform: translateX(-50%); }
+.tutorial-dialog-placement-player { top: 68%; right: calc(max(176px, 14vw) + clamp(3rem, 5vw, 5rem)); bottom: auto; left: auto; width: min(410px, calc(48vw - 1.5rem)); transform: translateY(-50%); }
+.tutorial-dialog-placement-active { top: auto; right: auto; bottom: 52%; left: 50%; width: min(600px, calc(100vw - 2rem)); transform: translateX(-50%); }
+.tutorial-dialog-placement-opponent { top: 31%; right: calc(max(176px, 14vw) + clamp(2rem, 4vw, 4rem)); bottom: auto; left: auto; width: min(430px, calc(48vw - 1.5rem)); transform: translateY(-50%); }
+.tutorial-dialog-placement-header { top: 4.2rem; right: clamp(8rem, 16vw, 14rem); bottom: auto; left: auto; width: min(470px, calc(55vw - 2rem)); transform: none; }
+.tutorial-dialog-placement-center { top: 50%; right: auto; bottom: auto; left: 50%; transform: translate(-50%, -50%); }
+.tutorial-level-1.tutorial-step-0 .field-zone, .tutorial-level-1.tutorial-step-0 .minion-zone,
+.tutorial-level-1.tutorial-step-1 .hand-panel, .tutorial-level-1.tutorial-step-1 .player-stats,
+.tutorial-level-1.tutorial-step-2 .player-panel,
+.tutorial-level-1.tutorial-step-3 .hand-panel,
+.tutorial-level-1.tutorial-step-4 .hand-card,
+.tutorial-level-1.tutorial-step-5 .hand-card, .tutorial-level-1.tutorial-step-5 .mana-display,
+.tutorial-level-1.tutorial-step-6 .hand-panel, .tutorial-level-1.tutorial-step-6 .active-side,
+.tutorial-level-3.tutorial-step-0 .hand-panel, .tutorial-level-3.tutorial-step-0 .field-zone,
+.tutorial-level-3.tutorial-step-1 .hand-panel, .tutorial-level-3.tutorial-step-1 .mana-display,
+.tutorial-level-3.tutorial-step-2 .hand-panel, .tutorial-level-3.tutorial-step-2 .active-side,
+.tutorial-level-3.tutorial-step-3 .hand-panel, .tutorial-level-3.tutorial-step-3 .mana-display,
+.tutorial-level-3.tutorial-step-4 .field-zone,
+.tutorial-level-3.tutorial-step-5 .hand-panel, .tutorial-level-3.tutorial-step-5 .mana-display,
+.tutorial-level-3.tutorial-step-6 .hand-panel, .tutorial-level-3.tutorial-step-6 .active-side,
+.tutorial-level-1.tutorial-step-7 .active-side,
+.tutorial-level-3.tutorial-step-7 .active-side { position: relative; z-index: 91; outline: 3px solid #d7ff55; outline-offset: -2px; background-color: #182127; box-shadow: 0 0 0 2px #111418, 0 0 24px #d7ff55aa; filter: brightness(1.18) saturate(1.12); pointer-events: none; }
+.tutorial-level-1.tutorial-step-6 .hand-panel, .tutorial-level-1.tutorial-step-6 .active-side,
+.tutorial-level-3.tutorial-step-2 .hand-panel, .tutorial-level-3.tutorial-step-2 .active-side,
+.tutorial-level-3.tutorial-step-6 .hand-panel, .tutorial-level-3.tutorial-step-6 .active-side { pointer-events: auto; }
+.tutorial-level-1.tutorial-step-4 .hand-card .inspect-card { z-index: 94; border: 3px solid #ffe45c; color: #fff6b0; box-shadow: 0 0 0 2px #111418, 0 0 18px #ffe45ccc; pointer-events: auto; animation: ready-pulse 1.25s ease-in-out infinite; }
+.tutorial-level-1.tutorial-step-5 .hand-card .cost { z-index: 94; outline: 3px solid #ffe45c; outline-offset: 2px; box-shadow: 0 0 16px #ffe45ccc; }
+.tutorial-level-2.tutorial-step-0 [data-instance-id="tutorial-warrior-apprentice"],
+.tutorial-level-2.tutorial-step-0 .hero-health,
+.tutorial-level-2.tutorial-step-1 [data-instance-id="tutorial-warrior-apprentice"],
+.tutorial-level-2.tutorial-step-2 [data-instance-id="tutorial-warrior-apprentice"],
+.tutorial-level-2.tutorial-step-3 .hand-panel, .tutorial-level-2.tutorial-step-3 .active-side,
+.tutorial-level-2.tutorial-step-4 [data-instance-id="tutorial-warrior-apprentice"],
+.tutorial-level-2.tutorial-step-5 .tutorial-end-turn,
+.tutorial-level-2.tutorial-step-6 [data-instance-id="tutorial-guard-apprentice"],
+.tutorial-level-2.tutorial-step-7 [data-instance-id="tutorial-knight-apprentice"], .tutorial-level-2.tutorial-step-7 .mana-display,
+.tutorial-level-2.tutorial-step-8 [data-instance-id="tutorial-knight-apprentice"],
+.tutorial-level-2.tutorial-step-9 [data-instance-id="tutorial-knight-apprentice"],
+.tutorial-level-2.tutorial-step-10 .hand-panel, .tutorial-level-2.tutorial-step-10 .active-side,
+.tutorial-level-2.tutorial-step-11 .active-side .minion-zone,
+.tutorial-level-2.tutorial-step-12 [data-instance-id="tutorial-knight-apprentice"], .tutorial-level-2.tutorial-step-12 [data-instance-id="tutorial-guard-apprentice"],
+.tutorial-level-2.tutorial-step-13 .opponent-side .zone-count,
+.tutorial-level-2.tutorial-step-14 [data-instance-id="tutorial-knight-apprentice"],
+.tutorial-level-2.tutorial-step-15 [data-instance-id="tutorial-warrior-apprentice"], .tutorial-level-2.tutorial-step-15 .opponent-side .player-panel,
+.tutorial-level-2.tutorial-step-16 .tutorial-end-turn,
+.tutorial-level-2.tutorial-step-17 [data-instance-id="tutorial-opponent-knight-apprentice"], .tutorial-level-2.tutorial-step-17 [data-instance-id="tutorial-warrior-apprentice"],
+.tutorial-level-2.tutorial-step-18 .active-side .zone-count,
+.tutorial-level-2.tutorial-step-19 [data-instance-id="tutorial-assassin-apprentice"], .tutorial-level-2.tutorial-step-19 .mana-display,
+.tutorial-level-2.tutorial-step-20 [data-instance-id="tutorial-assassin-apprentice"],
+.tutorial-level-2.tutorial-step-21 [data-instance-id="tutorial-assassin-apprentice"],
+.tutorial-level-2.tutorial-step-22 .hand-panel, .tutorial-level-2.tutorial-step-22 .active-side,
+.tutorial-level-2.tutorial-step-23 [data-instance-id="tutorial-assassin-apprentice"], .tutorial-level-2.tutorial-step-23 .opponent-side .player-panel,
+.tutorial-level-2.tutorial-step-24 [data-instance-id="tutorial-knight-apprentice"], .tutorial-level-2.tutorial-step-24 .opponent-side .player-panel { position: relative; z-index: 91; outline: 3px solid #d7ff55; outline-offset: -2px; background-color: #46545f; box-shadow: 0 0 0 2px #111418, 0 0 24px #d7ff55aa; filter: brightness(1.15) saturate(1.1); pointer-events: none; }
+.tutorial-level-2.tutorial-step-1 .hand-attack,
+.tutorial-level-2.tutorial-step-2 .hand-health,
+.tutorial-level-2.tutorial-step-14 [data-instance-id="tutorial-knight-apprentice"] .health-stat { outline: 3px solid #ffe45c; outline-offset: 2px; border-radius: 3px; color: #fff3a3; box-shadow: 0 0 14px #ffe45caa; }
+.tutorial-level-2.tutorial-step-8 .hand-card .inspect-card,
+.tutorial-level-2.tutorial-step-20 .hand-card .inspect-card { z-index: 94; border: 3px solid #ffe45c; color: #fff6b0; box-shadow: 0 0 0 2px #111418, 0 0 18px #ffe45ccc; pointer-events: auto; animation: ready-pulse 1.25s ease-in-out infinite; }
+.tutorial-level-2.tutorial-step-3 .hand-panel, .tutorial-level-2.tutorial-step-3 .active-side,
+.tutorial-level-2.tutorial-step-10 .hand-panel, .tutorial-level-2.tutorial-step-10 .active-side,
+.tutorial-level-2.tutorial-step-22 .hand-panel, .tutorial-level-2.tutorial-step-22 .active-side,
+.tutorial-level-2.tutorial-step-5 .tutorial-end-turn, .tutorial-level-2.tutorial-step-16 .tutorial-end-turn,
+.tutorial-level-2.tutorial-step-12 [data-instance-id="tutorial-knight-apprentice"], .tutorial-level-2.tutorial-step-12 [data-instance-id="tutorial-guard-apprentice"],
+.tutorial-level-2.tutorial-step-15 [data-instance-id="tutorial-warrior-apprentice"], .tutorial-level-2.tutorial-step-15 .opponent-side .player-panel,
+.tutorial-level-2.tutorial-step-23 [data-instance-id="tutorial-assassin-apprentice"], .tutorial-level-2.tutorial-step-23 .opponent-side .player-panel,
+.tutorial-level-2.tutorial-step-24 [data-instance-id="tutorial-knight-apprentice"], .tutorial-level-2.tutorial-step-24 .opponent-side .player-panel { pointer-events: auto; }
+.tutorial-level-2.tutorial-step-8 [data-instance-id="tutorial-knight-apprentice"],
+.tutorial-level-2.tutorial-step-20 [data-instance-id="tutorial-assassin-apprentice"] { pointer-events: none; }
+.tutorial-level-1.tutorial-step-0 .board-side,
+.tutorial-level-1.tutorial-step-1 .board-side,
+.tutorial-level-1.tutorial-step-2 .board-side,
+.tutorial-level-1.tutorial-step-5 .board-side,
+.tutorial-level-3.tutorial-step-0 .board-side,
+.tutorial-level-3.tutorial-step-1 .board-side,
+.tutorial-level-3.tutorial-step-3 .board-side,
+.tutorial-level-3.tutorial-step-4 .board-side,
+.tutorial-level-3.tutorial-step-5 .board-side { perspective: none; }
+.tutorial-level-1.tutorial-step-6 .hand-panel,
+.tutorial-level-3.tutorial-step-2 .hand-panel,
+.tutorial-level-3.tutorial-step-6 .hand-panel { animation: ready-pulse 1.25s ease-in-out infinite; }
+.tutorial-arrow-level-1.tutorial-arrow-step-4 { left: calc(50% + clamp(4rem, 8vw, 6rem)); bottom: 7%; transform: rotate(180deg); }
+.tutorial-arrow-level-1.tutorial-arrow-step-5 { left: calc(50% + 1rem); bottom: 17%; transform: rotate(90deg); }
+.tutorial-arrow-level-3.tutorial-arrow-step-2 { right: auto; top: auto; left: calc(50% - 1.5rem); bottom: 12%; transform: rotate(90deg); }
+.tutorial-arrow-level-3.tutorial-arrow-step-4 { bottom: 27%; transform: rotate(-90deg); }
+.tutorial-level-2 .board-side { perspective: none; }
+.tutorial-arrow-level-2 { right: auto; top: auto; left: calc(50% - 1.5rem); bottom: 8%; transform: rotate(90deg); }
+.tutorial-arrow-level-2.tutorial-arrow-step-1 { left: calc(50% - 3.2rem); bottom: 7%; }
+.tutorial-arrow-level-2.tutorial-arrow-step-2 { left: calc(50% + .8rem); bottom: 7%; }
+.tutorial-arrow-level-2.tutorial-arrow-step-4,
+.tutorial-arrow-level-2.tutorial-arrow-step-11,
+.tutorial-arrow-level-2.tutorial-arrow-step-14,
+.tutorial-arrow-level-2.tutorial-arrow-step-18 { left: calc(50% - 1.5rem); bottom: 31%; transform: rotate(90deg); }
+.tutorial-arrow-level-2.tutorial-arrow-step-5,
+.tutorial-arrow-level-2.tutorial-arrow-step-16 { top: 3.8rem; right: 7rem; bottom: auto; left: auto; transform: none; }
+.tutorial-arrow-level-2.tutorial-arrow-step-6,
+.tutorial-arrow-level-2.tutorial-arrow-step-12,
+.tutorial-arrow-level-2.tutorial-arrow-step-17 { top: 34%; bottom: auto; left: calc(50% - 1.5rem); transform: rotate(-90deg); }
+.tutorial-arrow-level-2.tutorial-arrow-step-13 { top: 19%; right: 8%; bottom: auto; left: auto; transform: none; }
+.tutorial-arrow-level-2.tutorial-arrow-step-15,
+.tutorial-arrow-level-2.tutorial-arrow-step-23,
+.tutorial-arrow-level-2.tutorial-arrow-step-24 { top: 25%; right: 9%; bottom: auto; left: auto; transform: none; }
+.tutorial-arrow-level-2.tutorial-arrow-step-8,
+.tutorial-arrow-level-2.tutorial-arrow-step-20 { left: calc(50% + clamp(4rem, 8vw, 6rem)); bottom: 7%; transform: rotate(180deg); }
 @keyframes tutorial-arrow-point { from { margin: 0; } to { margin: 9px 0 0 9px; } }
+@keyframes tutorial-attack-guide-pulse { from { opacity: .72; } to { opacity: 1; box-shadow: 0 0 13px #ff5148, 0 0 28px #ff3027cc; } }
 .privacy { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: 1rem; }
 .mulligan-screen { width: min(1280px, 100%); }
 .mulligan-screen .hand.open { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); align-items: stretch; min-height: min(52vh, 430px); margin: 1rem 0; }
@@ -297,9 +447,12 @@ pre { overflow: auto; }
   header { align-items: flex-start; gap: 1rem; }
   .config label { grid-template-columns: 1fr; gap: .3rem; }
   .catalog-controls { grid-template-columns: 1fr 1fr; }
+  .glossary-controls { grid-template-columns: 1fr; }
+  .tutorial-dialog-placement-board, .tutorial-dialog-placement-player { top: 4.5rem; right: 1rem; bottom: auto; left: 1rem; width: auto; max-height: calc(100dvh - 5.5rem); transform: none; }
 }
 @media (max-width: 560px) {
   .catalog-controls { grid-template-columns: 1fr; }
   .catalog-grid { grid-template-columns: 1fr; }
+  .glossary-grid { grid-template-columns: 1fr; }
   .catalog-card { min-height: 245px; }
 }

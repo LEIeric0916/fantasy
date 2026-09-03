@@ -32,6 +32,7 @@ export type Keyword =
   | "ON_DISCARD"
   | "NECRO_REVIVE_4"
   | "NECRO_REVIVE_5"
+  | "NECRO_REVIVE_6"
   | "HEADHUNT"
   | "CAN_ONLY_ATTACK_HERO"
   | "CANNOT_COUNTERATTACK"
@@ -90,13 +91,16 @@ export type EffectDefinition =
   | { type: "VANISH_OLD_SAME_FIELD_AND_DRAW"; silentIfNone?: boolean }
   | { type: "VANISH_OTHER_SAME_FIELDS"; count: number }
   | { type: "TRANSFORM_SELF_FIELD"; definitionId: string }
+  | { type: "VANISH_SELF_IF_NO_FRIENDLY_FIELD"; definitionId: string }
+  | { type: "REDUCE_SELF_COUNTDOWN_BY_TURN_NUMBER" }
+  | { type: "RETURN_SELF_TO_FIELD_AND_TRANSFORM"; definitionId: string }
   | { type: "DAMAGE_ENEMY_HERO"; value: number }
   | { type: "GRANT_ALL_FRIENDLY_KEYWORD"; keyword: Keyword; subtypes?: string[] }
   | { type: "GRANT_TARGET_FRIENDLY_MINION_KEYWORD"; keyword: Keyword; subtypes?: string[] }
   | { type: "GAIN_SELF_KEYWORD"; keyword: Keyword }
   | { type: "RETURN_HAND_MINION_TO_DECK_SHUFFLE_DRAW_BY_COST"; subtype: string; threshold: number; low: number; high: number }
   | { type: "SEARCH_DECK"; cardType?: CardType; definitionId?: string }
-  | { type: "DISCOVER_TOP"; bonusReveal?: number; count: number; cardType?: CardType; subtype?: string; temporaryCostReduction?: number; discardFromSelected?: number }
+  | { type: "DISCOVER_TOP"; bonusReveal?: number; count: number; cardType?: CardType; subtype?: string; temporaryCostReduction?: number; discardFromSelected?: number; fallbackEffects?: EffectDefinition[] }
   | { type: "ADD_GENERATED_TO_HAND"; definitionId: string; count: number }
   | { type: "RESTORE_MANA" }
   | { type: "RESTORE_MANA_VALUE"; value: number }
@@ -164,7 +168,8 @@ export interface CardDefinition {
     | { event: "SPELL_PLAYED_ORIGINAL_COST_AT_LEAST"; value: number }
     | { event: "START_TURN_MAX_MANA_AT_LEAST"; value: number }
     | { event: "NECROMANCY_AT_LEAST"; value: number }
-    | { event: "RECYCLE_CHARGE_AT_LEAST"; value: number };
+    | { event: "RECYCLE_CHARGE_AT_LEAST"; value: number }
+    | { event: "NON_NORMAL_HAND_ENTRY_SUMMONED_THIS_GAME_AT_LEAST"; value: number };
   enterFieldEffects?: EffectDefinition[];
   activatedEffect?: {
     resource: "NECROMANCY" | "RECYCLE_CHARGE";
@@ -180,6 +185,8 @@ export interface CardDefinition {
   grantOnFriendlyEnterAura?: { subtypes: string[]; keyword: Keyword };
   damageCapAura?: { subtypes: string[]; value: number };
   friendlySummonAura?: { effects: EffectDefinition[]; maxPerTurn: number };
+  friendlyMinionDestroyedCountdownAura?: { amount: number; maxPerTurn: number };
+  maxCopiesOnField?: number;
   friendlyEffectDamageImmunityAura?: { excludeSelf: boolean };
   selfKeywordWhileOtherFriendlySubtypes?: { subtypes: string[]; keyword: Keyword };
   fieldWinCondition?: { count: number; loseReason: "DOOMSDAY_BOOK" };

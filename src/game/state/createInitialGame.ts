@@ -148,3 +148,83 @@ export function createFirstTutorialGame(): GameState {
   state.effectNotices = [];
   return state;
 }
+
+export function createSecondTutorialGame(): GameState {
+  const state = createInitialGame({
+    factions: { P1: "ALLIANCE", P2: "ALLIANCE" },
+    startingPlayerId: "P1",
+    seed: 2,
+    shuffle: false,
+  });
+
+  for (const playerId of ["P1", "P2"] as const) {
+    const player = state.players[playerId];
+    player.deck = [];
+    player.hand = [];
+    player.minions = [];
+    player.fields = [];
+    player.graveyard = [];
+    player.removed = [];
+    player.extraDeck = [];
+    player.mulliganDone = true;
+    player.normalDraws = 1;
+    player.coinGranted = true;
+  }
+
+  state.players.P1.hand.push(createTestCard("NEUTRAL_002", "P1", "HAND", "tutorial-warrior-apprentice"));
+  state.players.P1.deck.push(
+    createTestCard("NEUTRAL_005", "P1", "DECK", "tutorial-assassin-apprentice"),
+    createTestCard("NEUTRAL_004", "P1", "DECK", "tutorial-knight-apprentice"),
+  );
+  state.players.P2.hand.push(createTestCard("NEUTRAL_003", "P2", "HAND", "tutorial-guard-apprentice"));
+  state.players.P2.deck.push(
+    createTestCard("NEUTRAL_004", "P2", "DECK", "tutorial-opponent-knight-apprentice"),
+    createTestCard("NEUTRAL_001", "P2", "DECK", "tutorial-opponent-draw-filler"),
+  );
+  state.players.P1.heroHp = 2;
+  state.players.P2.heroHp = 6;
+  state.players.P1.mana = 2;
+  state.players.P1.maxMana = 2;
+  state.players.P1.turnsStarted = 1;
+  state.players.P2.mana = 1;
+  state.players.P2.maxMana = 1;
+  state.phase = "MAIN";
+  state.turnNumber = 1;
+  state.log = [];
+  state.effectNotices = [];
+  return state;
+}
+
+export function createThirdTutorialGame(): GameState {
+  const state = createInitialGame({
+    factions: { P1: "MACHINE", P2: "MACHINE" },
+    startingPlayerId: "P1",
+    seed: 2,
+    shuffle: false,
+  });
+
+  for (const playerId of ["P1", "P2"] as const) {
+    const player = state.players[playerId];
+    for (const card of player.hand) {
+      card.zone = "DECK";
+      player.deck.push(card);
+    }
+    player.hand = [];
+    player.mulliganDone = true;
+  }
+
+  const tutorialSpell = createTestCard("NEUTRAL_001", "P1", "HAND", "tutorial-magic-knowledge");
+  state.players.P1.hand.push(tutorialSpell);
+  const arsenalIndex = state.players.P1.deck.findIndex((card) => card.definitionId === "MACHINE_008");
+  if (arsenalIndex < 0) throw new Error("Tutorial deck is missing MACHINE_008");
+  const [arsenal] = state.players.P1.deck.splice(arsenalIndex, 1);
+  state.players.P1.deck.push(arsenal);
+  state.players.P1.mana = 4;
+  state.players.P1.maxMana = 4;
+  state.players.P1.turnsStarted = 1;
+  state.phase = "MAIN";
+  state.turnNumber = 1;
+  state.log = [];
+  state.effectNotices = [];
+  return state;
+}

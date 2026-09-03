@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { chooseAiAction, type AiDifficulty } from "../game/ai/aiPolicy";
 import { getActingPlayerId } from "../game/ai/legalActionEngine";
 import { cardDefinitions, getCardDefinition, isCardImplemented } from "../game/cards/cardRegistry";
 import { getCardKeywordText } from "../game/cards/keywordText";
+import { GlossaryText, KeywordGlossaryButton } from "./GlossaryTerm";
 import type { CardInstance, PlayerId } from "../game/cards/cardTypes";
 import { getLegalAttackTargets } from "../game/engine/combatEngine";
 import { refreshHandCosts } from "../game/engine/costEngine";
@@ -74,7 +75,7 @@ function describeActionAnimation(state: GameState, action: GameAction): ActionAn
 interface Props {
   initialState: GameState;
   onRestart: () => void;
-  tutorialLevel?: 1;
+  tutorialLevel?: 1 | 2 | 3;
   aiPlayerId?: PlayerId;
   aiDifficulty?: AiDifficulty;
   aiPlayers?: Partial<Record<PlayerId, AiDifficulty>>;
@@ -98,7 +99,7 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
   const [fixedSpectatorPlayerId, setFixedSpectatorPlayerId] = useState<PlayerId>("P1");
   const [draggedHandCardId, setDraggedHandCardId] = useState<string>();
   const [actionAnimation, setActionAnimation] = useState<ActionAnimation>();
-  const [tutorialStep, setTutorialStep] = useState<number | undefined>(tutorialLevel === 1 ? 0 : undefined);
+  const [tutorialStep, setTutorialStep] = useState<number | undefined>(tutorialLevel ? 0 : undefined);
   const aiSeed = useRef((initialState.rngSeed ^ 0xa17a17) >>> 0);
   const aiStepCount = useRef(0);
   const actingPlayerId = getActingPlayerId(state);
@@ -106,9 +107,21 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
   const actingAiDifficulty = actingPlayerId ? aiDifficulties[actingPlayerId] : undefined;
   const aiActing = Boolean(actingPlayerId && actingAiDifficulty);
   const firstTutorial = tutorialLevel === 1;
+  const secondTutorial = tutorialLevel === 2;
+  const thirdTutorial = tutorialLevel === 3;
+  const tutorialMode = firstTutorial || secondTutorial || thirdTutorial;
+  const tutorialInspectDefinitionId = firstTutorial && tutorialStep === 4
+    ? "TOKEN_ALLIANCE_ROYAL_GUARD"
+    : secondTutorial && tutorialStep === 8
+      ? "NEUTRAL_004"
+      : secondTutorial && tutorialStep === 20
+        ? "NEUTRAL_005"
+        : undefined;
   const aiVsAi = Boolean(aiDifficulties.P1 && aiDifficulties.P2);
   const fixedSpectatorView = aiVsAi && spectatorViewMode === "FIXED";
-  const perspectivePlayerId: PlayerId = aiVsAi
+  const perspectivePlayerId: PlayerId = tutorialMode
+    ? "P1"
+    : aiVsAi
     ? fixedSpectatorView ? fixedSpectatorPlayerId : (actingPlayerId ?? state.activePlayerId)
     : aiPlayerId
       ? (aiPlayerId === "P1" ? "P2" : "P1")
@@ -210,6 +223,14 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
 
   function canPlay(card: CardInstance): boolean {
     if (firstTutorial && tutorialStep !== 6) return false;
+    if (secondTutorial) {
+      const expectedCardId = tutorialStep === 3 ? "NEUTRAL_002" : tutorialStep === 10 ? "NEUTRAL_004" : tutorialStep === 22 ? "NEUTRAL_005" : undefined;
+      if (!expectedCardId || card.definitionId !== expectedCardId) return false;
+    }
+    if (thirdTutorial) {
+      const expectedCardId = tutorialStep === 2 ? "NEUTRAL_001" : tutorialStep === 6 ? "MACHINE_008" : undefined;
+      if (!expectedCardId || card.definitionId !== expectedCardId) return false;
+    }
     if (aiActing || state.activePlayerId !== active.id || state.phase !== "MAIN" || state.pendingChoice || card.currentCost === null || card.currentCost > active.mana) return false;
     const definition = getCardDefinition(card.definitionId);
     if (!isCardImplemented(definition)) return false;
@@ -237,6 +258,16 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
   }
 
   function canAttack(card: CardInstance): boolean {
+    if (secondTutorial) {
+      const expectedAttackerId = tutorialStep === 12 || tutorialStep === 24
+        ? "tutorial-knight-apprentice"
+        : tutorialStep === 15
+          ? "tutorial-warrior-apprentice"
+          : tutorialStep === 23
+            ? "tutorial-assassin-apprentice"
+            : undefined;
+      if (!expectedAttackerId || card.instanceId !== expectedAttackerId) return false;
+    }
     return !aiActing && !state.pendingChoice && getLegalAttackTargets(state, card.instanceId).length > 0;
   }
 
@@ -254,8 +285,7 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
 
   function dispatch(action: GameAction, gateAfter = false) {
     const result = applyAction(state, action);
-    const activePlayerChanged = result.state.activePlayerId !== state.activePlayerId;
-    setState(result.state);
+    let nextState = result.state;
     setMessage(result.error ? `${result.error.code}：${result.error.message}` : "");
     setAiAnnouncement("");
     if (!result.error) {
@@ -263,11 +293,89 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
         const playedCard = state.players[action.playerId].hand.find((card) => card.instanceId === action.instanceId);
         if (playedCard?.definitionId === "TOKEN_ALLIANCE_ROYAL_GUARD") setTutorialStep(7);
       }
+      if (secondTutorial && action.type === "PLAY_CARD") {
+        const playedCard = state.players[action.playerId].hand.find((card) => card.instanceId === action.instanceId);
+        if (tutorialStep === 3 && playedCard?.definitionId === "NEUTRAL_002") setTutorialStep(4);
+        if (tutorialStep === 10 && playedCard?.definitionId === "NEUTRAL_004") setTutorialStep(11);
+        if (tutorialStep === 22 && playedCard?.definitionId === "NEUTRAL_005") setTutorialStep(23);
+      }
+      if (secondTutorial && action.type === "ATTACK") {
+        if (tutorialStep === 12 && action.attackerId === "tutorial-knight-apprentice") setTutorialStep(13);
+        if (tutorialStep === 15 && action.attackerId === "tutorial-warrior-apprentice") setTutorialStep(16);
+        if (tutorialStep === 23 && action.attackerId === "tutorial-assassin-apprentice") setTutorialStep(24);
+        if (tutorialStep === 24 && action.attackerId === "tutorial-knight-apprentice") setTutorialStep(25);
+      }
+      if (secondTutorial && action.type === "END_TURN" && tutorialStep === 5) {
+        const guard = nextState.players.P2.hand.find((card) => card.definitionId === "NEUTRAL_003");
+        const scripted = guard ? applyAction(nextState, { type: "PLAY_CARD", playerId: "P2", instanceId: guard.instanceId }) : undefined;
+        if (scripted && !scripted.error) {
+          nextState = scripted.state;
+          setTutorialStep(6);
+        } else {
+          setMessage("教學流程錯誤：對手無法打出守備學徒");
+        }
+      }
+      if (secondTutorial && action.type === "END_TURN" && tutorialStep === 16) {
+        const knight = nextState.players.P2.hand.find((card) => card.definitionId === "NEUTRAL_004");
+        const scripted = knight ? applyAction(nextState, { type: "PLAY_CARD", playerId: "P2", instanceId: knight.instanceId }) : undefined;
+        if (scripted && !scripted.error) {
+          nextState = scripted.state;
+          setTutorialStep(17);
+        } else {
+          setMessage("教學流程錯誤：對手無法打出騎士學徒");
+        }
+      }
+      if (thirdTutorial && action.type === "PLAY_CARD") {
+        const playedCard = state.players[action.playerId].hand.find((card) => card.instanceId === action.instanceId);
+        if (tutorialStep === 2 && playedCard?.definitionId === "NEUTRAL_001") setTutorialStep(3);
+        if (tutorialStep === 6 && playedCard?.definitionId === "MACHINE_008") setTutorialStep(7);
+      }
       showActionAnimation(action);
       setSelected([]);
       setAttackerId(undefined);
-      if (Object.keys(aiDifficulties).length === 0 && (gateAfter || activePlayerChanged)) setPrivacyGate(true);
+      const activePlayerChanged = nextState.activePlayerId !== state.activePlayerId;
+      if (!tutorialMode && Object.keys(aiDifficulties).length === 0 && (gateAfter || activePlayerChanged)) setPrivacyGate(true);
     }
+    setState(nextState);
+  }
+
+  function continueTutorial() {
+    if (tutorialStep === undefined || !tutorialLevel) return;
+    if (secondTutorial && tutorialStep === 6) {
+      const result = applyAction(state, { type: "END_TURN", playerId: "P2" });
+      if (result.error) {
+        setMessage(`教學流程錯誤：${result.error.message}`);
+        return;
+      }
+      setState(result.state);
+      setTutorialStep(7);
+      return;
+    }
+    if (secondTutorial && tutorialStep === 17) {
+      const action: GameAction = { type: "ATTACK", playerId: "P2", attackerId: "tutorial-opponent-knight-apprentice", target: { type: "MINION", instanceId: "tutorial-warrior-apprentice" } };
+      const result = applyAction(state, action);
+      if (result.error) {
+        setMessage(`教學流程錯誤：${result.error.message}`);
+        return;
+      }
+      showActionAnimation(action);
+      setState(result.state);
+      setTutorialStep(18);
+      return;
+    }
+    if (secondTutorial && tutorialStep === 18) {
+      const result = applyAction(state, { type: "END_TURN", playerId: "P2" });
+      if (result.error) {
+        setMessage(`教學流程錯誤：${result.error.message}`);
+        return;
+      }
+      setState(result.state);
+      setTutorialStep(19);
+      return;
+    }
+    const finalStep = secondTutorial ? 25 : 8;
+    if (tutorialStep === finalStep) onRestart();
+    else setTutorialStep(tutorialStep + 1);
   }
 
   const mulliganPlayer: PlayerId = !state.players.P1.mulliganDone ? "P1" : "P2";
@@ -321,10 +429,10 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
   } : undefined;
 
   return (
-    <main className={`game-board ${firstTutorial ? `tutorial-board tutorial-step-${tutorialStep}` : ""}`}>
+    <main className={`game-board ${tutorialMode ? `tutorial-board tutorial-level-${tutorialLevel} tutorial-step-${tutorialStep}` : ""}`}>
       <header className="game-header">
-        <div><p className="eyebrow">{firstTutorial ? "新手教學 · 第一關" : `TURN ${state.turnNumber} · ${state.phase}`}</p><h1>戰記 <span>{firstTutorial ? "怎麼玩遊戲" : "規則驗證臺"}</span></h1></div>
-        <div className="actions"><button className="quiet" onClick={onRestart}>{firstTutorial ? "離開教學" : "重新開始"}</button>{fixedSpectatorView && <button className="quiet" onClick={toggleFixedSpectator}>切換到{fixedSpectatorPlayerId === "P1" ? "P2" : "P1"}視角</button>}{Object.keys(aiDifficulties).length > 0 && <button className="quiet" onClick={() => setAiPaused((paused) => !paused)}>{aiPaused ? "開始AI" : "暫停AI"}</button>}{fixedSpectatorView && <span className="ai-thinking">固定視角：{fixedSpectatorPlayerId}</span>}{aiActing && <span className="ai-thinking">{aiPaused ? "AI 已暫停" : "AI 思考中…"}</span>}{!firstTutorial && !aiActing && state.activePlayerId === active.id && state.phase === "MAIN" && !state.pendingChoice && <button onClick={() => dispatch({ type: "END_TURN", playerId: active.id })}>結束回合</button>}</div>
+        <div><p className="eyebrow">{tutorialMode ? `新手教學 · 第${tutorialLevel === 1 ? "一" : tutorialLevel === 2 ? "二" : "三"}關` : `TURN ${state.turnNumber} · ${state.phase}`}</p><h1>戰記 <span>{firstTutorial ? "怎麼玩遊戲" : secondTutorial ? "手下戰鬥" : thirdTutorial ? "法術與立場" : "規則驗證臺"}</span></h1></div>
+        <div className="actions"><button className="quiet" onClick={onRestart}>{tutorialMode ? "離開教學" : "重新開始"}</button>{fixedSpectatorView && <button className="quiet" onClick={toggleFixedSpectator}>切換到{fixedSpectatorPlayerId === "P1" ? "P2" : "P1"}視角</button>}{Object.keys(aiDifficulties).length > 0 && <button className="quiet" onClick={() => setAiPaused((paused) => !paused)}>{aiPaused ? "開始AI" : "暫停AI"}</button>}{fixedSpectatorView && <span className="ai-thinking">固定視角：{fixedSpectatorPlayerId}</span>}{aiActing && <span className="ai-thinking">{aiPaused ? "AI 已暫停" : "AI 思考中…"}</span>}{((!tutorialMode && !aiActing && state.activePlayerId === active.id && state.phase === "MAIN" && !state.pendingChoice) || (secondTutorial && (tutorialStep === 5 || tutorialStep === 16))) && <button className={secondTutorial ? "tutorial-end-turn" : ""} onClick={() => dispatch({ type: "END_TURN", playerId: active.id })}>結束回合</button>}</div>
       </header>
       {actionAnimation && <div className={`action-animation ${actionAnimation.type === "PLAY" ? "play-animation" : "attack-animation"}`} role="status" aria-live="polite">
         <span className="action-trajectory" style={actionLineStyle} aria-hidden="true"><i /></span>
@@ -445,7 +553,9 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
           selected={selected.includes(card.instanceId)}
           playable={canPlay(card) || canUseAlternate(card)}
           draggable={!handLimit && (canPlay(card) || canUseAlternate(card))}
-          onInspect={() => setInspectedCard(card)}
+          onInspect={() => {
+            setInspectedCard(card);
+          }}
           onDragStart={() => setDraggedHandCardId(card.instanceId)}
           onDragEnd={() => setDraggedHandCardId(undefined)}
           onClick={() => handLimit ? setSelected((items) => items.includes(card.instanceId) ? items.filter((id) => id !== card.instanceId) : [...items, card.instanceId]) : setInspectedCard(card)}
@@ -468,11 +578,19 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
         })}
         <details className="log"><summary>Game Log · {state.log.length}</summary>{[...state.log].reverse().map((entry) => <div key={entry.index}><time>#{entry.index} T{entry.turn}</time><strong>{entry.type}</strong><span>{formatLogMessage(entry.message)}</span></div>)}</details>
         <details><summary>Zone 檢視</summary><pre>{JSON.stringify({ active: { graveyard: active.graveyard.map((c) => c.definitionId), removed: active.removed.map((c) => c.definitionId), extraDeck: active.extraDeck.map((c) => c.definitionId) }, opponent: { graveyard: opponent.graveyard.map((c) => c.definitionId), removed: opponent.removed.map((c) => c.definitionId), extraDeck: opponent.extraDeck.map((c) => c.definitionId) } }, null, 2)}</pre></details>
-        {!firstTutorial && state.phase === "MAIN" && <details className="debug"><summary>Debug 召喚</summary><p>序列化 Debug Action，僅用於驗證召喚、戰斗及關鍵詞。</p><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: active.id, definitionId: "TOKEN_DRAGON_HELLFIRE" })}>我方：地獄炎龍</button><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: active.id, definitionId: "TOKEN_UNDEAD_SPIRIT" })}>我方：不朽者之靈</button><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: opponentId, definitionId: "TOKEN_ALLIANCE_ROYAL_WARRIOR" })}>對手：皇家戰士</button></details>}
+        {!tutorialMode && state.phase === "MAIN" && <details className="debug"><summary>Debug 召喚</summary><p>序列化 Debug Action，僅用於驗證召喚、戰斗及關鍵詞。</p><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: active.id, definitionId: "TOKEN_DRAGON_HELLFIRE" })}>我方：地獄炎龍</button><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: active.id, definitionId: "TOKEN_UNDEAD_SPIRIT" })}>我方：不朽者之靈</button><button onClick={() => dispatch({ type: "DEBUG_SUMMON", playerId: opponentId, definitionId: "TOKEN_ALLIANCE_ROYAL_WARRIOR" })}>對手：皇家戰士</button></details>}
       </section>
-      {inspectedCard && <CardDetailModal card={inspectedCard} onClose={() => setInspectedCard(undefined)} />}
+      {inspectedCard && <CardDetailModal
+        card={inspectedCard}
+        tutorialCloseHint={inspectedCard.definitionId === tutorialInspectDefinitionId}
+        onClose={() => {
+          const completedTutorialInspect = inspectedCard.definitionId === tutorialInspectDefinitionId;
+          setInspectedCard(undefined);
+          if (completedTutorialInspect) setTutorialStep((step) => step === undefined ? step : step + 1);
+        }}
+      />}
       {viewedGraveyardPlayerId && <GraveyardModal playerId={viewedGraveyardPlayerId} cards={state.players[viewedGraveyardPlayerId].graveyard} onInspect={(card) => { setViewedGraveyardPlayerId(undefined); setInspectedCard(card); }} onClose={() => setViewedGraveyardPlayerId(undefined)} />}
-      {firstTutorial && tutorialStep !== undefined && <FirstTutorialOverlay step={tutorialStep} onContinue={() => tutorialStep < 6 ? setTutorialStep(tutorialStep + 1) : tutorialStep === 7 ? onRestart() : undefined} />}
+      {tutorialMode && tutorialStep !== undefined && <TutorialOverlay level={tutorialLevel!} step={tutorialStep} onContinue={continueTutorial} />}
     </main>
   );
 }
@@ -483,25 +601,272 @@ const firstTutorialContent = [
   { title: "玩家資訊區", text: "玩家資訊區顯示生命、水晶、手牌數、牌組數與棄堆數，也會顯示牌組的獨立紀錄。聯盟牌組的獨立紀錄是本場累積召喚的「協作數」。" },
   { title: "先看看你的手牌", text: "你的手牌現在只有一張「皇家衛兵」。手牌會顯示卡牌費用、名稱與攻擊／生命數值。" },
   { title: "查看卡牌詳細資訊", text: "想完整閱讀卡牌時，可以點卡牌上的「詳細」，也可以點一下或長按卡牌，開啟放大的資訊欄。" },
-  { title: "確認費用與水晶", text: "皇家衛兵的費用是 1；你現在有 1／1 水晶，因此費用符合，可以打出。能打出的手牌會以發光邊框提示。" },
+  { title: "確認費用與水晶", text: "皇家衛兵的費用是1；你現在有1顆水晶，因此費用符合，可以打出。能打出的手牌會以發光邊框提示。" },
   { title: "請親自打出皇家衛兵", text: "按住下方的皇家衛兵，把它拖曳到我方場地後放開。完成正確操作後，教學才會繼續。" },
+  { title: "皇家衛兵已經進場", text: "你打出的皇家衛兵現在位於我方玩家區域的手下區。手下進場後會留在這裡，之後可以在符合行動條件時攻擊。" },
   { title: "第一關完成！", text: "你已經認識場地、牌組、手牌、玩家資訊與水晶，並成功從手牌打出一名手下。點擊任意位置返回模式選擇。" },
 ] as const;
 
-function FirstTutorialOverlay({ step, onContinue }: { step: number; onContinue: () => void }) {
-  const content = firstTutorialContent[step];
+const secondTutorialContent = [
+  { title: "認識戰士學徒", text: "這場戰鬥示範中，你剩下2點生命，對手剩下6點生命。你的起始手牌是2費、2攻擊、3生命的中立手下「戰士學徒」。" },
+  { title: "攻擊力", text: "箭頭指向的是戰士學徒的攻擊力。無論攻擊敵方手下或敵方玩家，都會依照這個數值造成傷害。" },
+  { title: "生命值", text: "箭頭指向的是戰士學徒的生命值。手下受到傷害會失去生命；生命降至0時會被消滅並移入棄堆。" },
+  { title: "請打出戰士學徒", text: "你現在有2顆水晶，剛好可以打出戰士學徒。請把它拖曳到我方場地。" },
+  { title: "召喚回合不能攻擊", text: "一般手下在打出的這個回合不能攻擊。戰士學徒要等到你的下一個回合，才會成為可行動手下。" },
+  { title: "請結束回合", text: "戰士學徒目前不能攻擊，請點擊上方的「結束回合」，讓對手開始行動。" },
+  { title: "嘲諷會保護其他目標", text: "對手打出了2費、1攻擊、3生命的「守備學徒」。具有嘲諷的敵方手下存在時，我方手下必須優先攻擊嘲諷手下，不能直接攻擊敵方玩家。" },
+  { title: "輪到我方並抽牌", text: "對手已經結束回合。你的水晶增加並恢復，這回合抽到的是3費、3攻擊、2生命的「騎士學徒」。" },
+  { title: "請查看騎士學徒", text: "請點擊騎士學徒的「詳細」，查看它擁有的關鍵字。閱讀完成後，再點擊資訊欄外關閉。" },
+  { title: "衝刺", text: "衝刺手下能在召喚的回合立刻攻擊敵方手下，但這個回合不能攻擊敵方玩家。" },
+  { title: "請打出騎士學徒", text: "你現在有3顆水晶，請把騎士學徒拖曳到我方場地。" },
+  { title: "發光代表可以行動", text: "我方場上具有發光標示的手下可以攻擊。戰士學徒已經等過一回合；騎士學徒則因為衝刺，可以立刻攻擊敵方手下。" },
+  { title: "用騎士學徒攻擊守備學徒", text: "拖曳騎士學徒至對面的守備學徒，完成第一次手下戰鬥。" },
+  { title: "守備學徒被消滅", text: "騎士學徒造成3點傷害，使守備學徒的生命降至0，因此守備學徒被消滅並進入對手棄堆。" },
+  { title: "手下會反擊", text: "手下互相戰鬥時，防守方會依自己的攻擊力反擊。守備學徒具有1點攻擊，因此騎士學徒也受到1點傷害，剩下1點生命。" },
+  { title: "用戰士學徒攻擊對手", text: "嘲諷手下已經離場。請拖曳戰士學徒至對手玩家區域，對對手造成2點傷害。" },
+  { title: "請再次結束回合", text: "這回合的攻擊已經完成，請點擊「結束回合」。" },
+  { title: "對手打出騎士學徒", text: "對手打出具有衝刺的騎士學徒。它能在召喚回合攻擊手下，接下來會攻擊我方戰士學徒。" },
+  { title: "戰士學徒被消滅", text: "對手的騎士學徒攻擊戰士學徒。戰士學徒的生命降至0，因此被消滅並進入我方棄堆。對手隨後結束回合。" },
+  { title: "抽到刺客學徒", text: "輪到我方，你抽到4費、3攻擊、3生命的「刺客學徒」。" },
+  { title: "請查看刺客學徒", text: "請點擊刺客學徒的「詳細」，查看它擁有的關鍵字。閱讀完成後，再點擊資訊欄外關閉。" },
+  { title: "衝鋒", text: "衝鋒手下在召喚回合就能攻擊，而且可以選擇敵方手下或敵方玩家，和只能立即攻擊手下的衝刺不同。" },
+  { title: "請打出刺客學徒", text: "你現在有4顆水晶，請把刺客學徒拖曳到我方場地。" },
+  { title: "刺客學徒攻擊對手", text: "請先拖曳刺客學徒至對手玩家區域，造成3點傷害。" },
+  { title: "騎士學徒攻擊對手", text: "騎士學徒已經度過召喚回合，現在也能攻擊玩家。請拖曳騎士學徒至對手玩家區域，完成最後一擊。" },
+  { title: "第二關完成！", text: "你已學會攻擊與生命、召喚回合限制、嘲諷、衝刺、衝鋒、反擊、手下死亡及攻擊玩家。點擊任意位置返回教學關卡選擇。" },
+] as const;
+
+const thirdTutorialContent = [
+  { title: "法術分為一般法術與立場", text: "一般法術打出後會立即執行效果，結算完成後進入棄堆；立場打出後會留在專用的立場區，持續提供牌面記載的效果。" },
+  { title: "先看一般法術", text: "你的起始手牌是1費中立法術「魔法知識」，效果是抽1張牌。你現在有4顆水晶，因此可以使用它。" },
+  { title: "請打出魔法知識", text: "按住手牌中的「魔法知識」，拖曳到我方場地後放開。一般法術不會留在場上，效果結算後會進入棄堆。" },
+  { title: "法術效果已經結算", text: "魔法知識消耗1顆水晶並抽了1張牌。你現在抽到的是3費立場「機械帝國兵工廠」，目前剩餘3顆水晶。" },
+  { title: "立場會留在立場區", text: "立場與一般法術不同。打出後，它會進入我方立場區持續存在；手下區與立場區的格子彼此獨立。" },
+  { title: "查看機械帝國兵工廠", text: "機械帝國兵工廠費用是3，具有入場曲、生長、倒數與回收。你剩下3顆水晶，剛好符合它的費用。" },
+  { title: "請打出機械帝國兵工廠", text: "按住機械帝國兵工廠，拖曳到我方場地後放開。它會進入後方的立場區，並發動入場曲。" },
+  { title: "入場曲召喚了手下", text: "請看我方玩家區域：機械帝國兵工廠已經進入立場區，並因為它的入場曲效果，在手下區召喚了1名「機械帝國士兵」。" },
+  { title: "第三關完成！", text: "你已經學會一般法術會立即結算並離場，而立場會留在立場區持續運作。點擊任意位置返回教學關卡選擇。" },
+] as const;
+
+function TutorialOverlay({ level, step, onContinue }: { level: 1 | 2 | 3; step: number; onContinue: () => void }) {
+  const content = (level === 1 ? firstTutorialContent : level === 2 ? secondTutorialContent : thirdTutorialContent)[step];
+  const secondLevelActionSteps = new Set([3, 5, 8, 10, 12, 15, 16, 20, 22, 23, 24]);
+  const waitingForAction = level === 1 ? step === 4 || step === 6 : level === 2 ? secondLevelActionSteps.has(step) : step === 2 || step === 6;
+  const actionHint = level === 1 && step === 4
+    ? "等待你點擊皇家衛兵的「詳細」"
+    : level === 2 && (step === 8 || step === 20)
+      ? "等待你點擊手牌的「詳細」"
+      : level === 2 && (step === 5 || step === 16)
+        ? "等待你點擊「結束回合」"
+        : level === 2 && [12, 15, 23, 24].includes(step)
+          ? "等待你完成指定攻擊"
+          : "等待你完成拖曳出牌";
+  const placement = tutorialDialogPlacement(level, step);
+  const visualGuide = tutorialVisualGuide(level, step);
+  const dialogRef = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    const keepDialogInSafeArea = () => {
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      dialog.style.setProperty("--tutorial-safe-shift-x", "0px");
+      dialog.style.setProperty("--tutorial-safe-shift-y", "0px");
+      const rect = dialog.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) return;
+      const boardRect = dialog.closest(".game-board")?.getBoundingClientRect();
+      const boardHasSize = Boolean(boardRect && boardRect.width > 0 && boardRect.height > 0);
+      const safeLeft = Math.max(16, boardHasSize ? boardRect!.left + 12 : 16);
+      const safeRight = Math.min(window.innerWidth - 16, boardHasSize ? boardRect!.right - 12 : window.innerWidth - 16);
+      const safeTop = Math.max(70, boardHasSize ? boardRect!.top + 64 : 70);
+      const safeBottom = Math.min(window.innerHeight - 16, boardHasSize ? boardRect!.bottom - 12 : window.innerHeight - 16);
+      let shiftX = rect.left < safeLeft ? safeLeft - rect.left : 0;
+      if (rect.right + shiftX > safeRight) shiftX += safeRight - (rect.right + shiftX);
+      let shiftY = rect.top < safeTop ? safeTop - rect.top : 0;
+      if (rect.bottom + shiftY > safeBottom) shiftY += safeBottom - (rect.bottom + shiftY);
+      dialog.style.setProperty("--tutorial-safe-shift-x", `${shiftX}px`);
+      dialog.style.setProperty("--tutorial-safe-shift-y", `${shiftY}px`);
+    };
+    keepDialogInSafeArea();
+    window.addEventListener("resize", keepDialogInSafeArea);
+    return () => window.removeEventListener("resize", keepDialogInSafeArea);
+  }, [level, step, placement]);
+
   if (!content) return null;
-  const waitingForAction = step === 6;
   return <>
-    <div className={`tutorial-overlay tutorial-overlay-step-${step} ${waitingForAction ? "tutorial-action-step" : ""}`} role="presentation" onClick={waitingForAction ? undefined : onContinue} />
-    <section className={`tutorial-dialog tutorial-dialog-step-${step} ${waitingForAction ? "tutorial-action-dialog" : ""}`} role="dialog" aria-modal={!waitingForAction} aria-label={content.title} onClick={waitingForAction ? undefined : onContinue}>
-      <p className="eyebrow">新手教學 · {Math.min(step + 1, 7)} / 7</p>
+    <div className={`tutorial-overlay tutorial-overlay-level-${level} tutorial-overlay-step-${step} ${waitingForAction ? "tutorial-action-step" : ""}`} role="presentation" onClick={waitingForAction ? undefined : onContinue} />
+    <section ref={dialogRef} className={`tutorial-dialog tutorial-dialog-level-${level} tutorial-dialog-step-${step} tutorial-dialog-placement-${placement} ${waitingForAction ? "tutorial-action-dialog" : ""}`} role="dialog" aria-modal={!waitingForAction} aria-label={content.title} onClick={waitingForAction ? undefined : onContinue}>
+      <p className="eyebrow">新手教學 · 第{level === 1 ? "一" : level === 2 ? "二" : "三"}關 · {Math.min(step + 1, level === 2 ? 25 : 8)} / {level === 2 ? 25 : 8}</p>
       <h2>{content.title}</h2>
       <p>{content.text}</p>
-      <small>{waitingForAction ? "等待你完成拖曳出牌" : step === 7 ? "點擊任意位置完成教學" : "準備好時，點擊任意位置繼續"}</small>
+      <small>{waitingForAction ? actionHint : step === (level === 2 ? 25 : 8) ? "點擊任意位置完成教學" : "準備好時，點擊任意位置繼續"}</small>
     </section>
-    {step < 7 && <span className={`tutorial-arrow tutorial-arrow-step-${step}`} aria-hidden="true">➜</span>}
+    {visualGuide?.type === "ATTACK"
+      ? <TutorialAttackGuide fromSelector={visualGuide.from} toSelector={visualGuide.to} />
+      : <TutorialArrow level={level} step={step} finalStep={level === 2 ? 25 : 8} targetSelector={visualGuide?.target} />}
   </>;
+}
+
+function TutorialAttackGuide({ fromSelector, toSelector }: { fromSelector: string; toSelector: string }) {
+  const [style, setStyle] = useState<CSSProperties>();
+  useLayoutEffect(() => {
+    const placeGuide = () => {
+      const from = document.querySelector(fromSelector)?.getBoundingClientRect();
+      const to = document.querySelector(toSelector)?.getBoundingClientRect();
+      if (!from || !to) return;
+      const fromCenter = { x: from.left + from.width / 2, y: from.top + from.height / 2 };
+      const toCenter = { x: to.left + to.width / 2, y: to.top + to.height / 2 };
+      const dx = toCenter.x - fromCenter.x;
+      const dy = toCenter.y - fromCenter.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance === 0) return;
+      const trim = Math.min(46, distance / 4);
+      const unitX = dx / distance;
+      const unitY = dy / distance;
+      setStyle({
+        left: fromCenter.x + unitX * trim,
+        top: fromCenter.y + unitY * trim,
+        width: Math.max(24, distance - trim * 2),
+        transform: `rotate(${Math.atan2(dy, dx)}rad)`,
+      });
+    };
+    placeGuide();
+    window.addEventListener("resize", placeGuide);
+    return () => window.removeEventListener("resize", placeGuide);
+  }, [fromSelector, toSelector]);
+  return <span className="tutorial-attack-guide" style={style} aria-hidden="true"><i /></span>;
+}
+
+function TutorialArrow({ level, step, finalStep, targetSelector }: { level: 1 | 2 | 3; step: number; finalStep: number; targetSelector?: string }) {
+  const arrowRef = useRef<HTMLSpanElement>(null);
+  const [position, setPosition] = useState<CSSProperties>();
+
+  useLayoutEffect(() => {
+    if (!targetSelector) {
+      setPosition(undefined);
+      return;
+    }
+    const placeArrow = () => {
+      const target = document.querySelector(targetSelector);
+      if (!target) return;
+      const rect = target.getBoundingClientRect();
+      const arrowSize = 48;
+      const gap = 10;
+      let left: number;
+      let top: number;
+      let transform: string;
+      if (targetSelector.includes("health-stat")) {
+        const cardRect = target.closest(".card")?.getBoundingClientRect() ?? rect;
+        if (cardRect.right + arrowSize + gap < window.innerWidth - 8) {
+          left = cardRect.right + gap;
+          top = rect.top + rect.height / 2 - arrowSize / 2;
+          transform = "rotate(180deg)";
+        } else {
+          left = cardRect.left - arrowSize - gap;
+          top = rect.top + rect.height / 2 - arrowSize / 2;
+          transform = "none";
+        }
+      } else if (rect.width > 260) {
+        left = rect.left + rect.width / 2 - arrowSize / 2;
+        top = rect.top - arrowSize - gap;
+        transform = "rotate(90deg)";
+      } else if (rect.left >= arrowSize + gap + 8) {
+        left = rect.left - arrowSize - gap;
+        top = rect.top + rect.height / 2 - arrowSize / 2;
+        transform = "none";
+      } else {
+        left = rect.right + gap;
+        top = rect.top + rect.height / 2 - arrowSize / 2;
+        transform = "rotate(180deg)";
+      }
+      setPosition({
+        right: "auto",
+        bottom: "auto",
+        left: Math.max(8, Math.min(window.innerWidth - arrowSize - 8, left)),
+        top: Math.max(70, Math.min(window.innerHeight - arrowSize - 8, top)),
+        transform,
+      });
+    };
+    placeArrow();
+    window.addEventListener("resize", placeArrow);
+    return () => window.removeEventListener("resize", placeArrow);
+  }, [targetSelector]);
+
+  if (step >= finalStep) return null;
+  return <span ref={arrowRef} className={`tutorial-arrow tutorial-arrow-level-${level} tutorial-arrow-step-${step}`} style={position} aria-hidden="true">➜</span>;
+}
+
+type TutorialVisualGuide = { type: "POINTER"; target: string } | { type: "ATTACK"; from: string; to: string };
+
+function tutorialVisualGuide(level: 1 | 2 | 3, step: number): TutorialVisualGuide | undefined {
+  const firstLevelTargets: Record<number, string> = {
+    0: ".active-side .minion-zone",
+    1: ".hand-panel",
+    2: ".active-side .player-panel",
+    3: '[data-instance-id="tutorial-royal-guard"]',
+    4: '[data-instance-id="tutorial-royal-guard"] .inspect-card',
+    5: '[data-instance-id="tutorial-royal-guard"] .cost',
+    6: '[data-instance-id="tutorial-royal-guard"]',
+    7: '[data-instance-id="tutorial-royal-guard"]',
+  };
+  const secondLevelTargets: Record<number, string> = {
+    0: '[data-instance-id="tutorial-warrior-apprentice"]',
+    1: '[data-instance-id="tutorial-warrior-apprentice"] .hand-attack',
+    2: '[data-instance-id="tutorial-warrior-apprentice"] .hand-health',
+    3: '[data-instance-id="tutorial-warrior-apprentice"]',
+    4: '[data-instance-id="tutorial-warrior-apprentice"]',
+    5: ".tutorial-end-turn",
+    6: '[data-instance-id="tutorial-guard-apprentice"]',
+    7: '[data-instance-id="tutorial-knight-apprentice"]',
+    8: '[data-instance-id="tutorial-knight-apprentice"] .inspect-card',
+    9: '[data-instance-id="tutorial-knight-apprentice"]',
+    10: '[data-instance-id="tutorial-knight-apprentice"]',
+    11: ".active-side .minion-zone",
+    13: ".opponent-side .zone-count",
+    14: '[data-instance-id="tutorial-knight-apprentice"] .health-stat',
+    16: ".tutorial-end-turn",
+    17: '[data-instance-id="tutorial-opponent-knight-apprentice"]',
+    18: ".active-side .zone-count",
+    19: '[data-instance-id="tutorial-assassin-apprentice"]',
+    20: '[data-instance-id="tutorial-assassin-apprentice"] .inspect-card',
+    21: '[data-instance-id="tutorial-assassin-apprentice"]',
+    22: '[data-instance-id="tutorial-assassin-apprentice"]',
+  };
+  const thirdLevelTargets: Record<number, string> = {
+    0: ".active-side .field-zone",
+    1: '[data-instance-id="tutorial-magic-knowledge"]',
+    2: '[data-instance-id="tutorial-magic-knowledge"]',
+    3: ".hand-panel",
+    4: ".active-side .field-zone",
+    5: ".hand-panel .hand-card",
+    6: ".hand-panel .hand-card",
+    7: ".active-side",
+  };
+  if (level === 2 && step === 12) return { type: "ATTACK", from: '[data-instance-id="tutorial-knight-apprentice"]', to: '[data-instance-id="tutorial-guard-apprentice"]' };
+  if (level === 2 && step === 15) return { type: "ATTACK", from: '[data-instance-id="tutorial-warrior-apprentice"]', to: ".opponent-side .player-panel" };
+  if (level === 2 && step === 23) return { type: "ATTACK", from: '[data-instance-id="tutorial-assassin-apprentice"]', to: ".opponent-side .player-panel" };
+  if (level === 2 && step === 24) return { type: "ATTACK", from: '[data-instance-id="tutorial-knight-apprentice"]', to: ".opponent-side .player-panel" };
+  const target = level === 1 ? firstLevelTargets[step] : level === 2 ? secondLevelTargets[step] : thirdLevelTargets[step];
+  return target ? { type: "POINTER", target } : undefined;
+}
+
+function tutorialDialogPlacement(level: 1 | 2 | 3, step: number): "board" | "hand" | "player" | "active" | "opponent" | "header" | "center" {
+  if (level === 2) {
+    if (step === 25) return "center";
+    if (step === 5 || step === 16) return "header";
+    if ([6, 13, 17].includes(step)) return "opponent";
+    if ([4, 11, 14, 18].includes(step)) return "active";
+    if ([12, 15, 23, 24].includes(step)) return "board";
+    return "hand";
+  }
+  if (step === 8) return "center";
+  if (step === 7) return "active";
+  if (level === 1) {
+    if (step === 0) return "board";
+    if (step === 2) return "player";
+    return "hand";
+  }
+  if (step === 0 || step === 4) return "board";
+  return "hand";
 }
 
 interface ZoneProps {
@@ -567,12 +932,13 @@ function GraveyardModal({ playerId, cards, onInspect, onClose }: { playerId: Pla
   </div>;
 }
 
-function CardDetailModal({ card, onClose }: { card: CardInstance; onClose: () => void }) {
+function CardDetailModal({ card, onClose, tutorialCloseHint = false }: { card: CardInstance; onClose: () => void; tutorialCloseHint?: boolean }) {
   const definition = getCardDefinition(card.definitionId);
   const keywordText = getCardKeywordText(card);
   return <div className="card-modal-backdrop" role="presentation" onClick={onClose}>
     <section className="card-modal" role="dialog" aria-modal="true" aria-label={`${definition.name} 卡牌資訊`} onClick={(event) => event.stopPropagation()}>
       <button className="modal-close" onClick={onClose} aria-label="關閉卡牌資訊">×</button>
+      {tutorialCloseHint && <p className="tutorial-modal-hint">閱讀完成後，點擊資訊欄外任意一處即可關閉，並繼續下一步。</p>}
       <p className="eyebrow">{definition.cardType} · {definition.subtype.join(" · ") || "無種族"}</p>
       <h2>{definition.name}</h2>
       <div className="card-modal-stats">
@@ -584,9 +950,9 @@ function CardDetailModal({ card, onClose }: { card: CardInstance; onClose: () =>
         <strong>效果：</strong>
         <div className="effect-keyword-list">
           {card.sealed && <span className="effect-keyword sealed">封印中</span>}
-          {card.keywords.map((keyword, index) => <span className={`effect-keyword keyword-${keyword.toLowerCase().replaceAll("_", "-")}`} key={`${keyword}-${index}`}>{keywordText[index].label}</span>)}
+          {card.keywords.map((keyword, index) => <KeywordGlossaryButton keyword={keyword} key={`${keyword}-${index}`} />)}
         </div>
-        {definition.effectsText && <p className="printed-effect">{definition.effectsText}</p>}
+        {definition.effectsText && <p className="printed-effect"><GlossaryText text={definition.effectsText} /></p>}
         {keywordText.length === 0 && !definition.effectsText && <p>無卡牌效果</p>}
       </div>
     </section>

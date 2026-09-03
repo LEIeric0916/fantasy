@@ -114,6 +114,11 @@ export function summonGeneratedField(state: GameState, playerId: PlayerId, defin
   }
   const definition = getCardDefinition(definitionId);
   if (definition.cardType !== "FIELD") throw new InvalidActionError(`${definitionId} 不是立場`);
+  if (definition.maxCopiesOnField !== undefined
+    && player.fields.filter((field) => field.definitionId === definitionId).length >= definition.maxCopiesOnField) {
+    addLog(state, "ACTION", `${definition.name} 召喚失敗：同名卡在場上最多只能存在 ${definition.maxCopiesOnField} 張`, { reason: "SAME_NAME_FIELD_LIMIT" });
+    return false;
+  }
   const card = createCardInstance(definition, playerId, "FIELD", `${playerId}-${definitionId}-generated-${state.turnNumber}-${state.log.length}`);
   player.fields.push(card);
   addLog(state, "ZONE", `召喚立場 ${definition.name}`, { instanceId: card.instanceId, reason: "EFFECT_SUMMON_FIELD" });

@@ -7,7 +7,7 @@ describe("聯盟後期主牌", () => {
     expect(putCard(mainState(), "P1", "ALLIANCE_011", "HAND", "cost").currentCost).toBe(8);
   });
 
-  it("皇家戰士第5回合以上按本回合召喚次數每次減2；檢索主牌並在協作15時召喚衍生皇家戰士", () => {
+  it("皇家戰士第5回合以上按本回合召喚次數每次減2；協作15同時檢索主牌並召喚衍生皇家戰士", () => {
     let state = mainState();
     state.players.P1.hand = [];
     state.players.P1.turnsStarted = 5;
@@ -22,6 +22,42 @@ describe("聯盟後期主牌", () => {
     expect(state.players.P1.mana).toBe(5);
     state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [searched.instanceId] }).state;
     expect(state.players.P1.minions.some((card) => card.definitionId === "TOKEN_ALLIANCE_ROYAL_WARRIOR")).toBe(true);
+  });
+
+  it("皇家戰士只在協作10後檢索，未達協作15時不召喚衍生皇家戰士", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    state.players.P1.summonedThisGame = 9;
+    const searched = putCard(state, "P1", "ALLIANCE_010", "HAND", "rally-ten-copy");
+    state.players.P1.hand.splice(state.players.P1.hand.indexOf(searched), 1);
+    searched.zone = "DECK";
+    state.players.P1.deck.unshift(searched);
+    const warrior = putCard(state, "P1", "ALLIANCE_010", "HAND", "rally-ten-played");
+
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: warrior.instanceId }).state;
+
+    expect(state.pendingChoice).toMatchObject({ type: "EFFECT_CARDS" });
+    expect(state.players.P1.minions.some((card) => card.definitionId === "TOKEN_ALLIANCE_ROYAL_WARRIOR")).toBe(false);
+    state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [searched.instanceId] }).state;
+    expect(state.players.P1.hand.some((card) => card.instanceId === searched.instanceId)).toBe(true);
+    expect(state.players.P1.minions.some((card) => card.definitionId === "TOKEN_ALLIANCE_ROYAL_WARRIOR")).toBe(false);
+  });
+
+  it("皇家戰士未達協作10時不會檢索或召喚衍生牌", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    state.players.P1.summonedThisGame = 8;
+    const searched = putCard(state, "P1", "ALLIANCE_010", "HAND", "below-ten-copy");
+    state.players.P1.hand.splice(state.players.P1.hand.indexOf(searched), 1);
+    searched.zone = "DECK";
+    state.players.P1.deck.unshift(searched);
+    const warrior = putCard(state, "P1", "ALLIANCE_010", "HAND", "below-ten-played");
+
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: warrior.instanceId }).state;
+
+    expect(state.pendingChoice).toBeUndefined();
+    expect(state.players.P1.deck.some((card) => card.instanceId === searched.instanceId)).toBe(true);
+    expect(state.players.P1.minions.some((card) => card.definitionId === "TOKEN_ALLIANCE_ROYAL_WARRIOR")).toBe(false);
   });
 
   it("皇家戰士在自己的第4回合不會因本回合召喚次數減費", () => {

@@ -100,6 +100,8 @@ describe("全卡牌卡死風險靜態稽核", () => {
         }
         if (effect.type === "TRANSFORM_ENEMY_MINIONS" || effect.type === "TRANSFORM_UP_TO_ENEMY_MINIONS") expectType(card.id, effect.definitionId, "MINION");
         if (effect.type === "TRANSFORM_SELF_FIELD") expectType(card.id, effect.definitionId, "FIELD");
+        if (effect.type === "VANISH_SELF_IF_NO_FRIENDLY_FIELD") expectType(card.id, effect.definitionId, "FIELD");
+        if (effect.type === "RETURN_SELF_TO_FIELD_AND_TRANSFORM") expectType(card.id, effect.definitionId, "FIELD");
         if (effect.type === "SNAPSHOT_FIELD_COUNT_DAMAGE_AND_SUMMON") expectType(card.id, effect.summonDefinitionId, "MINION");
         if (effect.type === "CATASTROPHE_FLOOD") {
           expectType(card.id, effect.transformDefinitionId, "MINION");

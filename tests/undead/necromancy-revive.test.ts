@@ -15,9 +15,9 @@ describe("死靈數與死靈復活", () => {
     expect(state.players.P1.extraDeck.some((card) => card.instanceId === minion.instanceId)).toBe(true);
   });
 
-  it("我方回合蓋德爾斯被消滅時先獲得+1，達到4後扣4並立即復活", () => {
+  it("我方回合蓋德爾斯被消滅時先獲得+1，達到5後扣5並立即復活", () => {
     const state = mainState();
-    state.players.P1.resources.necromancy = 3;
+    state.players.P1.resources.necromancy = 4;
     const minion = putCard(state, "P1", "UNDEAD_009", "MINION", "self-revive");
     destroyMinion(state, minion, "TEST");
     resolvePendingEffects(state);
@@ -36,13 +36,13 @@ describe("死靈數與死靈復活", () => {
     destroyMinion(state, minion, "SECOND");
     resolvePendingEffects(state);
     expect(minion.zone).toBe("GRAVEYARD");
-    expect(state.players.P1.resources.necromancy).toBe(8);
+    expect(state.players.P1.resources.necromancy).toBe(7);
   });
 
-  it("由手牌被效果送入棄堆不獲得死亡+1，但已有4死靈數時仍可復活", () => {
+  it("由手牌被效果送入棄堆不獲得死亡+1，但已有5死靈數時仍可復活", () => {
     let state = mainState();
     state.players.P1.hand = [];
-    state.players.P1.resources.necromancy = 4;
+    state.players.P1.resources.necromancy = 5;
     const silencer = putCard(state, "P1", "UNDEAD_002", "HAND", "discard-source");
     const revived = putCard(state, "P1", "UNDEAD_009", "HAND", "discarded-revive");
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: silencer.instanceId }).state;

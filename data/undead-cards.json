@@ -14,9 +14,9 @@
       "health": 1,
       "deckCount": 3,
       "keywords": ["RUSH", "BATTLECRY"],
-      "effectsText": "戰吼：發現1張不朽者手下。若我方場上有黑暗之書，召喚1名衍生「不朽者」。",
+      "effectsText": "戰吼：發現1張不朽者手下；若翻開的牌中沒有合法目標，則抽1張牌。若我方場上有黑暗之書，召喚1名衍生「不朽者」。",
       "generatedOnly": false,
-      "notes": "最後修正：發現只檢查牌組上方翻開的3張；其中沒有合法目標時，發現效果結束。"
+      "notes": "最後修正：發現只檢查牌組上方翻開的3張；其中沒有合法目標時，改為抽1張牌。"
     },
     {
       "id": "UNDEAD_002",
@@ -133,8 +133,8 @@
       "attack": 5,
       "health": 5,
       "deckCount": 3,
-      "keywords": ["NECRO_REVIVE_4", "RUSH", "BATTLECRY"],
-      "effectsText": "死靈復活4。戰吼：復活我方棄堆1張消耗5以上的手下。",
+      "keywords": ["NECRO_REVIVE_5", "RUSH", "BATTLECRY"],
+      "effectsText": "死靈復活5。戰吼：復活我方棄堆1張消耗5以上的手下。",
       "generatedOnly": false,
       "notes": ""
     },
@@ -163,8 +163,8 @@
       "attack": 3,
       "health": 5,
       "deckCount": 3,
-      "keywords": ["NECRO_REVIVE_5"],
-      "effectsText": "死靈復活5。進場時：召喚2名「不朽者巨靈」；若我方場上有末日之書，使這些巨靈獲得聖盾術與衝鋒。",
+      "keywords": ["NECRO_REVIVE_6"],
+      "effectsText": "死靈復活6。進場時：召喚2名「不朽者巨靈」；若我方場上有末日之書，使這些巨靈獲得聖盾術與衝鋒。",
       "generatedOnly": false,
       "notes": "最後修正確認進場時包含以任何方式進入場上，並與僅從手牌打出的戰吼區分。"
     },

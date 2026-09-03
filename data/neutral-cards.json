@@ -1,0 +1,79 @@
+{
+  "cards": [
+    {
+      "id": "NEUTRAL_001",
+      "name": "魔法知識",
+      "faction": "NEUTRAL",
+      "cardType": "SPELL",
+      "subtype": [],
+      "originalCost": 1,
+      "attack": null,
+      "health": null,
+      "deckCount": 0,
+      "keywords": [],
+      "effectsText": "抽1張牌。",
+      "generatedOnly": false,
+      "notes": ""
+    },
+    {
+      "id": "NEUTRAL_002",
+      "name": "戰士學徒",
+      "faction": "NEUTRAL",
+      "cardType": "MINION",
+      "subtype": [],
+      "originalCost": 2,
+      "attack": 2,
+      "health": 3,
+      "deckCount": 0,
+      "keywords": [],
+      "effectsText": "",
+      "generatedOnly": false,
+      "notes": ""
+    },
+    {
+      "id": "NEUTRAL_003",
+      "name": "守備學徒",
+      "faction": "NEUTRAL",
+      "cardType": "MINION",
+      "subtype": [],
+      "originalCost": 2,
+      "attack": 1,
+      "health": 3,
+      "deckCount": 0,
+      "keywords": ["TAUNT"],
+      "effectsText": "嘲諷。",
+      "generatedOnly": false,
+      "notes": ""
+    },
+    {
+      "id": "NEUTRAL_004",
+      "name": "騎士學徒",
+      "faction": "NEUTRAL",
+      "cardType": "MINION",
+      "subtype": [],
+      "originalCost": 3,
+      "attack": 3,
+      "health": 2,
+      "deckCount": 0,
+      "keywords": ["RUSH"],
+      "effectsText": "衝刺。",
+      "generatedOnly": false,
+      "notes": ""
+    },
+    {
+      "id": "NEUTRAL_005",
+      "name": "刺客學徒",
+      "faction": "NEUTRAL",
+      "cardType": "MINION",
+      "subtype": [],
+      "originalCost": 4,
+      "attack": 3,
+      "health": 3,
+      "deckCount": 0,
+      "keywords": ["CHARGE"],
+      "effectsText": "衝鋒。",
+      "generatedOnly": false,
+      "notes": ""
+    }
+  ]
+}

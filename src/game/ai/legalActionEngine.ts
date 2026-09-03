@@ -39,6 +39,8 @@ function canPlayCard(state: GameState, playerId: PlayerId, card: CardInstance): 
   if (definition.cardType === "FIELD") {
     const limit = state.rulesConfig.fieldLimits[player.faction];
     if (limit === undefined || (limit !== null && player.fields.length >= limit)) return false;
+    if (definition.maxCopiesOnField !== undefined
+      && player.fields.filter((field) => field.definitionId === definition.id).length >= definition.maxCopiesOnField) return false;
   }
   return true;
 }
