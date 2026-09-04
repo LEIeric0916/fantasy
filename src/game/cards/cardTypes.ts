@@ -89,6 +89,7 @@ export type EffectDefinition =
   | { type: "TRANSFORM_UP_TO_ENEMY_MINIONS"; maxCount: number; definitionId: string; maxHealth?: number }
   | { type: "REVIVE_FRIENDLY_GRAVE_MINION"; maxOriginalCost?: number; minOriginalCost?: number }
   | { type: "VANISH_OLD_SAME_FIELD_AND_DRAW"; silentIfNone?: boolean }
+  | { type: "DRAW_AND_VANISH_SELF_IF_SAME_FIELD" }
   | { type: "VANISH_OTHER_SAME_FIELDS"; count: number }
   | { type: "TRANSFORM_SELF_FIELD"; definitionId: string }
   | { type: "VANISH_SELF_IF_NO_FRIENDLY_FIELD"; definitionId: string }

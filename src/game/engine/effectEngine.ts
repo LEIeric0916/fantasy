@@ -506,6 +506,18 @@ function resolveEffectList(
         }
         break;
       }
+      case "DRAW_AND_VANISH_SELF_IF_SAME_FIELD": {
+        const hasOldSameName = state.players[playerId].fields.some((card) =>
+          card.instanceId !== source.instanceId && card.definitionId === source.definitionId,
+        );
+        if (!hasOldSameName) break;
+        drawCard(state, playerId, `EFFECT:${source.definitionId}:DUPLICATE_VANISH`);
+        if (source.zone === "FIELD") {
+          const destination = getCardDefinition(source.definitionId).generatedOnly ? "EXTRA_DECK" : "REMOVED";
+          moveCard(state, source, destination, "VANISH_DUPLICATE_SELF_FIELD");
+        }
+        break;
+      }
       case "VANISH_OTHER_SAME_FIELDS": {
         const others = state.players[playerId].fields
           .filter((card) => card.instanceId !== source.instanceId && card.definitionId === source.definitionId)

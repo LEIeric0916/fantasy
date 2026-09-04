@@ -43,6 +43,38 @@ describe("瘟疫典錄與末日序曲", () => {
     expect(after?.counters.plagueMarks).toBe(5);
   });
 
+  it("召喚其他種類的黑暗之書時，既有瘟疫典錄保留標記與實例", () => {
+    let state = mainState();
+    const plague = putCard(state, "P1", "TOKEN_UNDEAD_BOOK_PLAGUE", "FIELD", "keep-marks");
+    plague.counters.plagueMarks = 1;
+    const daxter = putCard(state, "P1", "UNDEAD_006", "HAND", "summon-other-book");
+
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: daxter.instanceId }).state;
+    expect(state.pendingChoice?.type).toBe("EFFECT_OPTION");
+    state = applyAction(state, { type: "SELECT_EFFECT_OPTION", playerId: "P1", optionId: "TOKEN_UNDEAD_BOOK_IMMORTAL" }).state;
+
+    const after = state.players.P1.fields.find((card) => card.instanceId === plague.instanceId);
+    expect(after?.definitionId).toBe("TOKEN_UNDEAD_BOOK_PLAGUE");
+    expect(after?.counters.plagueMarks).toBe(1);
+  });
+
+  it("已有瘟疫典錄時，新瘟疫典錄抽1張後自行消失並保留舊卡標記", () => {
+    const state = mainState();
+    const old = putCard(state, "P1", "TOKEN_UNDEAD_BOOK_PLAGUE", "FIELD", "old-plague");
+    old.counters.plagueMarks = 3;
+    const deckBefore = state.players.P1.deck.length;
+
+    expect(summonGeneratedField(state, "P1", "TOKEN_UNDEAD_BOOK_PLAGUE")).toBe(true);
+    const duplicateId = state.players.P1.fields.at(-1)!.instanceId;
+    resolvePendingEffects(state);
+
+    expect(state.players.P1.deck).toHaveLength(deckBefore - 1);
+    expect(state.players.P1.fields.filter((card) => card.definitionId === "TOKEN_UNDEAD_BOOK_PLAGUE")).toHaveLength(1);
+    expect(state.players.P1.fields[0].instanceId).toBe(old.instanceId);
+    expect(state.players.P1.fields[0].counters.plagueMarks).toBe(3);
+    expect(state.players.P1.extraDeck.some((card) => card.instanceId === duplicateId)).toBe(true);
+  });
+
   it("殘光渡扉者亞恩具有衝刺與嘲諷", () => {
     const state = mainState();
     const yaan = putCard(state, "P1", "UNDEAD_008", "MINION", "yaan-keywords");

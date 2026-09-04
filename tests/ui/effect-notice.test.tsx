@@ -280,13 +280,14 @@ describe("效果未發動介面提示", () => {
     state.players.P1.heroHp = 8;
     const plague = putCard(state, "P1", "TOKEN_UNDEAD_BOOK_PLAGUE", "FIELD", "visible-marks");
     plague.counters.plagueMarks = 4;
+    putCard(state, "P1", "TOKEN_UNDEAD_BOOK_IMMORTAL", "FIELD", "other-book");
     const container = document.createElement("div");
     document.body.append(container);
     const root = createRoot(container);
     act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
     expect(container.querySelector('[aria-label="瘟疫標記 4"]')?.textContent).toContain("4/ 6");
     const plagueZone = container.querySelector(`[data-instance-id="${plague.instanceId}"]`)?.closest(".field-zone");
-    expect(plagueZone?.querySelectorAll(".slot")).toHaveLength(6);
+    expect(plagueZone?.querySelectorAll(".slot")).toHaveLength(5);
     expect(container.querySelectorAll(".player-panel")).toHaveLength(2);
     const health = container.querySelector('[data-testid="player-health-P1"]')!;
     expect(health.textContent).toContain("生命8/30");

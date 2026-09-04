@@ -221,7 +221,7 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
     },
   ],
   TOKEN_UNDEAD_BOOK_IMMORTAL: [{ type: "VANISH_OLD_SAME_FIELD_AND_DRAW", silentIfNone: true }],
-  TOKEN_UNDEAD_BOOK_PLAGUE: [{ type: "VANISH_OLD_SAME_FIELD_AND_DRAW", silentIfNone: true }],
+  TOKEN_UNDEAD_BOOK_PLAGUE: [{ type: "DRAW_AND_VANISH_SELF_IF_SAME_FIELD" }],
   TOKEN_UNDEAD_BOOK_REVENGE: [
     { type: "VANISH_OLD_SAME_FIELD_AND_DRAW", silentIfNone: true },
     { type: "SEGMENT_BREAK" },
