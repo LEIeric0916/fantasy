@@ -25,7 +25,7 @@ describe("絕杰榮耀與聯盟絕杰", () => {
     state.players.P1.summonedThisGame = 20;
     const first = putCard(state, "P1", "TOKEN_ALLIANCE_HEROIC_GLORY", "HAND", "first");
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: first.instanceId }).state;
-    expect(state.players.P1.mana).toBe(9);
+    expect(state.players.P1.mana).toBe(8);
     state = applyAction(state, { type: "SELECT_EFFECT_OPTION", playerId: "P1", optionId: "DRAW" }).state;
     expect(state.pendingChoice).toMatchObject({ type: "EFFECT_OPTION" });
     state = applyAction(state, { type: "SELECT_EFFECT_OPTION", playerId: "P1", optionId: "TOKEN_ALLIANCE_HERO_AUGUSTIN" }).state;

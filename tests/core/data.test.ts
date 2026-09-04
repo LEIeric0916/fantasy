@@ -49,10 +49,12 @@ describe("卡牌資料", () => {
   it("聯盟新增3張革命戰線銀彈克加魯", () => {
     const definition = getCardDefinition("ALLIANCE_013");
     expect(definition.deckCount).toBe(3);
-    expect(definition.keywords).toEqual(expect.arrayContaining(["EFFECT_SUMMON", "RUSH", "BATTLECRY", "DEATHRATTLE"]));
+    expect(definition.keywords).toEqual(expect.arrayContaining(["EFFECT_SUMMON", "RUSH", "BATTLECRY"]));
+    expect(definition.keywords).not.toContain("DEATHRATTLE");
     expect(definition.effectSummon).toEqual({ event: "NON_NORMAL_HAND_ENTRY_SUMMONED_THIS_GAME_AT_LEAST", value: 10 });
     expect(definition.effects).toEqual([{ type: "DAMAGE_TARGET_ENEMY_MINION", value: 3 }]);
-    expect(definition.triggeredEffects?.DEATHRATTLE).toEqual([{ type: "DRAW", value: 1 }]);
+    expect(definition.triggeredEffects?.DEATHRATTLE).toBeUndefined();
+    expect(getCardDefinition("TOKEN_ALLIANCE_HEROIC_GLORY").originalCost).toBe(2);
   });
 
   it("CardInstance 與不可變 CardDefinition 分離", () => {

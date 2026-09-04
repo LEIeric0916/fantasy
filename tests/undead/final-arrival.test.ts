@@ -11,14 +11,14 @@ describe("黑暗之書 終末降臨", () => {
     expect(book).toMatchObject({
       name: "黑暗之書 終末降臨",
       cardType: "FIELD",
-      initialCounters: { countdown: 15 },
+      initialCounters: { countdown: 12 },
       maxCopiesOnField: 1,
       friendlyMinionDestroyedCountdownAura: { amount: 1, maxPerTurn: 1 },
     });
     expect(book.keywords).toEqual(expect.arrayContaining(["WARD", "SANCTUARY", "COUNTDOWN", "LAST_WORDS"]));
 
     const king = getCardDefinition("TOKEN_UNDEAD_FINAL_KING_HACHIGOKU");
-    expect(king).toMatchObject({ name: "終末之王 八獄", originalCost: 10, attack: 10, health: 10 });
+    expect(king).toMatchObject({ name: "終末之王 八獄", originalCost: 10, attack: 8, health: 8 });
     expect(king.subtype).toContain("SPELLBEING");
     expect(king.keywords).toContain("TAUNT");
   });
@@ -31,18 +31,33 @@ describe("黑暗之書 終末降臨", () => {
     expect(state.players.P1.extraDeck.some((card) => card.definitionId === "TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL")).toBe(true);
   });
 
-  it("有末日之書時依當前回合數減少倒數，且同名卡最多存在1張", () => {
+  it("只依控制者自己的回合數減少倒數，不把雙方回合相加", () => {
     const state = mainState();
-    state.turnNumber = 4;
+    state.turnNumber = 7;
+    state.players.P1.turnsStarted = 4;
     putCard(state, "P1", "TOKEN_UNDEAD_DOOMSDAY_BOOK", "FIELD", "required-doom");
     expect(summonGeneratedField(state, "P1", "TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL")).toBe(true);
     resolvePendingEffects(state);
     const book = state.players.P1.fields.find((card) => card.definitionId === "TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL");
-    expect(book?.counters.countdown).toBe(11);
+    expect(book?.counters.countdown).toBe(8);
+    destroyMinion(state, putCard(state, "P1", "TOKEN_UNDEAD_SPIRIT", "MINION", "countdown-check"));
+    expect(book?.counters.countdown).toBe(7);
+    expect(book?.zone).toBe("FIELD");
     expect(summonGeneratedField(state, "P1", "TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL")).toBe(false);
   });
 
-  it("每回合只因我方手下被消滅減少1次倒數，歸零後召喚八獄並由原卡轉變", () => {
+  it("後攻玩家也只使用自己的回合數計算入場曲 X", () => {
+    const state = mainState();
+    state.turnNumber = 8;
+    state.players.P2.turnsStarted = 4;
+    putCard(state, "P2", "TOKEN_UNDEAD_DOOMSDAY_BOOK", "FIELD", "second-player-doom");
+    expect(summonGeneratedField(state, "P2", "TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL")).toBe(true);
+    resolvePendingEffects(state);
+    const book = state.players.P2.fields.find((card) => card.definitionId === "TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL");
+    expect(book?.counters.countdown).toBe(8);
+  });
+
+  it("每回合只因我方手下被消滅減少1次倒數，歸零後依序召喚末日之書與八獄", () => {
     const state = mainState();
     putCard(state, "P1", "TOKEN_UNDEAD_DOOMSDAY_BOOK", "FIELD", "required-doom");
     summonGeneratedField(state, "P1", "TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL");
@@ -60,7 +75,25 @@ describe("黑暗之書 終末降臨", () => {
     resolvePendingEffects(state);
 
     expect(state.players.P1.minions.some((card) => card.definitionId === "TOKEN_UNDEAD_FINAL_KING_HACHIGOKU")).toBe(true);
-    expect(state.players.P1.fields.find((card) => card.instanceId === book.instanceId)?.definitionId).toBe("TOKEN_UNDEAD_DOOMSDAY_BOOK");
+    expect(state.players.P1.extraDeck.some((card) => card.instanceId === book.instanceId)).toBe(true);
+    expect(state.players.P1.fields.filter((card) => card.definitionId === "TOKEN_UNDEAD_DOOMSDAY_BOOK")).toHaveLength(2);
+  });
+
+  it("光環只在控制者自己的回合因我方手下被消滅而減少倒數", () => {
+    const state = mainState();
+    putCard(state, "P1", "TOKEN_UNDEAD_DOOMSDAY_BOOK", "FIELD", "required-doom");
+    summonGeneratedField(state, "P1", "TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL");
+    resolvePendingEffects(state);
+    const book = state.players.P1.fields.find((card) => card.definitionId === "TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL")!;
+    book.counters.countdown = 5;
+
+    state.activePlayerId = "P2";
+    destroyMinion(state, putCard(state, "P1", "TOKEN_UNDEAD_SPIRIT", "MINION", "opponent-turn"));
+    expect(book.counters.countdown).toBe(5);
+
+    state.activePlayerId = "P1";
+    destroyMinion(state, putCard(state, "P1", "TOKEN_UNDEAD_SPIRIT", "MINION", "own-turn"));
+    expect(book.counters.countdown).toBe(4);
   });
 });
 

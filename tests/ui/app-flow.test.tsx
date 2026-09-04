@@ -104,6 +104,34 @@ describe("瀏覽器入口流程", () => {
     random.mockRestore();
   });
 
+  it("混沌模式隨機合併兩副不同牌組，並保留一般對戰與 AI 難度選項", () => {
+    const random = vi.spyOn(Math, "random")
+      .mockReturnValueOnce(0.01)
+      .mockReturnValueOnce(0.01)
+      .mockReturnValueOnce(0.51)
+      .mockReturnValueOnce(0.99);
+    changeSelect("遊玩類型", "CHAOS");
+    const battleMode = container.querySelector<HTMLSelectElement>('select[aria-label="對戰模式"]')!;
+    expect([...battleMode.options].map((option) => option.value)).toEqual([
+      "LOCAL", "RANDOM_AI", "HEURISTIC_AI", "SEARCH_AI", "WATCH_AI_HEURISTIC",
+    ]);
+    expect(container.querySelector('select[aria-label="P1 玩家陣營"]')).toBeNull();
+    changeSelect("先攻設定", "P1");
+    click(button("建立混沌對局"));
+    click(button("確認換牌（0）"));
+    click(button("已交接，顯示畫面"));
+    click(button("確認換牌（0）"));
+    click(button("已交接，顯示畫面"));
+
+    expect(container.textContent).toContain("混沌模式");
+    expect(container.textContent).toContain("龍族＋不朽者");
+    expect(container.textContent).toContain("機械＋聯盟");
+    for (const label of ["死靈數", "棄堆龍族", "回收充能", "協作數"]) {
+      expect(container.textContent).toContain(label);
+    }
+    random.mockRestore();
+  });
+
   it("可選擇隨機 AI 模式，由 P2 自動完成換牌並維持 P1 視角", () => {
     vi.useFakeTimers();
     changeSelect("對戰模式", "RANDOM_AI");

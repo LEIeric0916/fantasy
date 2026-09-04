@@ -1,5 +1,5 @@
 import type { CardInstance, ConditionDefinition, EffectDefinition, PlayerId } from "../cards/cardTypes";
-import type { GameState } from "../state/GameState";
+import { getPlayerFieldLimit, type GameState } from "../state/GameState";
 import { addLog } from "../utils/gameLog";
 import { dealDamageToHero, dealDamageToMinion, grantDamageCap } from "./damageEngine";
 import { InvalidActionError, NotImplementedError, RuleUndefinedError } from "./errors";
@@ -10,7 +10,7 @@ import { grantTemporaryCostReduction, refreshHandCosts } from "./costEngine";
 import { shuffleSeeded } from "../utils/rng";
 import { summonFromHandByEffect, summonGeneratedField, summonGeneratedMinion } from "./summonEngine";
 import { drawCard, opponentOf } from "./turnEngine";
-import { destroyCardOnField, destroyMinion, findCard } from "./zoneEngine";
+import { destroyCardOnField, destroyMinion, destroyZeroHealthMinions, findCard } from "./zoneEngine";
 import { createTimingContext } from "./simultaneousEngine";
 import { getCardDefinition } from "../cards/cardRegistry";
 import { moveCard } from "./zoneEngine";
@@ -93,6 +93,15 @@ function conditionMatches(
   }
 }
 
+function availableGeneratedFieldIds(state: GameState, playerId: PlayerId, definitionIds: readonly string[]): string[] {
+  const fields = state.players[playerId].fields;
+  return definitionIds.filter((definitionId) => {
+    const definition = getCardDefinition(definitionId);
+    return definition.maxCopiesOnField === undefined
+      || fields.filter((field) => field.definitionId === definitionId).length < definition.maxCopiesOnField;
+  });
+}
+
 export function canExecuteEffect(state: GameState, playerId: PlayerId, source: CardInstance, effect: EffectDefinition): boolean {
   switch (effect.type) {
     case "DRAW": return state.players[playerId].deck.length > 0;
@@ -101,15 +110,20 @@ export function canExecuteEffect(state: GameState, playerId: PlayerId, source: C
       return state.players[playerId].mana < state.players[playerId].maxMana;
     case "SUMMON": return state.players[playerId].minions.length < state.rulesConfig.minionLimit;
     case "SUMMON_FIELD": {
-      const limit = state.rulesConfig.fieldLimits[state.players[playerId].faction];
+      const limit = getPlayerFieldLimit(state, playerId);
       const definition = getCardDefinition(effect.definitionId);
       const belowCopyLimit = definition.maxCopiesOnField === undefined
         || state.players[playerId].fields.filter((field) => field.definitionId === effect.definitionId).length < definition.maxCopiesOnField;
       return belowCopyLimit && (limit === null || limit === undefined || state.players[playerId].fields.length < limit);
     }
+    case "CHOOSE_GENERATED_FIELD": {
+      const limit = getPlayerFieldLimit(state, playerId);
+      return availableGeneratedFieldIds(state, playerId, effect.definitionIds).length > 0
+        && (limit === null || limit === undefined || state.players[playerId].fields.length < limit);
+    }
     case "CHOOSE_DISTINCT_GENERATED_FIELDS": {
-      const limit = state.rulesConfig.fieldLimits[state.players[playerId].faction];
-      return effect.definitionIds.length >= effect.count
+      const limit = getPlayerFieldLimit(state, playerId);
+      return availableGeneratedFieldIds(state, playerId, effect.definitionIds).length >= effect.count
         && (limit === null || limit === undefined || state.players[playerId].fields.length + effect.count <= limit);
     }
     case "CHOOSE_DISTINCT_GENERATED_MINIONS": {
@@ -382,13 +396,18 @@ function resolveEffectList(
       case "SUMMON_FIELD":
         for (let count = 0; count < effect.count; count += 1) summonGeneratedField(state, playerId, effect.definitionId);
         break;
-      case "CHOOSE_GENERATED_FIELD":
+      case "CHOOSE_GENERATED_FIELD": {
+        const definitionIds = availableGeneratedFieldIds(state, playerId, effect.definitionIds);
+        if (definitionIds.length === 0) {
+          notifyEffectSkipped(state, playerId, source, "沒有可召喚的黑暗之書種類");
+          return false;
+        }
         state.pendingChoice = {
           type: "EFFECT_OPTION",
           playerId,
           sourceInstanceId: source.instanceId,
           prompt: "選擇要召喚的黑暗之書",
-          options: effect.definitionIds.map((definitionId) => ({
+          options: definitionIds.map((definitionId) => ({
             id: definitionId,
             label: getCardDefinition(definitionId).name,
             effects: [{ type: "SUMMON_FIELD", definitionId, count: 1 }],
@@ -396,21 +415,27 @@ function resolveEffectList(
           remainingEffects,
         };
         return false;
+      }
       case "CHOOSE_DISTINCT_GENERATED_FIELDS": {
-        if (effect.count <= 0 || effect.definitionIds.length < effect.count) break;
+        const definitionIds = availableGeneratedFieldIds(state, playerId, effect.definitionIds);
+        if (effect.count <= 0) break;
+        if (definitionIds.length < effect.count) {
+          notifyEffectSkipped(state, playerId, source, `可召喚的不同名黑暗之書不足 ${effect.count} 種`);
+          return false;
+        }
         state.pendingChoice = {
           type: "EFFECT_OPTION",
           playerId,
           sourceInstanceId: source.instanceId,
           prompt: `選擇黑暗之書（尚需選擇${effect.count}種，不可重複）`,
-          options: effect.definitionIds.map((definitionId) => ({
+          options: definitionIds.map((definitionId) => ({
             id: definitionId,
             label: getCardDefinition(definitionId).name,
             effects: [
               { type: "SUMMON_FIELD", definitionId, count: 1 },
               ...(effect.count > 1 ? [{
                 type: "CHOOSE_DISTINCT_GENERATED_FIELDS" as const,
-                definitionIds: effect.definitionIds.filter((candidate) => candidate !== definitionId),
+                definitionIds: definitionIds.filter((candidate) => candidate !== definitionId),
                 count: effect.count - 1,
               }] : []),
             ],
@@ -511,25 +536,21 @@ function resolveEffectList(
         }
         return false;
       }
-      case "REDUCE_SELF_COUNTDOWN_BY_TURN_NUMBER": {
+      case "REDUCE_SELF_COUNTDOWN_BY_OWN_TURN_COUNT": {
         if (source.zone !== "FIELD") return false;
         const current = source.counters.countdown;
         if (current === undefined) {
           throw new RuleUndefinedError("COUNTDOWN_INITIAL_VALUE", "入場曲要減少倒數，但此卡缺少倒數初值", source.definitionId);
         }
-        source.counters.countdown = current - state.turnNumber;
-        addLog(state, "RESOURCE", `${source.definitionId} 因當前回合數倒數 ${current} → ${source.counters.countdown}`, {
+        const ownTurnCount = state.players[playerId].turnsStarted;
+        source.counters.countdown = current - ownTurnCount;
+        addLog(state, "RESOURCE", `${source.definitionId} 因我方回合數倒數 ${current} → ${source.counters.countdown}`, {
           instanceId: source.instanceId,
-          turnNumber: state.turnNumber,
+          ownTurnCount,
         });
         if (source.counters.countdown <= 0) {
           destroyCardOnField(state, source, "ENTER_FIELD_COUNTDOWN_FINISHED", createTimingContext(state, `ENTER_FIELD_COUNTDOWN:${source.instanceId}`));
         }
-        break;
-      }
-      case "RETURN_SELF_TO_FIELD_AND_TRANSFORM": {
-        if (source.zone !== "FIELD") moveCard(state, source, "FIELD", "LAST_WORDS_RETURN_FOR_TRANSFORM");
-        transformField(state, source, effect.definitionId);
         break;
       }
       case "ADD_GENERATED_TO_HAND":
@@ -1255,7 +1276,10 @@ function resolveEffectList(
         const player = state.players[playerId];
         if (state.activePlayerId !== playerId || source.zone !== "GRAVEYARD") break;
         if (source.necroRevivedTurn === state.turnNumber || player.resources.necromancy < effect.value) break;
-        if (player.minions.length >= state.rulesConfig.minionLimit) break;
+        if (player.minions.length >= state.rulesConfig.minionLimit) {
+          notifyEffectSkipped(state, playerId, source, "死靈數已足夠，但我方手下區已滿，無法死靈復活");
+          break;
+        }
         player.resources.necromancy -= effect.value;
         addLog(state, "RESOURCE", `${source.definitionId} 消耗 ${effect.value} 死靈數發動死靈復活`, {
           instanceId: source.instanceId,
@@ -1277,6 +1301,10 @@ function resolveEffectList(
         const unhandledEffect: never = effect;
         throw new NotImplementedError(`尚未實作效果類型：${(unhandledEffect as EffectDefinition).type}`, source.definitionId);
       }
+    }
+    if (!state.winner) {
+      destroyZeroHealthMinions(state, "STATE_BASED_ZERO_HEALTH", createTimingContext(state, `STATE_ZERO:${source.instanceId}:${effectIndex}`));
+      if (state.pendingChoice) return false;
     }
   }
   return true;

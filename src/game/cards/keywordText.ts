@@ -22,7 +22,7 @@ export const KEYWORD_TEXT: Record<Keyword, KeywordText> = {
   INVINCIBLE: { label: "無敵", description: "不受攻擊與效果傷害、改值、轉變、沉默、封印、直接消滅及消失。" },
   LETHAL: { label: "必殺", description: "與此手下交戰的敵方手下，在交戰傷害結算後被消滅。" },
   WINDFURY: { label: "風怒", description: "每回合可攻擊2次。" },
-  ON_KILL: { label: "殺意", description: "此手下透過戰鬥消滅手下且自身仍在場時，發動牌面記載的效果。" },
+  ON_KILL: { label: "殺意", description: "具有殺意的手下主動攻擊並透過該次交戰消滅敵方手下，且結算後自身仍存活在場上時，發動牌面記載的效果。被攻擊時不會發動。" },
   AURA: { label: "光環", description: "來源在場期間，牌面記載的持續效果生效；來源離場時停止。" },
   COUNTDOWN: { label: "倒數", description: "控制者回合開始時倒數值減1；降至0時此牌被消滅。" },
   GROWTH: { label: "生長", description: "控制者回合開始的生長時機，發動牌面記載的效果。" },

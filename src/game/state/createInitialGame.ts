@@ -12,6 +12,7 @@ import {
 
 export interface CreateGameOptions {
   factions?: Record<PlayerId, Faction>;
+  deckFactions?: Partial<Record<PlayerId, readonly Faction[]>>;
   startingPlayerId?: PlayerId;
   seed?: number;
   rulesConfig?: Partial<RulesConfig>;
@@ -22,19 +23,22 @@ function createRandomSeed(): number {
   return Math.floor(Math.random() * 0x1_0000_0000) >>> 0;
 }
 
-function buildDeck(faction: Faction, ownerId: PlayerId): CardInstance[] {
+function buildDeck(factions: readonly Faction[], ownerId: PlayerId): CardInstance[] {
   let serial = 0;
-  return getMainDeckDefinitions(faction).flatMap((definition) =>
+  return factions.flatMap((faction) => getMainDeckDefinitions(faction)).flatMap((definition) =>
     Array.from({ length: definition.deckCount }, () =>
       createCardInstance(definition, ownerId, "DECK", `${ownerId}-${definition.id}-${serial++}`),
     ),
   );
 }
 
-function createPlayer(id: PlayerId, faction: Faction, deck: CardInstance[]): PlayerState {
+function createPlayer(id: PlayerId, deckFactions: readonly Faction[], deck: CardInstance[]): PlayerState {
+  const faction = deckFactions[0];
+  if (!faction) throw new Error(`${id} 至少需要一個牌組陣營`);
   return {
     id,
     faction,
+    deckFactions: [...deckFactions],
     heroHp: 30,
     heroMaxHp: 30,
     mana: 0,
@@ -69,10 +73,14 @@ function createPlayer(id: PlayerId, faction: Faction, deck: CardInstance[]): Pla
 
 export function createInitialGame(options: CreateGameOptions = {}): GameState {
   const factions = options.factions ?? { P1: "DRAGON", P2: "UNDEAD" };
+  const deckFactions = {
+    P1: [...new Set(options.deckFactions?.P1 ?? [factions.P1])],
+    P2: [...new Set(options.deckFactions?.P2 ?? [factions.P2])],
+  } satisfies Record<PlayerId, Faction[]>;
   const startingPlayerId = options.startingPlayerId ?? "P1";
   const initialSeed = options.seed ?? createRandomSeed();
   let seed = initialSeed;
-  const decks = { P1: buildDeck(factions.P1, "P1"), P2: buildDeck(factions.P2, "P2") };
+  const decks = { P1: buildDeck(deckFactions.P1, "P1"), P2: buildDeck(deckFactions.P2, "P2") };
   if (options.shuffle !== false) {
     const p1 = shuffleSeeded(decks.P1, seed);
     decks.P1 = p1.value;
@@ -88,8 +96,8 @@ export function createInitialGame(options: CreateGameOptions = {}): GameState {
     startingPlayerId,
     phase: "MULLIGAN",
     players: {
-      P1: createPlayer("P1", factions.P1, decks.P1),
-      P2: createPlayer("P2", factions.P2, decks.P2),
+      P1: createPlayer("P1", deckFactions.P1, decks.P1),
+      P2: createPlayer("P2", deckFactions.P2, decks.P2),
     },
     pendingEffects: [],
     log: [],

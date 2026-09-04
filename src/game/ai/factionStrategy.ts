@@ -87,11 +87,14 @@ function allianceScore(player: PlayerState): number {
 export function evaluateFactionStrategy(state: GameState, playerId: PlayerId): number {
   const player = state.players[playerId];
   const opponent = state.players[playerId === "P1" ? "P2" : "P1"];
-  switch (player.faction) {
-    case "DRAGON": return dragonScore(player);
-    case "UNDEAD": return undeadScore(player, opponent);
-    case "MACHINE": return machineScore(player);
-    case "ALLIANCE": return allianceScore(player);
-    case "NEUTRAL": return 0;
-  }
+  const factions = player.deckFactions?.length > 1 ? player.deckFactions : [player.faction];
+  return factions.reduce((score, faction) => {
+    switch (faction) {
+      case "DRAGON": return score + dragonScore(player);
+      case "UNDEAD": return score + undeadScore(player, opponent);
+      case "MACHINE": return score + machineScore(player);
+      case "ALLIANCE": return score + allianceScore(player);
+      case "NEUTRAL": return score;
+    }
+  }, 0);
 }

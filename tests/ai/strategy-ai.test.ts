@@ -58,6 +58,26 @@ describe("AI 公開局面評分", () => {
     });
   });
 
+  it("困難 AI 血量偏低且能清掉高攻威脅時，會優先降低對方下回合斬殺風險", () => {
+    const state = mainState();
+    state.players.P1.hand = [];
+    state.players.P1.heroHp = 12;
+    const attacker = putCard(state, "P1", "TOKEN_DRAGON_HELLFIRE", "MINION", "risk-clear");
+    attacker.keywords = [];
+    const threat = putCard(state, "P2", "TOKEN_MACHINE_DESTROYER", "MINION", "risk-threat");
+    threat.currentAttack = 5;
+    threat.currentHealth = 5;
+    threat.maxHealth = 5;
+    state.players.P2.heroHp = 30;
+
+    expect(chooseSearchAction(state, "P1", 92).action).toEqual({
+      type: "ATTACK",
+      playerId: "P1",
+      attackerId: attacker.instanceId,
+      target: { type: "MINION", instanceId: threat.instanceId },
+    });
+  });
+
   it("四個陣營都有可閱讀的主要戰術與對手預測資料", () => {
     for (const faction of ["DRAGON", "UNDEAD", "MACHINE", "ALLIANCE"] as const) {
       expect(FACTION_STRATEGY_PROFILES[faction].primaryPlan.length).toBeGreaterThan(0);
@@ -86,6 +106,87 @@ describe("AI 公開局面評分", () => {
       type: "PLAY_CARD",
       playerId: "P1",
       instanceId: third.instanceId,
+    });
+  });
+
+  it("困難不朽 AI 選第一本黑暗之書時，會依場面選擇可解場的瘟疫典錄而非固定末日序曲", () => {
+    const state = mainState();
+    state.players.P1.faction = "UNDEAD";
+    state.players.P1.hand = [];
+    const source = putCard(state, "P1", "UNDEAD_006", "MINION", "book-choice-source");
+    putCard(state, "P1", "UNDEAD_004", "HAND", "doomsayer-plan");
+    const target = putCard(state, "P2", "ALLIANCE_005", "MINION", "plague-target");
+    target.currentAttack = 4;
+    target.currentHealth = 3;
+    target.maxHealth = 3;
+    state.pendingChoice = {
+      type: "EFFECT_OPTION",
+      playerId: "P1",
+      sourceInstanceId: source.instanceId,
+      prompt: "選擇要召喚的黑暗之書",
+      options: [
+        { id: "TOKEN_UNDEAD_BOOK_IMMORTAL", label: "黑暗之書 不朽典錄", effects: [] },
+        { id: "TOKEN_UNDEAD_BOOK_PLAGUE", label: "黑暗之書 瘟疫典錄", effects: [] },
+        { id: "TOKEN_UNDEAD_BOOK_REVENGE", label: "黑暗之書 復仇典錄", effects: [] },
+        { id: "TOKEN_UNDEAD_BOOK_DOOM_PRELUDE", label: "黑暗之書 末日序曲", effects: [] },
+      ],
+      remainingEffects: [],
+    };
+
+    expect(chooseSearchAction(state, "P1", 124).action).toEqual({
+      type: "SELECT_EFFECT_OPTION",
+      playerId: "P1",
+      optionId: "TOKEN_UNDEAD_BOOK_PLAGUE",
+    });
+  });
+
+  it("困難不朽 AI 血量接近復仇條件時，會提高復仇典錄順位", () => {
+    const state = mainState();
+    state.players.P1.faction = "UNDEAD";
+    state.players.P1.hand = [];
+    state.players.P1.heroHp = 11;
+    const source = putCard(state, "P1", "UNDEAD_006", "MINION", "revenge-source");
+    const pressure = putCard(state, "P2", "TOKEN_MACHINE_DESTROYER", "MINION", "revenge-pressure");
+    pressure.currentAttack = 5;
+    state.pendingChoice = {
+      type: "EFFECT_OPTION",
+      playerId: "P1",
+      sourceInstanceId: source.instanceId,
+      prompt: "選擇要召喚的黑暗之書",
+      options: [
+        { id: "TOKEN_UNDEAD_BOOK_IMMORTAL", label: "黑暗之書 不朽典錄", effects: [] },
+        { id: "TOKEN_UNDEAD_BOOK_REVENGE", label: "黑暗之書 復仇典錄", effects: [] },
+        { id: "TOKEN_UNDEAD_BOOK_DOOM_PRELUDE", label: "黑暗之書 末日序曲", effects: [] },
+      ],
+      remainingEffects: [],
+    };
+
+    expect(chooseSearchAction(state, "P1", 125).action).toEqual({
+      type: "SELECT_EFFECT_OPTION",
+      playerId: "P1",
+      optionId: "TOKEN_UNDEAD_BOOK_REVENGE",
+    });
+  });
+
+  it("困難不朽 AI 手上有災厄洪流時，會先處理對手皇家親衛隊再發動", () => {
+    const state = mainState();
+    state.players.P1.faction = "UNDEAD";
+    state.players.P1.hand = [];
+    state.players.P1.mana = 5;
+    state.players.P1.maxMana = 5;
+    const attacker = putCard(state, "P1", "TOKEN_UNDEAD_FINAL_KING_HACHIGOKU", "MINION", "guard-clearer");
+    attacker.keywords = attacker.keywords.filter((keyword) => keyword !== "TAUNT");
+    const flood = putCard(state, "P1", "UNDEAD_014", "HAND", "held-flood");
+    const guard = putCard(state, "P2", "TOKEN_ALLIANCE_ROYAL_HONOR_GUARD", "MINION", "protecting-guard");
+    putCard(state, "P2", "TOKEN_ALLIANCE_ROYAL_WARRIOR", "MINION", "protected-minion");
+    refreshHandCosts(state);
+
+    expect(flood.currentCost).toBe(5);
+    expect(chooseSearchAction(state, "P1", 126).action).toEqual({
+      type: "ATTACK",
+      playerId: "P1",
+      attackerId: attacker.instanceId,
+      target: { type: "MINION", instanceId: guard.instanceId },
     });
   });
 

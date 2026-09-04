@@ -89,7 +89,7 @@
       "health": 3,
       "deckCount": 3,
       "keywords": ["RUSH", "BATTLECRY", "ON_REVIVE"],
-      "effectsText": "戰吼：召喚1張黑暗之書，由玩家從已提供的四種中選擇。復活：召喚1張「黑暗之書 不朽典錄」。",
+      "effectsText": "戰吼：召喚1張黑暗之書，由玩家從已提供的五種中選擇。復活：召喚1張「黑暗之書 不朽典錄」。",
       "generatedOnly": false,
       "notes": "最後修正確認：由其他卡牌效果復活達克斯特時不觸發戰吼，只觸發復活效果；只有死靈復活這種自身復活才觸發戰吼。"
     },

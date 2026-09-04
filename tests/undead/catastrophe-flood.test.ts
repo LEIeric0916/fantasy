@@ -33,7 +33,9 @@ describe("災厄洪流", () => {
     putCard(state, "P2", "UNDEAD_001", "MINION", "target");
     const spell = putCard(state, "P1", "UNDEAD_014", "HAND", "bonus");
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: spell.instanceId }).state;
-    expect(state.players.P1.minions.filter((card) => card.definitionId === "TOKEN_UNDEAD_CATASTROPHE_KNIGHT")).toHaveLength(2);
+    const knights = state.players.P1.minions.filter((card) => card.definitionId === "TOKEN_UNDEAD_CATASTROPHE_KNIGHT");
+    expect(knights).toHaveLength(2);
+    expect(knights.every((card) => card.currentAttack === 5 && card.currentHealth === 3)).toBe(true);
   });
 
   it("災厄騎士死亡之聲給予對手玩家3點傷害", () => {

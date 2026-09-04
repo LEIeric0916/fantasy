@@ -22,6 +22,7 @@ export interface RulesConfig {
 export interface PlayerState {
   id: PlayerId;
   faction: Faction;
+  deckFactions: Faction[];
   heroHp: number;
   heroMaxHp: number;
   mana: number;
@@ -163,3 +164,19 @@ export const DEFAULT_RULES_CONFIG: RulesConfig = {
   fieldLimits: { DRAGON: 7, UNDEAD: 7, MACHINE: 6, ALLIANCE: 7, NEUTRAL: 7 },
   discoverRemainderPolicy: "RETURN_KEEP_ORDER",
 };
+
+export function playerHasFaction(player: PlayerState, faction: Faction): boolean {
+  const factions = player.deckFactions?.length > 1 ? player.deckFactions : [player.faction];
+  return factions.includes(faction);
+}
+
+export function getPlayerFieldLimit(state: GameState, playerId: PlayerId): number | null | undefined {
+  const player = state.players[playerId];
+  const factions = player.deckFactions?.length > 1 ? player.deckFactions : [player.faction];
+  const limits = factions
+    .map((faction) => state.rulesConfig.fieldLimits[faction])
+    .filter((limit): limit is number | null => limit !== undefined);
+  if (limits.includes(null)) return null;
+  const numericLimits = limits.filter((limit): limit is number => limit !== null);
+  return numericLimits.length > 0 ? Math.min(...numericLimits) : undefined;
+}

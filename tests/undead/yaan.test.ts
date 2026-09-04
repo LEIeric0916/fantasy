@@ -44,6 +44,59 @@ describe("殘光渡扉者 亞恩", () => {
     ]);
   });
 
+  it("捨棄闇黑帝王當下死靈數不足時，復仇典錄後來增加的5點不會倒回觸發復活", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    state.players.P1.resources.necromancy = 0;
+    const yaan = putCard(state, "P1", "UNDEAD_008", "HAND", "discard-emperor");
+    const emperor = putCard(state, "P1", "UNDEAD_009", "HAND", "discarded-emperor");
+
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: yaan.instanceId }).state;
+    state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [emperor.instanceId] }).state;
+    expect(state.players.P1.graveyard.some((card) => card.instanceId === emperor.instanceId)).toBe(true);
+
+    state = applyAction(state, {
+      type: "SELECT_EFFECT_OPTION",
+      playerId: "P1",
+      optionId: "TOKEN_UNDEAD_BOOK_REVENGE",
+    }).state;
+    expect(state.players.P1.resources.necromancy).toBe(0);
+    expect(state.players.P1.graveyard.some((card) => card.instanceId === emperor.instanceId)).toBe(true);
+
+    state = applyAction(state, {
+      type: "SELECT_EFFECT_OPTION",
+      playerId: "P1",
+      optionId: "TOKEN_UNDEAD_BOOK_PLAGUE",
+    }).state;
+    expect(state.players.P1.resources.necromancy).toBe(5);
+    expect(state.players.P1.graveyard.some((card) => card.instanceId === emperor.instanceId)).toBe(true);
+  });
+
+  it("捨棄闇黑帝王當下已有5死靈數時，會支付5點並正常復活", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    state.players.P1.resources.necromancy = 5;
+    const yaan = putCard(state, "P1", "UNDEAD_008", "HAND", "revive-emperor");
+    const emperor = putCard(state, "P1", "UNDEAD_009", "HAND", "revived-emperor");
+
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: yaan.instanceId }).state;
+    state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [emperor.instanceId] }).state;
+    state = applyAction(state, {
+      type: "SELECT_EFFECT_OPTION",
+      playerId: "P1",
+      optionId: "TOKEN_UNDEAD_BOOK_REVENGE",
+    }).state;
+    state = applyAction(state, {
+      type: "SELECT_EFFECT_OPTION",
+      playerId: "P1",
+      optionId: "TOKEN_UNDEAD_BOOK_PLAGUE",
+    }).state;
+
+    expect(state.players.P1.resources.necromancy).toBe(5);
+    expect(state.players.P1.minions.some((card) => card.instanceId === emperor.instanceId)).toBe(true);
+    expect(state.log.some((entry) => entry.message.includes("UNDEAD_009 消耗 5 死靈數發動死靈復活"))).toBe(true);
+  });
+
   it("回合結束恢復玩家3HP，並使選擇的我方手下獲得聖盾術", () => {
     let state = mainState();
     state.players.P1.heroHp = 20;

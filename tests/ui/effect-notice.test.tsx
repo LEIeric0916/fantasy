@@ -419,4 +419,20 @@ describe("效果未發動介面提示", () => {
     act(() => root.unmount());
     container.remove();
   });
+
+  it("倒數立場在場上與詳細資訊中都清楚顯示目前倒數", () => {
+    const state = mainState();
+    const book = putCard(state, "P1", "TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL", "FIELD", "visible-countdown");
+    book.counters.countdown = 11;
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
+    expect(container.querySelector('[data-instance-id="P1-TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL-visible-countdown"] .countdown-badge')?.textContent).toContain("倒數11");
+    const inspect = container.querySelector<HTMLButtonElement>('[aria-label="檢視 黑暗之書 終末降臨 卡牌資訊"]')!;
+    act(() => inspect.click());
+    expect(container.querySelector(".modal-countdown-counter")?.textContent).toContain("目前倒數 11");
+    act(() => root.unmount());
+    container.remove();
+  });
 });

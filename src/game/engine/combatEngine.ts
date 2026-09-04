@@ -99,7 +99,6 @@ export function resolveAttack(state: GameState, playerId: PlayerId, attackerId: 
     if (attacker.zone !== "MINION" || defender.zone !== "MINION") return;
   }
   const attackerKillEffects = !attacker.sealed ? getCardDefinition(attacker.definitionId).triggeredEffects?.ON_KILL : undefined;
-  const defenderKillEffects = !defender.sealed ? getCardDefinition(defender.definitionId).triggeredEffects?.ON_KILL : undefined;
   const combatKillAuras = state.players[playerId].minions.filter((card) =>
     !card.sealed && Boolean(getCardDefinition(card.definitionId).triggeredEffects?.ON_FRIENDLY_COMBAT_KILL?.length),
   );
@@ -133,10 +132,9 @@ export function resolveAttack(state: GameState, playerId: PlayerId, attackerId: 
       aura.counters.friendlyCombatKillTriggerUses = triggerUses + 1;
       enqueueTriggeredEffects(state, aura, effects, "AURA:FRIENDLY_COMBAT_KILL", timingContext, true);
     }
-    if (attackerKillEffects) enqueueTriggeredEffects(state, attacker, attackerKillEffects, "ON_KILL", timingContext, true);
-  }
-  if (attackerDead) {
-    if (defenderKillEffects) enqueueTriggeredEffects(state, defender, defenderKillEffects, "ON_KILL", timingContext, true);
+    if (!attackerDead && attacker.zone === "MINION" && attackerKillEffects) {
+      enqueueTriggeredEffects(state, attacker, attackerKillEffects, "ON_KILL", timingContext, true);
+    }
   }
   resolvePendingEffects(state);
 }

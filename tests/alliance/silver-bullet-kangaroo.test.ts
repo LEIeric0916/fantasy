@@ -65,7 +65,7 @@ describe("革命戰線 銀彈克加魯", () => {
     }
   });
 
-  it("協作10時由效果抽牌上手也會效果召喚，死亡之聲抽1張牌", () => {
+  it("協作10時由效果抽牌上手仍會效果召喚，但被消滅時不再抽牌", () => {
     let state = mainState();
     state.players.P1.hand = [];
     state.players.P1.deck = [];
@@ -86,6 +86,7 @@ describe("革命戰線 銀彈克加魯", () => {
     expect(summonedKangaroo).toBeDefined();
     destroyMinion(state, summonedKangaroo!, "TEST_DESTROY");
     resolvePendingEffects(state);
-    expect(state.players.P1.hand.some((card) => card.instanceId === filler.instanceId)).toBe(true);
+    expect(state.players.P1.hand.some((card) => card.instanceId === filler.instanceId)).toBe(false);
+    expect(state.players.P1.deck.some((card) => card.instanceId === filler.instanceId)).toBe(true);
   });
 });

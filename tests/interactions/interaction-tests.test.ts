@@ -334,7 +334,9 @@ describe("F. 黑暗之書與末日之書", () => {
     const source = putCard(state, "P1", "UNDEAD_006", "HAND", "choose-book");
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: source.instanceId }).state;
     expect(state.pendingChoice).toMatchObject({ type: "EFFECT_OPTION" });
-    expect(state.pendingChoice?.type === "EFFECT_OPTION" ? state.pendingChoice.options : []).toHaveLength(4);
+    const options = state.pendingChoice?.type === "EFFECT_OPTION" ? state.pendingChoice.options : [];
+    expect(options).toHaveLength(5);
+    expect(options.map((option) => option.id)).toContain("TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL");
   });
   it("F02｜同種類可再次生成", () => {
     const state = mainState();
@@ -435,6 +437,7 @@ describe("G. 指定卡牌確認", () => {
   });
   it("G04｜絕傑榮耀名稱", () => {
     expect(getCardDefinition("TOKEN_ALLIANCE_HEROIC_GLORY").name).toBe("絕傑榮耀");
+    expect(getCardDefinition("TOKEN_ALLIANCE_HEROIC_GLORY").originalCost).toBe(2);
     expect(getCardDefinition("ALLIANCE_001").effectsText).toContain("絕傑榮耀");
   });
 });

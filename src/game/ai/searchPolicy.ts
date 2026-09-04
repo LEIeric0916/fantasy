@@ -1,13 +1,16 @@
 import { getCardDefinition } from "../cards/cardRegistry";
 import type { ConditionDefinition, EffectDefinition, PlayerId } from "../cards/cardTypes";
 import { applyAction, type GameAction } from "../engine/gameEngine";
-import type { GameState } from "../state/GameState";
+import { playerHasFaction, type GameState } from "../state/GameState";
 import { getActingPlayerId, getLegalActions } from "./legalActionEngine";
 import { nextAiRandom, type RandomDecision } from "./randomPolicy";
 import { evaluatePublicCardValue, evaluatePublicState } from "./stateEvaluator";
 
 interface SearchCandidate { action: GameAction; state: GameState; score: number; tacticalScore: number }
 interface SearchBudget { remaining: number }
+
+const ROYAL_HONOR_GUARD_ID = "TOKEN_ALLIANCE_ROYAL_HONOR_GUARD";
+const CATASTROPHE_FLOOD_ID = "UNDEAD_014";
 
 function valentineTimingAdjustment(state: GameState, playerId: PlayerId): number {
   const player = state.players[playerId];
@@ -63,7 +66,7 @@ function cardActionIncreasesMaxMana(state: GameState, playerId: PlayerId, action
 
 function dragonRampTimingScore(state: GameState, playerId: PlayerId, action: GameAction): number {
   const player = state.players[playerId];
-  if (player.faction !== "DRAGON" || player.maxMana >= state.rulesConfig.normalMaxMana || !cardActionIncreasesMaxMana(state, playerId, action)) return 0;
+  if (!playerHasFaction(player, "DRAGON") || player.maxMana >= state.rulesConfig.normalMaxMana || !cardActionIncreasesMaxMana(state, playerId, action)) return 0;
   const opponent = state.players[playerId === "P1" ? "P2" : "P1"];
   const incomingAttack = opponent.minions.reduce((sum, card) => sum + Math.max(0, card.currentAttack ?? 0), 0);
   const emergency = player.heroHp <= 10 || incomingAttack >= player.heroHp || (opponent.minions.length >= 3 && incomingAttack >= 8);
@@ -87,7 +90,7 @@ function coinTimingWaste(state: GameState, playerId: PlayerId, coinInstanceId: s
   );
   const hasWorthwhileFollowUp = followUps.some((card) => targetedBattlecryWaste(state, playerId, card.definitionId) === 0);
   if (!hasWorthwhileFollowUp) return -32;
-  if (player.faction !== "DRAGON" || player.maxMana > 3) return 0;
+  if (!playerHasFaction(player, "DRAGON") || player.maxMana > 3) return 0;
   const enablesRamp = followUps.some((card) => effectsIncreaseMaxMana(getCardDefinition(card.definitionId).effects));
   if (enablesRamp) return 10;
   const opponent = state.players[playerId === "P1" ? "P2" : "P1"];
@@ -102,6 +105,58 @@ function findMinion(state: GameState, instanceId: string) {
     ?? state.players.P2.minions.find((card) => card.instanceId === instanceId);
 }
 
+function boardAttack(cards: readonly { currentAttack: number | null; sealed: boolean; keywords: readonly string[] }[]): number {
+  return cards
+    .filter((card) => !card.sealed)
+    .reduce((sum, card) => sum + Math.max(0, card.currentAttack ?? 0) * (card.keywords.includes("WINDFURY") ? 2 : 1), 0);
+}
+
+function projectedOpponentBurstRisk(state: GameState, playerId: PlayerId): number {
+  const player = state.players[playerId];
+  const opponent = state.players[playerId === "P1" ? "P2" : "P1"];
+  const boardPressure = boardAttack(opponent.minions);
+  const handPressureEstimate = Math.min(opponent.hand.length, Math.max(1, Math.floor((opponent.maxMana + 1) / 3))) * 2;
+  return boardPressure + handPressureEstimate - player.heroHp;
+}
+
+function minionCanKill(attacker: { currentAttack: number | null; sealed: boolean; keywords: readonly string[] }, defender: { currentHealth: number | null; sealed: boolean; keywords: readonly string[] }): boolean {
+  if (attacker.sealed) return false;
+  if (!defender.sealed && (defender.keywords.includes("DIVINE_SHIELD") || defender.keywords.includes("INVINCIBLE"))) return false;
+  return (attacker.currentAttack ?? 0) >= (defender.currentHealth ?? Number.POSITIVE_INFINITY)
+    || attacker.keywords.includes("LETHAL");
+}
+
+function playableCatastropheFlood(state: GameState, playerId: PlayerId): boolean {
+  return state.players[playerId].hand.some((card) =>
+    card.definitionId === CATASTROPHE_FLOOD_ID
+    && card.currentCost !== null
+    && card.currentCost <= state.players[playerId].mana,
+  );
+}
+
+function activeRoyalHonorGuardProtection(state: GameState, playerId: PlayerId) {
+  const opponent = state.players[playerId === "P1" ? "P2" : "P1"];
+  const guard = opponent.minions.find((card) => card.definitionId === ROYAL_HONOR_GUARD_ID && !card.sealed);
+  if (!guard) return undefined;
+  const protectedMinions = opponent.minions.filter((card) => card.instanceId !== guard.instanceId);
+  if (protectedMinions.length === 0) return undefined;
+  return { guard, protectedMinions };
+}
+
+function catastropheFloodTimingScore(state: GameState, resultingState: GameState, playerId: PlayerId, action: GameAction): number {
+  const protection = activeRoyalHonorGuardProtection(state, playerId);
+  if (!protection) return 0;
+  if (action.type === "PLAY_CARD" || action.type === "PLAY_ALTERNATE") {
+    const card = state.players[playerId].hand.find((candidate) => candidate.instanceId === action.instanceId);
+    if (card?.definitionId === CATASTROPHE_FLOOD_ID) return -140 - protection.protectedMinions.length * 26;
+    return 0;
+  }
+  if (action.type !== "ATTACK" || action.target.type !== "MINION" || action.target.instanceId !== protection.guard.instanceId) return 0;
+  if (!playableCatastropheFlood(resultingState, playerId)) return 0;
+  const guardStillActive = activeRoyalHonorGuardProtection(resultingState, playerId);
+  return guardStillActive ? 0 : 115 + protection.protectedMinions.length * 20;
+}
+
 function attackOutcomeScore(state: GameState, resultingState: GameState, playerId: PlayerId, action: GameAction): number {
   if (action.type !== "ATTACK") return 0;
   const attacker = state.players[playerId].minions.find((card) => card.instanceId === action.attackerId);
@@ -112,7 +167,20 @@ function attackOutcomeScore(state: GameState, resultingState: GameState, playerI
     || getCardDefinition(attacker.definitionId).triggeredEffects?.ON_SELF_COMBAT_START?.length,
   );
   if (attack === 0 && !hasAttackTrigger) return -120;
-  if (action.target.type === "HERO") return attack === 0 ? -120 : 0;
+  if (action.target.type === "HERO") {
+    if (attack === 0) return -120;
+    const opponent = state.players[playerId === "P1" ? "P2" : "P1"];
+    const risk = projectedOpponentBurstRisk(state, playerId);
+    const killableThreat = opponent.minions
+      .filter((card) => minionCanKill(attacker, card))
+      .sort((a, b) => evaluatePublicCardValue(b) - evaluatePublicCardValue(a))[0];
+    if (!killableThreat) return 0;
+    const threatAttack = Math.max(0, killableThreat.currentAttack ?? 0);
+    if (risk >= -4 || state.players[playerId].heroHp <= 15) {
+      return -18 - threatAttack * 5 - evaluatePublicCardValue(killableThreat) * 0.25;
+    }
+    return threatAttack >= 5 ? -12 : 0;
+  }
 
   const defender = findMinion(state, action.target.instanceId);
   if (!defender) return 0;
@@ -123,7 +191,12 @@ function attackOutcomeScore(state: GameState, resultingState: GameState, playerI
     && !(resultingDefender && !resultingDefender.sealed && resultingDefender.keywords.includes("DIVINE_SHIELD"));
   const attackerShieldConsumed = !attacker.sealed && attacker.keywords.includes("DIVINE_SHIELD")
     && !(resultingAttacker && !resultingAttacker.sealed && resultingAttacker.keywords.includes("DIVINE_SHIELD"));
+  const incomingBefore = boardAttack(state.players[playerId === "P1" ? "P2" : "P1"].minions);
+  const incomingAfter = boardAttack(resultingState.players[playerId === "P1" ? "P2" : "P1"].minions);
+  const pressureRelief = Math.max(0, incomingBefore - incomingAfter);
+  const risk = projectedOpponentBurstRisk(state, playerId);
   let score = resultingDefender ? defenderHealthLost * 1.5 + (defenderShieldBroken ? 3 : 0) : 24 + evaluatePublicCardValue(defender) * 0.3;
+  score += pressureRelief * (risk >= -4 || state.players[playerId].heroHp <= 15 ? 9 : 3.2);
   if (defenderHealthLost === 0 && !defenderShieldBroken && resultingDefender) score -= 80;
   if (attackerShieldConsumed && resultingDefender && defenderHealthLost < Math.max(1, (defender.currentHealth ?? 1) / 2)) score -= 24;
   if (!resultingAttacker) score -= 8;
@@ -169,7 +242,7 @@ function necroReviveCost(keywords: readonly string[]): number | undefined {
 
 function undeadDiscardChoiceScore(state: GameState, playerId: PlayerId, action: GameAction): number {
   if (action.type !== "SELECT_EFFECT_CARDS" || state.pendingChoice?.type !== "EFFECT_CARDS"
-    || state.pendingChoice.resolution.type !== "DISCARD_HAND" || state.players[playerId].faction !== "UNDEAD") return 0;
+    || state.pendingChoice.resolution.type !== "DISCARD_HAND" || !playerHasFaction(state.players[playerId], "UNDEAD")) return 0;
   const player = state.players[playerId];
   const opponent = state.players[playerId === "P1" ? "P2" : "P1"];
   const incomingAttack = opponent.minions.reduce((sum, card) => sum + Math.max(0, card.currentAttack ?? 0), 0);
@@ -195,6 +268,62 @@ function undeadDiscardChoiceScore(state: GameState, playerId: PlayerId, action: 
   }, 0);
 }
 
+function undeadBookChoiceScore(state: GameState, playerId: PlayerId, action: GameAction): number {
+  if (action.type !== "SELECT_EFFECT_OPTION" || state.pendingChoice?.type !== "EFFECT_OPTION"
+    || !playerHasFaction(state.players[playerId], "UNDEAD")) return 0;
+  const bookIds = new Set([
+    "TOKEN_UNDEAD_BOOK_IMMORTAL",
+    "TOKEN_UNDEAD_BOOK_PLAGUE",
+    "TOKEN_UNDEAD_BOOK_REVENGE",
+    "TOKEN_UNDEAD_BOOK_DOOM_PRELUDE",
+    "TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL",
+  ]);
+  if (!bookIds.has(action.optionId) || !state.pendingChoice.options.some((option) => option.id === action.optionId)) return 0;
+
+  const player = state.players[playerId];
+  const opponent = state.players[playerId === "P1" ? "P2" : "P1"];
+  const incomingAttack = boardAttack(opponent.minions);
+  const underPressure = player.heroHp <= 12 || incomingAttack >= player.heroHp - 5 || opponent.minions.length >= player.minions.length + 2;
+  const darkBookCount = player.fields.filter((field) => getCardDefinition(field.definitionId).subtype.includes("DARK_MAGIC")).length;
+  const doomsdayCount = player.fields.filter((field) => field.definitionId === "TOKEN_UNDEAD_DOOMSDAY_BOOK").length;
+  const preludeCount = player.fields.filter((field) => field.definitionId === "TOKEN_UNDEAD_BOOK_DOOM_PRELUDE").length;
+  const hasDoomsayerOrFlood = player.hand.some((card) => card.definitionId === "UNDEAD_004" || card.definitionId === "UNDEAD_014");
+  const lowHealthTargets = opponent.minions.filter((card) => (card.currentHealth ?? 99) <= 3);
+  const hardLowHealthTarget = lowHealthTargets.some((card) =>
+    evaluatePublicCardValue(card) >= 15 || card.keywords.includes("TAUNT") || card.keywords.includes("DIVINE_SHIELD"),
+  );
+  const likelyLowHpSoon = player.heroHp <= 13 || incomingAttack >= Math.max(4, player.heroHp - 10);
+
+  switch (action.optionId) {
+    case "TOKEN_UNDEAD_BOOK_IMMORTAL":
+      return (player.resources.necromancy < 20 ? 20 : 8)
+        + (player.minions.length < state.rulesConfig.minionLimit ? 14 : -10)
+        + (underPressure ? 10 : 4)
+        + darkBookCount * 2;
+    case "TOKEN_UNDEAD_BOOK_PLAGUE":
+      return (lowHealthTargets.length > 0 ? 18 + lowHealthTargets.length * 5 : -6)
+        + (hardLowHealthTarget ? 18 : 0)
+        + (hasDoomsayerOrFlood ? 16 : 0)
+        + (underPressure ? 8 : 0);
+    case "TOKEN_UNDEAD_BOOK_REVENGE":
+      return 8
+        + (player.resources.necromancy < 10 ? 18 : 7)
+        + (player.heroHp < 10 ? 48 : 0)
+        + (likelyLowHpSoon ? 20 : 0)
+        + (underPressure ? 8 : 0);
+    case "TOKEN_UNDEAD_BOOK_DOOM_PRELUDE":
+      return preludeCount >= 2
+        ? 78
+        : 8 + preludeCount * 20 + (darkBookCount >= 2 ? 8 : 0) - (underPressure && preludeCount === 0 ? 10 : 0);
+    case "TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL":
+      return doomsdayCount > 0
+        ? 30 + (underPressure ? 24 : 0) + Math.min(20, incomingAttack * 2) + doomsdayCount * 7
+        : -44;
+    default:
+      return 0;
+  }
+}
+
 function isArtifact(definitionId: string): boolean {
   const definition = getCardDefinition(definitionId);
   return definition.cardType === "FIELD" && definition.subtype.includes("ARTIFACT");
@@ -202,7 +331,7 @@ function isArtifact(definitionId: string): boolean {
 
 function machinePlayTimingScore(state: GameState, playerId: PlayerId, instanceId: string): number {
   const player = state.players[playerId];
-  if (player.faction !== "MACHINE") return 0;
+  if (!playerHasFaction(player, "MACHINE")) return 0;
   const card = player.hand.find((candidate) => candidate.instanceId === instanceId);
   if (!card) return 0;
 
@@ -409,6 +538,10 @@ function lowCostSetupScore(state: GameState, playerId: PlayerId, instanceId: str
 }
 
 export function tacticalActionScore(state: GameState, playerId: PlayerId, action: GameAction, resultingState: GameState): number {
+  const floodTimingScore = catastropheFloodTimingScore(state, resultingState, playerId, action);
+  if (floodTimingScore !== 0) return floodTimingScore;
+  const bookChoiceScore = undeadBookChoiceScore(state, playerId, action);
+  if (bookChoiceScore !== 0) return bookChoiceScore;
   const descentChoiceScore = machineDescentChoiceScore(state, playerId, action);
   if (descentChoiceScore !== 0) return descentChoiceScore;
   const discardChoiceScore = undeadDiscardChoiceScore(state, playerId, action);
@@ -441,7 +574,13 @@ export function tacticalActionScore(state: GameState, playerId: PlayerId, action
 
 function actionPlanningPriority(state: GameState, playerId: PlayerId, action: GameAction): number {
   if (action.type === "SELECT_EFFECT_CARDS" || action.type === "SELECT_EFFECT_OPTION" || action.type === "CONFIRM_EFFECT_SUMMON") return 80;
-  if (action.type === "ATTACK" && action.target.type === "MINION") return 35 + boardSpaceActionScore(state, playerId, action);
+  if (action.type === "ATTACK" && action.target.type === "MINION") {
+    const protection = activeRoyalHonorGuardProtection(state, playerId);
+    const floodSetup = protection && action.target.instanceId === protection.guard.instanceId && playableCatastropheFlood(state, playerId)
+      ? 55
+      : 0;
+    return 35 + boardSpaceActionScore(state, playerId, action) + floodSetup;
+  }
   if (action.type === "ATTACK") return 20;
   if (action.type === "ACTIVATE_FIELD") return 28;
   if (action.type === "END_TURN") return -100;
@@ -453,6 +592,7 @@ function actionPlanningPriority(state: GameState, playerId: PlayerId, action: Ga
   const definition = getCardDefinition(card.definitionId);
   const cost = card.currentCost ?? definition.originalCost ?? 10;
   let priority = 50 - cost;
+  if (definition.id === CATASTROPHE_FLOOD_ID && activeRoyalHonorGuardProtection(state, playerId)) priority -= 70;
   if (definition.cardType === "MINION") priority += 8;
   if (definition.keywords.includes("BATTLECRY")) priority += 4;
   const opensFollowUp = definition.effects?.some((effect) =>
@@ -462,7 +602,7 @@ function actionPlanningPriority(state: GameState, playerId: PlayerId, action: Ga
   ) ?? false;
   if (definition.effects?.some((effect) => effect.type === "SUMMON" || opensFollowUp)) priority += 9;
   if (opensFollowUp && cost <= 1) priority += 36;
-  if (player.faction === "ALLIANCE" && definition.cardType === "MINION") priority += 5;
+  if (playerHasFaction(player, "ALLIANCE") && definition.cardType === "MINION") priority += 5;
   if (definition.id === "TOKEN_ALLIANCE_HERO_VALENTINE") priority += valentineTimingAdjustment(state, playerId);
   if (cardActionIncreasesMaxMana(state, playerId, action)) priority += 22;
   priority += machinePlayTimingScore(state, playerId, card.instanceId);

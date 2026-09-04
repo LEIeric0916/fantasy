@@ -131,6 +131,7 @@ export function CardView({
       </span>}
       {boardStatuses.length > 0 && <span className="status-strip" aria-label={`狀態：${boardStatuses.map((status) => status.label).join("、")}`}>{boardStatuses.map((status) => <small className={`status-badge ${status.key}`} title={status.description} key={status.key}>{status.label}</small>)}</span>}
       {plagueMarks !== undefined && <span className="counter-badge plague-counter" aria-label={`瘟疫標記 ${plagueMarks}`}><small>瘟疫</small><strong>{plagueMarks}</strong><small>/ {plagueThreshold}</small></span>}
+      {card.counters.countdown !== undefined && <span className="counter-badge countdown-badge" aria-label={`目前倒數 ${card.counters.countdown}`}><small>倒數</small><strong>{card.counters.countdown}</strong></span>}
       <button className="card-surface" disabled={disabled} onClick={() => {
         if (longPressTriggered.current) {
           longPressTriggered.current = false;
@@ -143,7 +144,6 @@ export function CardView({
         {!handSummary && <small>{definition.subtype.join(" · ") || definition.cardType}</small>}
         {definition.cardType === "MINION" && !isBattleMinion && <span className="stats"><b className="hand-attack">{card.currentAttack ?? "?"}</b><i> / </i><b className="hand-health">{card.currentHealth ?? "?"}</b></span>}
         {!handSummary && <small>{keywordText.map((keyword) => keyword.label).join(" · ") || "—"}</small>}
-        {!handSummary && card.counters.countdown !== undefined && <small className="countdown-counter">倒數 {card.counters.countdown}</small>}
         {!handSummary && <span className="effect">{definition.effectsText || "無卡牌效果"}</span>}
       </button>
       {isBattleMinion && <span className="battle-stats" aria-label={`攻擊 ${card.currentAttack ?? "未知"}，生命 ${card.currentHealth ?? "未知"}`}>

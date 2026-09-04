@@ -8,7 +8,7 @@ import type { CardInstance, PlayerId } from "../game/cards/cardTypes";
 import { getLegalAttackTargets } from "../game/engine/combatEngine";
 import { refreshHandCosts } from "../game/engine/costEngine";
 import { applyAction, type GameAction } from "../game/engine/gameEngine";
-import type { GameState } from "../game/state/GameState";
+import { getPlayerFieldLimit, playerHasFaction, type GameState, type PlayerState } from "../game/state/GameState";
 import { CardView } from "./CardView";
 
 const AI_ACTION_DELAY_MS = 2_000;
@@ -27,6 +27,14 @@ type ActionAnimationLabel = Omit<ActionAnimation, "key" | "from" | "to">;
 
 function opponentOf(playerId: PlayerId): PlayerId {
   return playerId === "P1" ? "P2" : "P1";
+}
+
+const factionLabels = { DRAGON: "龍族", UNDEAD: "不朽者", MACHINE: "機械", ALLIANCE: "聯盟", NEUTRAL: "中立" } as const;
+
+function playerFactionLabel(player: PlayerState): string {
+  const factions = player.deckFactions?.length > 1 ? player.deckFactions : [player.faction];
+  if (factions.length === 1) return player.faction;
+  return factions.map((faction) => factionLabels[faction]).join("＋");
 }
 
 export function formatLogMessage(message: string): string {
@@ -110,6 +118,7 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
   const secondTutorial = tutorialLevel === 2;
   const thirdTutorial = tutorialLevel === 3;
   const tutorialMode = firstTutorial || secondTutorial || thirdTutorial;
+  const chaosMode = !tutorialMode && Object.values(state.players).some((player) => (player.deckFactions?.length ?? 1) > 1);
   const tutorialInspectDefinitionId = firstTutorial && tutorialStep === 4
     ? "TOKEN_ALLIANCE_ROYAL_GUARD"
     : secondTutorial && tutorialStep === 8
@@ -129,8 +138,8 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
   const active = state.players[perspectivePlayerId];
   const opponentId: PlayerId = perspectivePlayerId === "P1" ? "P2" : "P1";
   const opponent = state.players[opponentId];
-  const activeFieldSlots = state.rulesConfig.fieldLimits[active.faction] ?? 7;
-  const opponentFieldSlots = state.rulesConfig.fieldLimits[opponent.faction] ?? 7;
+  const activeFieldSlots = getPlayerFieldLimit(state, active.id) ?? 7;
+  const opponentFieldSlots = getPlayerFieldLimit(state, opponent.id) ?? 7;
   const allCards = useMemo(() => (["P1", "P2"] as const).flatMap((playerId) => {
     const player = state.players[playerId];
     return [...player.deck, ...player.hand, ...player.minions, ...player.fields, ...player.graveyard, ...player.removed, ...player.extraDeck];
@@ -236,7 +245,7 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
     if (!isCardImplemented(definition)) return false;
     if (definition.cardType === "MINION" && active.minions.length >= state.rulesConfig.minionLimit) return false;
     if (definition.cardType === "FIELD") {
-      const limit = state.rulesConfig.fieldLimits[active.faction];
+      const limit = getPlayerFieldLimit(state, active.id);
       if (limit !== null && limit !== undefined && active.fields.length >= limit) return false;
     }
     return true;
@@ -431,7 +440,7 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
   return (
     <main className={`game-board ${tutorialMode ? `tutorial-board tutorial-level-${tutorialLevel} tutorial-step-${tutorialStep}` : ""}`}>
       <header className="game-header">
-        <div><p className="eyebrow">{tutorialMode ? `新手教學 · 第${tutorialLevel === 1 ? "一" : tutorialLevel === 2 ? "二" : "三"}關` : `TURN ${state.turnNumber} · ${state.phase}`}</p><h1>戰記 <span>{firstTutorial ? "怎麼玩遊戲" : secondTutorial ? "手下戰鬥" : thirdTutorial ? "法術與立場" : "規則驗證臺"}</span></h1></div>
+        <div><p className="eyebrow">{tutorialMode ? `新手教學 · 第${tutorialLevel === 1 ? "一" : tutorialLevel === 2 ? "二" : "三"}關` : `TURN ${state.turnNumber} · ${state.phase}`}</p><h1>戰記 <span>{firstTutorial ? "怎麼玩遊戲" : secondTutorial ? "手下戰鬥" : thirdTutorial ? "法術與立場" : chaosMode ? "混沌模式" : "規則驗證臺"}</span></h1></div>
         <div className="actions"><button className="quiet" onClick={onRestart}>{tutorialMode ? "離開教學" : "重新開始"}</button>{fixedSpectatorView && <button className="quiet" onClick={toggleFixedSpectator}>切換到{fixedSpectatorPlayerId === "P1" ? "P2" : "P1"}視角</button>}{Object.keys(aiDifficulties).length > 0 && <button className="quiet" onClick={() => setAiPaused((paused) => !paused)}>{aiPaused ? "開始AI" : "暫停AI"}</button>}{fixedSpectatorView && <span className="ai-thinking">固定視角：{fixedSpectatorPlayerId}</span>}{aiActing && <span className="ai-thinking">{aiPaused ? "AI 已暫停" : "AI 思考中…"}</span>}{((!tutorialMode && !aiActing && state.activePlayerId === active.id && state.phase === "MAIN" && !state.pendingChoice) || (secondTutorial && (tutorialStep === 5 || tutorialStep === 16))) && <button className={secondTutorial ? "tutorial-end-turn" : ""} onClick={() => dispatch({ type: "END_TURN", playerId: active.id })}>結束回合</button>}</div>
       </header>
       {actionAnimation && <div className={`action-animation ${actionAnimation.type === "PLAY" ? "play-animation" : "attack-animation"}`} role="status" aria-live="polite">
@@ -493,9 +502,9 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
             }}
             onClick={() => attackerId && heroLegal && dispatch({ type: "ATTACK", playerId: state.activePlayerId, attackerId, target: { type: "HERO", playerId: opponentId } })}
           >
-            <div className="player-identity"><small>對手玩家</small><strong>{opponentId}</strong><span> · {opponent.faction}</span></div>
+            <div className="player-identity"><small>對手玩家</small><strong>{opponentId}</strong><span> · {playerFactionLabel(opponent)}</span></div>
             <div className="hero-resource-row"><span className={`hero-health ${opponent.heroHp <= 10 ? "critical" : ""}`} data-testid={`player-health-${opponentId}`}><small>生命</small><b>{opponent.heroHp}</b><small>/{opponent.heroMaxHp}</small></span><span className="mana-display"><small>水晶</small><b>{opponent.mana}<i>/</i>{opponent.maxMana}</b><em>上限 {state.rulesConfig.normalMaxMana}</em></span></div>
-            <div className="player-stats"><span><small>手牌</small><b>{opponent.hand.length}</b></span><span><small>牌庫</small><b>{opponent.deck.length}</b></span><button className="zone-count" onClick={() => setViewedGraveyardPlayerId(opponentId)}><small>棄堆</small><b>{opponent.graveyard.length}</b></button><span className="special-record"><small>{specialRecord(opponent).label}</small><b>{specialRecord(opponent).value}</b></span></div>
+            <div className="player-stats"><span><small>手牌</small><b>{opponent.hand.length}</b></span><span><small>牌庫</small><b>{opponent.deck.length}</b></span><button className="zone-count" onClick={() => setViewedGraveyardPlayerId(opponentId)}><small>棄堆</small><b>{opponent.graveyard.length}</b></button><span className="special-record-list">{specialRecords(opponent).map((record) => <span className="special-record" key={record.label}><small>{record.label}</small><b>{record.value}</b></span>)}</span></div>
           </section>
           <Zone compact kind="FIELD" slotCount={opponentFieldSlots} title={`對手立場區 · ${opponentFieldSlots} 格`} cards={opponent.fields} onInspect={setInspectedCard} />
           <Zone
@@ -537,9 +546,9 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
           />
           <Zone compact kind="FIELD" slotCount={activeFieldSlots} title={`我方立場區 · ${activeFieldSlots} 格`} cards={active.fields} onInspect={setInspectedCard} />
           <section className="player-panel">
-            <div className="player-identity"><small>目前玩家</small><strong>{active.id}</strong><span> · {active.faction}</span></div>
+            <div className="player-identity"><small>目前玩家</small><strong>{active.id}</strong><span> · {playerFactionLabel(active)}</span></div>
             <div className="hero-resource-row"><span className={`hero-health ${active.heroHp <= 10 ? "critical" : ""}`} data-testid={`player-health-${active.id}`}><small>生命</small><b>{active.heroHp}</b><small>/{active.heroMaxHp}</small></span><span className="mana-display"><small>水晶</small><b>{active.mana}<i>/</i>{active.maxMana}</b><em>上限 {state.rulesConfig.normalMaxMana}</em></span></div>
-            <div className="player-stats"><span><small>手牌</small><b>{active.hand.length}</b></span><span><small>牌庫</small><b>{active.deck.length}</b></span><button className="zone-count" onClick={() => setViewedGraveyardPlayerId(active.id)}><small>棄堆</small><b>{active.graveyard.length}</b></button><span className="special-record"><small>{specialRecord(active).label}</small><b>{specialRecord(active).value}</b></span></div>
+            <div className="player-stats"><span><small>手牌</small><b>{active.hand.length}</b></span><span><small>牌庫</small><b>{active.deck.length}</b></span><button className="zone-count" onClick={() => setViewedGraveyardPlayerId(active.id)}><small>棄堆</small><b>{active.graveyard.length}</b></button><span className="special-record-list">{specialRecords(active).map((record) => <span className="special-record" key={record.label}><small>{record.label}</small><b>{record.value}</b></span>)}</span></div>
           </section>
         </div>
       </section>
@@ -908,18 +917,19 @@ function Zone({ title, cards, compact, kind = "MINION", slotCount = 7, legal, se
   />)}{Array.from({ length: trailingSlots }, (_, index) => <span className="slot" data-position="trailing" key={`trailing-${index}`} />)}</div></section>;
 }
 
-function specialRecord(player: GameState["players"][PlayerId]): { label: string; value: number | string } {
-  if (player.faction === "UNDEAD") return { label: "死靈數", value: player.resources.necromancy };
-  if (player.faction === "MACHINE") return { label: "回收充能", value: player.resources.recycleCharge };
-  if (player.faction === "ALLIANCE") return { label: "協作數", value: player.summonedThisGame };
-  if (player.faction === "DRAGON") return {
+function specialRecords(player: GameState["players"][PlayerId]): { label: string; value: number | string }[] {
+  const records: { label: string; value: number | string }[] = [];
+  if (playerHasFaction(player, "UNDEAD")) records.push({ label: "死靈數", value: player.resources.necromancy });
+  if (playerHasFaction(player, "MACHINE")) records.push({ label: "回收充能", value: player.resources.recycleCharge });
+  if (playerHasFaction(player, "ALLIANCE")) records.push({ label: "協作數", value: player.summonedThisGame });
+  if (playerHasFaction(player, "DRAGON")) records.push({
     label: "棄堆龍族",
     value: player.graveyard.filter((card) => {
       const definition = getCardDefinition(card.definitionId);
       return definition.cardType === "MINION" && definition.subtype.includes("DRAGON");
     }).length,
-  };
-  return { label: "特殊紀錄", value: "—" };
+  });
+  return records.length > 0 ? records : [{ label: "特殊紀錄", value: "—" }];
 }
 
 function GraveyardModal({ playerId, cards, onInspect, onClose }: { playerId: PlayerId; cards: CardInstance[]; onInspect: (card: CardInstance) => void; onClose: () => void }) {
@@ -946,6 +956,7 @@ function CardDetailModal({ card, onClose, tutorialCloseHint = false }: { card: C
         {definition.cardType === "MINION" && <><span>攻擊 <strong>{card.currentAttack ?? "?"}</strong></span><span>生命 <strong>{card.currentHealth ?? "?"}</strong></span></>}
       </div>
       {card.counters.plagueMarks !== undefined && <p className="modal-plague-counter">瘟疫標記 <strong>{card.counters.plagueMarks}</strong> / {definition.transformAura?.threshold ?? 6}</p>}
+      {card.counters.countdown !== undefined && <p className="modal-countdown-counter">目前倒數 <strong>{card.counters.countdown}</strong></p>}
       <div className="card-modal-effect">
         <strong>效果：</strong>
         <div className="effect-keyword-list">

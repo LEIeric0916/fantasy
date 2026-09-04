@@ -60,6 +60,14 @@ export function destroyMinion(state: GameState, card: CardInstance, reason = "DE
   destroyCardOnField(state, card, reason, timingContext);
 }
 
+export function destroyZeroHealthMinions(state: GameState, reason = "ZERO_HEALTH", timingContext?: TimingContext): void {
+  const targets = [...state.players.P1.minions, ...state.players.P2.minions]
+    .filter((card) => (card.currentHealth ?? 1) <= 0);
+  for (const target of targets) {
+    if (target.zone === "MINION") destroyMinion(state, target, reason, timingContext);
+  }
+}
+
 export function destroyCardOnField(state: GameState, card: CardInstance, reason = "DESTROY", timingContext?: TimingContext): void {
   const definition = getCardDefinition(card.definitionId);
   if (card.zone !== "MINION" && card.zone !== "FIELD") throw new Error(`${card.instanceId} is not on the field`);
@@ -90,6 +98,7 @@ export function destroyCardOnField(state: GameState, card: CardInstance, reason 
       if (field.sealed) continue;
       const aura = getCardDefinition(field.definitionId).friendlyMinionDestroyedCountdownAura;
       if (!aura) continue;
+      if (state.activePlayerId !== field.controllerId) continue;
       if (field.counters.friendlyDestroyedCountdownTurn !== state.turnNumber) {
         field.counters.friendlyDestroyedCountdownTurn = state.turnNumber;
         field.counters.friendlyDestroyedCountdownUses = 0;

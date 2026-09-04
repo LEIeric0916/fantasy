@@ -13,7 +13,7 @@ const factionOptions: { value: Faction; label: string }[] = [
   { value: "ALLIANCE", label: "聯盟（38 張）" },
 ];
 
-type EntryMode = "BATTLE" | "TUTORIAL";
+type EntryMode = "BATTLE" | "CHAOS" | "TUTORIAL";
 type GameMode = "LOCAL" | "RANDOM_AI" | "HEURISTIC_AI" | "SEARCH_AI" | "WATCH_AI_HEURISTIC";
 type SpectatorViewMode = "FOLLOW_ACTION" | "FIXED";
 type FactionSelection = Faction | "RANDOM";
@@ -21,6 +21,14 @@ type FactionSelection = Faction | "RANDOM";
 function resolveFaction(selection: FactionSelection): Faction {
   if (selection !== "RANDOM") return selection;
   return factionOptions[Math.floor(Math.random() * factionOptions.length)].value;
+}
+
+export function randomChaosFactions(random: () => number = Math.random): [Faction, Faction] {
+  const available = factionOptions.map((option) => option.value);
+  const first = available.splice(Math.floor(random() * available.length), 1)[0];
+  const second = available.splice(Math.floor(random() * available.length), 1)[0];
+  if (!first || !second) throw new Error("混沌模式無法取得兩個不同牌組");
+  return [first, second];
 }
 
 export default function App() {
@@ -31,6 +39,7 @@ export default function App() {
   const [p1Faction, setP1Faction] = useState<FactionSelection>("DRAGON");
   const [p2Faction, setP2Faction] = useState<FactionSelection>("UNDEAD");
   const [resolvedFactions, setResolvedFactions] = useState<Record<PlayerId, Faction>>({ P1: "DRAGON", P2: "UNDEAD" });
+  const [resolvedDeckFactions, setResolvedDeckFactions] = useState<Record<PlayerId, Faction[]>>({ P1: ["DRAGON"], P2: ["UNDEAD"] });
   const [startingMode, setStartingMode] = useState<PlayerId | "RANDOM">("RANDOM");
   const [startingPlayerId, setStartingPlayerId] = useState<PlayerId>("P1");
   const [entryMode, setEntryMode] = useState<EntryMode>("BATTLE");
@@ -42,11 +51,20 @@ export default function App() {
     if (entryMode === "TUTORIAL") {
       const tutorialFaction: Faction = tutorialLevel === 3 ? "MACHINE" : "ALLIANCE";
       setResolvedFactions({ P1: tutorialFaction, P2: tutorialFaction });
+      setResolvedDeckFactions({ P1: [tutorialFaction], P2: [tutorialFaction] });
       setStartingPlayerId("P1");
       setStarted(true);
       return;
     }
-    setResolvedFactions({ P1: resolveFaction(p1Faction), P2: resolveFaction(p2Faction) });
+    if (entryMode === "CHAOS") {
+      const deckFactions = { P1: randomChaosFactions(), P2: randomChaosFactions() } satisfies Record<PlayerId, Faction[]>;
+      setResolvedDeckFactions(deckFactions);
+      setResolvedFactions({ P1: deckFactions.P1[0], P2: deckFactions.P2[0] });
+    } else {
+      const factions = { P1: resolveFaction(p1Faction), P2: resolveFaction(p2Faction) };
+      setResolvedFactions(factions);
+      setResolvedDeckFactions({ P1: [factions.P1], P2: [factions.P2] });
+    }
     setStartingPlayerId(startingMode === "RANDOM" ? (Math.random() < 0.5 ? "P1" : "P2") : startingMode);
     setStarted(true);
   }
@@ -66,6 +84,7 @@ export default function App() {
             遊玩類型
             <select aria-label="遊玩類型" value={entryMode} onChange={(event) => setEntryMode(event.target.value as EntryMode)}>
               <option value="BATTLE">一般對戰</option>
+              <option value="CHAOS">混沌模式</option>
               <option value="TUTORIAL">新手教學</option>
             </select>
           </label>
@@ -77,7 +96,8 @@ export default function App() {
               <option value={3}>第三關：一般法術與立場</option>
             </select>
           </label>}
-          {entryMode === "BATTLE" && <label>
+          {entryMode === "CHAOS" && <p className="mode-description">雙方每場各自隨機取得兩副不同牌組，合併並洗牌後進行對戰。</p>}
+          {entryMode !== "TUTORIAL" && <label>
             對戰模式
             <select aria-label="對戰模式" value={gameMode} onChange={(event) => setGameMode(event.target.value as GameMode)}>
               <option value="LOCAL">本機雙人</option>
@@ -87,7 +107,7 @@ export default function App() {
               <option value="WATCH_AI_HEURISTIC">AI vs AI 觀戰（困難）</option>
             </select>
           </label>}
-          {entryMode === "BATTLE" && gameMode === "WATCH_AI_HEURISTIC" && <label>
+          {entryMode !== "TUTORIAL" && gameMode === "WATCH_AI_HEURISTIC" && <label>
             觀戰視角
             <select aria-label="觀戰視角" value={spectatorViewMode} onChange={(event) => setSpectatorViewMode(event.target.value as SpectatorViewMode)}>
               <option value="FOLLOW_ACTION">雙方視角（跟著行動方）</option>
@@ -108,7 +128,7 @@ export default function App() {
               {factionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </label>}
-          {entryMode === "BATTLE" && <label>
+          {entryMode !== "TUTORIAL" && <label>
             先攻設定
             <select aria-label="先攻設定" value={startingMode} onChange={(event) => setStartingMode(event.target.value as PlayerId | "RANDOM")}>
               <option value="RANDOM">隨機先攻</option>
@@ -117,7 +137,7 @@ export default function App() {
             </select>
           </label>}
           <div className="setup-actions">
-            <button onClick={startGame}>{entryMode === "TUTORIAL" ? "開始教學" : "建立對局"}</button>
+            <button onClick={startGame}>{entryMode === "TUTORIAL" ? "開始教學" : entryMode === "CHAOS" ? "建立混沌對局" : "建立對局"}</button>
             <button className="quiet" onClick={() => setShowCatalog(true)}>查看卡表</button>
             <button className="quiet" onClick={() => setShowGlossary(true)}>專有名詞圖鑑</button>
           </div>
@@ -129,6 +149,7 @@ export default function App() {
     ? tutorialLevel === 1 ? createFirstTutorialGame() : tutorialLevel === 2 ? createSecondTutorialGame() : createThirdTutorialGame()
     : createInitialGame({
     factions: resolvedFactions,
+    deckFactions: resolvedDeckFactions,
     startingPlayerId,
   });
   const aiDifficulty: AiDifficulty | undefined = gameMode === "RANDOM_AI"

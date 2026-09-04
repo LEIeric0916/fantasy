@@ -2,7 +2,7 @@ import { getCardDefinition, isCardImplemented } from "../cards/cardRegistry";
 import type { CardInstance, PlayerId } from "../cards/cardTypes";
 import { getLegalAttackTargets } from "../engine/combatEngine";
 import type { GameAction } from "../engine/gameEngine";
-import type { GameState } from "../state/GameState";
+import { getPlayerFieldLimit, type GameState } from "../state/GameState";
 
 function combinations<T>(items: readonly T[], minCount: number, maxCount: number): T[][] {
   const result: T[][] = [];
@@ -37,7 +37,7 @@ function canPlayCard(state: GameState, playerId: PlayerId, card: CardInstance): 
   if (!isCardImplemented(definition) || card.currentCost === null || card.currentCost > player.mana) return false;
   if (definition.cardType === "MINION" && player.minions.length >= state.rulesConfig.minionLimit) return false;
   if (definition.cardType === "FIELD") {
-    const limit = state.rulesConfig.fieldLimits[player.faction];
+    const limit = getPlayerFieldLimit(state, playerId);
     if (limit === undefined || (limit !== null && player.fields.length >= limit)) return false;
     if (definition.maxCopiesOnField !== undefined
       && player.fields.filter((field) => field.definitionId === definition.id).length >= definition.maxCopiesOnField) return false;

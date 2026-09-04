@@ -20,6 +20,39 @@ describe("黑暗魔人 瑞瑟特", () => {
 });
 
 describe("黑暗之書選擇與入場", () => {
+  it("所有泛指召喚黑暗之書的效果都包含終末降臨", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    const source = putCard(state, "P1", "UNDEAD_006", "HAND", "choose-final-arrival");
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: source.instanceId }).state;
+    expect(state.pendingChoice).toMatchObject({ type: "EFFECT_OPTION" });
+    if (state.pendingChoice?.type === "EFFECT_OPTION") {
+      expect(state.pendingChoice.options.map((option) => option.id)).toContain("TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL");
+    }
+  });
+
+  it("場上已有終末降臨時，單選與複選黑暗之書都不再顯示該選項", () => {
+    let single = mainState();
+    single.players.P1.hand = [];
+    putCard(single, "P1", "TOKEN_UNDEAD_DOOMSDAY_BOOK", "FIELD", "required-doom");
+    putCard(single, "P1", "TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL", "FIELD", "existing-final-arrival");
+    const dexter = putCard(single, "P1", "UNDEAD_006", "HAND", "single-choice");
+    single = applyAction(single, { type: "PLAY_CARD", playerId: "P1", instanceId: dexter.instanceId }).state;
+    if (single.pendingChoice?.type !== "EFFECT_OPTION") throw new Error("預期出現黑暗之書單選");
+    expect(single.pendingChoice.options.map((option) => option.id)).not.toContain("TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL");
+
+    let distinct = mainState();
+    distinct.players.P1.hand = [];
+    putCard(distinct, "P1", "TOKEN_UNDEAD_DOOMSDAY_BOOK", "FIELD", "required-doom");
+    putCard(distinct, "P1", "TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL", "FIELD", "existing-final-arrival");
+    const yaan = putCard(distinct, "P1", "UNDEAD_008", "HAND", "distinct-choice");
+    const discard = putCard(distinct, "P1", "UNDEAD_001", "HAND", "discard");
+    distinct = applyAction(distinct, { type: "PLAY_CARD", playerId: "P1", instanceId: yaan.instanceId }).state;
+    distinct = applyAction(distinct, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [discard.instanceId] }).state;
+    if (distinct.pendingChoice?.type !== "EFFECT_OPTION") throw new Error("預期出現黑暗之書複選");
+    expect(distinct.pendingChoice.options.map((option) => option.id)).not.toContain("TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL");
+  });
+
   it("第一張不朽典錄進場時不提示尚無舊同名卡", () => {
     let state = mainState();
     state.players.P1.hand = [];

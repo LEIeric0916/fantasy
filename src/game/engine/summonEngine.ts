@@ -1,6 +1,6 @@
 import { getCardDefinition } from "../cards/cardRegistry";
 import type { PlayerId } from "../cards/cardTypes";
-import type { GameState } from "../state/GameState";
+import { getPlayerFieldLimit, type GameState } from "../state/GameState";
 import { createCardInstance } from "../state/CardInstance";
 import { addLog } from "../utils/gameLog";
 import { InvalidActionError, RuleUndefinedError } from "./errors";
@@ -107,7 +107,7 @@ export function summonFromHandByEffect(state: GameState, card: CardInstance): bo
 
 export function summonGeneratedField(state: GameState, playerId: PlayerId, definitionId: string): boolean {
   const player = state.players[playerId];
-  const limit = state.rulesConfig.fieldLimits[player.faction];
+  const limit = getPlayerFieldLimit(state, playerId);
   if (limit !== null && limit !== undefined && player.fields.length >= limit) {
     addLog(state, "ACTION", `${definitionId} 召喚失敗：立場區已滿`, { reason: "FIELD_LIMIT" });
     return false;

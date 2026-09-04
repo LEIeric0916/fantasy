@@ -10,6 +10,14 @@ import type { RuleUndefined } from "../state/GameState";
 type RawCard = Omit<CardDefinition, "keywords" | "effects"> & { keywords: string[] };
 type CardFile = { cards: RawCard[] };
 
+const DARK_BOOK_DEFINITION_IDS = [
+  "TOKEN_UNDEAD_BOOK_IMMORTAL",
+  "TOKEN_UNDEAD_BOOK_PLAGUE",
+  "TOKEN_UNDEAD_BOOK_REVENGE",
+  "TOKEN_UNDEAD_BOOK_DOOM_PRELUDE",
+  "TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL",
+];
+
 const implementedEffects: Record<string, EffectDefinition[]> = {
   TOKEN_COIN: [{ type: "GAIN_MANA", value: 1 }],
   NEUTRAL_001: [{ type: "DRAW", value: 1 }],
@@ -304,22 +312,12 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
   UNDEAD_005: [{ type: "REVIVE_FRIENDLY_GRAVE_MINION", maxOriginalCost: 3 }],
   UNDEAD_006: [{
     type: "CHOOSE_GENERATED_FIELD",
-    definitionIds: [
-      "TOKEN_UNDEAD_BOOK_IMMORTAL",
-      "TOKEN_UNDEAD_BOOK_PLAGUE",
-      "TOKEN_UNDEAD_BOOK_REVENGE",
-      "TOKEN_UNDEAD_BOOK_DOOM_PRELUDE",
-    ],
+    definitionIds: [...DARK_BOOK_DEFINITION_IDS],
   }],
   UNDEAD_007: [
     {
       type: "CHOOSE_GENERATED_FIELD",
-      definitionIds: [
-        "TOKEN_UNDEAD_BOOK_IMMORTAL",
-        "TOKEN_UNDEAD_BOOK_PLAGUE",
-        "TOKEN_UNDEAD_BOOK_REVENGE",
-        "TOKEN_UNDEAD_BOOK_DOOM_PRELUDE",
-      ],
+      definitionIds: [...DARK_BOOK_DEFINITION_IDS],
     },
     { type: "SUMMON_PER_FRIENDLY_FIELD_SUBTYPE", definitionId: "TOKEN_UNDEAD_DOOM_KNIGHT", subtype: "DARK_MAGIC" },
   ],
@@ -327,12 +325,7 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
     { type: "DISCARD_HAND", count: 1 },
     {
       type: "CHOOSE_DISTINCT_GENERATED_FIELDS",
-      definitionIds: [
-        "TOKEN_UNDEAD_BOOK_IMMORTAL",
-        "TOKEN_UNDEAD_BOOK_PLAGUE",
-        "TOKEN_UNDEAD_BOOK_REVENGE",
-        "TOKEN_UNDEAD_BOOK_DOOM_PRELUDE",
-      ],
+      definitionIds: [...DARK_BOOK_DEFINITION_IDS],
       count: 2,
     },
   ],
@@ -362,7 +355,7 @@ const enterFieldEffects: Record<string, EffectDefinition[]> = {
   TOKEN_UNDEAD_DOOMSDAY_BOOK: [{ type: "SUMMON", definitionId: "TOKEN_UNDEAD_DOOM_KNIGHT", count: 1 }],
   TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL: [
     { type: "VANISH_SELF_IF_NO_FRIENDLY_FIELD", definitionId: "TOKEN_UNDEAD_DOOMSDAY_BOOK" },
-    { type: "REDUCE_SELF_COUNTDOWN_BY_TURN_NUMBER" },
+    { type: "REDUCE_SELF_COUNTDOWN_BY_OWN_TURN_COUNT" },
   ],
   TOKEN_UNDEAD_FINAL_KING_HACHIGOKU: [
     { type: "DAMAGE_ALL_ENEMY_MINIONS", value: 5 },
@@ -474,9 +467,6 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
   ALLIANCE_012: {
     DEATHRATTLE: [{ type: "SUMMON", definitionId: "TOKEN_ALLIANCE_ROYAL_PALADIN", count: 2 }],
   },
-  ALLIANCE_013: {
-    DEATHRATTLE: [{ type: "DRAW", value: 1 }],
-  },
   TOKEN_ALLIANCE_HERO_AUGUSTIN: {
     DEATHRATTLE: [{ type: "RETURN_SELF_TO_HAND" }],
   },
@@ -542,12 +532,7 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
     ON_SELF_COMBAT_START: [{ type: "DAMAGE_ENEMY_HERO", value: 3 }],
     ON_KILL: [{
       type: "CHOOSE_GENERATED_FIELD",
-      definitionIds: [
-        "TOKEN_UNDEAD_BOOK_IMMORTAL",
-        "TOKEN_UNDEAD_BOOK_PLAGUE",
-        "TOKEN_UNDEAD_BOOK_REVENGE",
-        "TOKEN_UNDEAD_BOOK_DOOM_PRELUDE",
-      ],
+      definitionIds: [...DARK_BOOK_DEFINITION_IDS],
     }],
   },
   TOKEN_UNDEAD_PREACHER: {
@@ -577,8 +562,8 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
   },
   TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL: {
     LAST_WORDS: [
+      { type: "SUMMON_FIELD", definitionId: "TOKEN_UNDEAD_DOOMSDAY_BOOK", count: 1 },
       { type: "SUMMON", definitionId: "TOKEN_UNDEAD_FINAL_KING_HACHIGOKU", count: 1 },
-      { type: "RETURN_SELF_TO_FIELD_AND_TRANSFORM", definitionId: "TOKEN_UNDEAD_DOOMSDAY_BOOK" },
     ],
   },
   UNDEAD_008: {
@@ -591,7 +576,7 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
 
 const initialCounters: Record<string, Record<string, number>> = {
   TOKEN_UNDEAD_BOOK_PLAGUE: { plagueMarks: 0 },
-  TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL: { countdown: 15 },
+  TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL: { countdown: 12 },
   MACHINE_005: { countdown: 3 },
   MACHINE_008: { countdown: 3 },
   MACHINE_012: { countdown: 2 },

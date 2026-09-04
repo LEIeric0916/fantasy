@@ -41,14 +41,15 @@ h2 { margin: 1.1rem 0 .5rem; font-size: .78rem; letter-spacing: .12em; text-tran
 .mana-display b { color: #fff; font: 900 clamp(1.35rem, 2.2vw, 2rem)/1 ui-monospace, monospace; }
 .mana-display i { padding-inline: .08em; color: #82d7ff; font-size: .58em; font-style: normal; }
 .mana-display em { color: #89aabd; font-size: .48rem; font-style: normal; }
-.player-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: .22rem; width: 100%; }
+.player-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .22rem; width: 100%; }
 .player-stats > span, .player-stats > button { min-width: 0; min-height: 0; padding: .2rem .25rem; border: 1px solid #3e4a53; border-radius: 5px; background: #101519; text-align: center; }
 .player-stats small, .player-stats b { display: block; }
 .player-stats small { color: #87949e; font-size: .55rem; }
 .player-stats b { color: #edf3f7; font: 800 .85rem ui-monospace, monospace; }
 .player-stats .zone-count { color: inherit; cursor: pointer; }
 .player-stats .zone-count:hover { border-color: #d7ff55; }
-.player-stats .special-record { border-color: #7d6ca8; background: #1c1730; }
+.player-stats .special-record-list { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: .22rem; padding: 0; border: 0; background: transparent; }
+.player-stats .special-record { min-width: 0; padding: .2rem .25rem; border: 1px solid #7d6ca8; border-radius: 5px; background: #1c1730; text-align: center; }
 .hero-health { display: inline-flex; align-items: baseline; gap: .18rem; padding: .15rem .5rem; border: 1px solid #ff7b72; border-radius: 999px; background: #3a171a; color: #ffe5e2; box-shadow: 0 0 9px #ff5f5655; }
 .hero-health small { color: #ffb7b2; font-size: .68rem; font-weight: 700; }
 .hero-health b { min-width: 2ch; color: #fff; font: 900 clamp(1.35rem, 2.3vw, 2rem)/1 ui-monospace, monospace; text-align: center; }
@@ -65,8 +66,8 @@ h2 { margin: 1.1rem 0 .5rem; font-size: .78rem; letter-spacing: .12em; text-tran
 .attack-animation .action-trajectory i { border-color: #ffd0cc; filter: drop-shadow(0 0 10px #ff5148); }
 .action-card-label { position: fixed; padding: .45rem .75rem; border: 1px solid #72c7ff; border-radius: 999px; background: #101923ee; color: #e9f8ff; font-size: .88rem; font-weight: 900; box-shadow: 0 0 18px #45bfff77; transform: translate(-50%, -50%); animation: action-label-pop .9s ease-out both; }
 .board-side { min-height: 0; display: grid; grid-template-rows: minmax(66px, .78fr) minmax(96px, 1.22fr); gap: .35rem .55rem; align-items: stretch; }
-.opponent-side { grid-template-columns: minmax(0, 1fr) minmax(176px, 14%); grid-template-areas: "field player" "minion player"; perspective: 1100px; }
-.active-side { grid-template-columns: minmax(0, 1fr) minmax(176px, 14%); grid-template-rows: minmax(96px, 1.22fr) minmax(66px, .78fr); grid-template-areas: "minion player" "field player"; perspective: 1100px; }
+.opponent-side { grid-template-columns: minmax(0, 1fr) minmax(176px, 14%); grid-template-areas: "field player" "minion player"; }
+.active-side { grid-template-columns: minmax(0, 1fr) minmax(176px, 14%); grid-template-rows: minmax(96px, 1.22fr) minmax(66px, .78fr); grid-template-areas: "minion player" "field player"; }
 .active-side.hand-play-drop-zone { position: relative; border-radius: 14px; outline: 2px solid #ffbf69; outline-offset: -2px; box-shadow: inset 0 0 28px #ff9f4366, 0 0 18px #ffbf6966; background: radial-gradient(circle at center, #ffbf691f, transparent 64%); }
 .active-side.hand-play-drop-zone::after { content: "放開以打出卡牌"; position: absolute; z-index: 12; left: 50%; top: 50%; padding: .55rem .9rem; border: 1px solid #ffbf69; border-radius: 999px; background: #17100be8; color: #ffe4bd; font-size: .82rem; font-weight: 900; letter-spacing: .08em; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 18px #ff9f4388; }
 .compact-zone { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; }
@@ -74,8 +75,12 @@ h2 { margin: 1.1rem 0 .5rem; font-size: .78rem; letter-spacing: .12em; text-tran
 .minion-zone { grid-area: minion; }
 .field-zone .zone { justify-content: stretch; }
 .field-zone .card, .field-zone .slot { width: 100%; }
-.opponent-side .field-zone { transform: scale(.975); transform-origin: bottom center; opacity: .92; }
-.active-side .field-zone { transform: scale(.975); transform-origin: top center; opacity: .92; }
+.opponent-side .field-zone { opacity: .94; }
+.active-side .field-zone { opacity: 1; }
+.field-zone .card-surface { text-rendering: geometricPrecision; }
+.field-zone .card strong { color: #fff; font-size: clamp(.72rem, .88vw, .94rem); font-weight: 850; line-height: 1.14; text-shadow: 0 1px 2px #000; }
+.field-zone .card small { color: #e0e7ec; font-size: clamp(.56rem, .64vw, .7rem); font-weight: 650; line-height: 1.18; }
+.field-zone .card .effect { color: #f3f6f8; font-size: clamp(.56rem, .64vw, .7rem); font-weight: 600; line-height: 1.22; text-shadow: 0 1px 1px #000; }
 .opponent-side .minion-zone, .active-side .minion-zone { padding-inline: .25rem; border-inline: 1px solid #3b4750; background: linear-gradient(90deg, transparent, #26323b55 12%, #26323b55 88%, transparent); }
 .compact-zone h2 { position: relative; z-index: 2; margin: 0; padding: .12rem .35rem .2rem; border-bottom: 1px solid #3e4a53; background: #111418e6; line-height: 1.15; white-space: nowrap; }
 .compact-zone .zone { min-height: 0; padding-top: .24rem; overflow: hidden; }
@@ -130,7 +135,7 @@ h2 { margin: 1.1rem 0 .5rem; font-size: .78rem; letter-spacing: .12em; text-tran
 .counter-badge small { font-size: .48rem; font-weight: 800; }
 .counter-badge strong { padding: 0; font: 900 1rem/1 ui-monospace, monospace; }
 .plague-counter { border: 1px solid #cf73ff; background: #35104be8; color: #f0c8ff; box-shadow: 0 0 8px #bd55ff99; }
-.countdown-counter { color: #ffd37d !important; font-weight: 800; }
+.countdown-badge { border: 1px solid #ffbd55; background: #4b280fe8; color: #ffe0a3; box-shadow: 0 0 9px #ff9d3d99; }
 .card .cost { position: absolute; right: .45rem; top: .35rem; width: 1.65rem; height: 1.65rem; display: grid; place-items: center; border-radius: 50%; color: #111418; background: #72c7ff; }
 .card strong { padding-right: 1.7rem; line-height: 1.05; font-size: clamp(.64rem, .8vw, .86rem); }
 .card small { color: #aab5bd; font-size: clamp(.48rem, .55vw, .62rem); }
@@ -174,6 +179,8 @@ summary { cursor: pointer; font-weight: 700; }
 .card-modal-stats strong { display: block; color: #d7ff55; font-size: 1.55rem; }
 .modal-plague-counter { display: inline-flex; align-items: baseline; gap: .35rem; padding: .55rem .8rem; border: 1px solid #cf73ff; background: #35104b; color: #f0c8ff; font-size: 1.1rem; }
 .modal-plague-counter strong { font-size: 1.8rem; }
+.modal-countdown-counter { display: inline-flex; align-items: baseline; gap: .35rem; padding: .55rem .8rem; border: 1px solid #ffbd55; background: #4b280f; color: #ffe0a3; font-size: 1.1rem; }
+.modal-countdown-counter strong { font-size: 1.8rem; }
 .card-modal-effect { margin: 0; padding: 1rem; border-left: 4px solid #72c7ff; background: #10161b; color: #f2f6f8; font-size: clamp(1.15rem, 2.2vw, 1.45rem); line-height: 1.65; }
 .card-relations { margin-top: 1.15rem; padding-top: 1rem; border-top: 1px solid #52616b; }
 .card-relations > h3 { margin: 0 0 .8rem; color: #fff; font-size: 1.15rem; }

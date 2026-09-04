@@ -45,7 +45,7 @@ describe("機械兵工廠與機械衍生手下", () => {
     expect(state.players.P1.heroHp).toBe(30);
   });
 
-  it("收割者與目標同時死亡時，殺意與死亡之聲都正常結算且不產生攻擊錯誤", () => {
+  it("收割者與目標同時死亡時不發動殺意，僅各自結算死亡之聲", () => {
     let state = mainState();
     state.players.P1.faction = "MACHINE";
     const reaper = putCard(state, "P1", "TOKEN_MACHINE_EMPIRE_REAPER", "MINION", "reaper-mutual-kill");
@@ -61,8 +61,8 @@ describe("機械兵工廠與機械衍生手下", () => {
 
     expect(result.error).toBeUndefined();
     expect(state.pendingChoice).toBeUndefined();
-    expect(state.players.P1.resources.recycleCharge).toBe(3);
-    expect(state.players.P2.resources.recycleCharge).toBe(3);
+    expect(state.players.P1.resources.recycleCharge).toBe(1);
+    expect(state.players.P2.resources.recycleCharge).toBe(1);
     expect(state.players.P1.extraDeck.some((card) => card.instanceId === reaper.instanceId)).toBe(true);
   });
 });

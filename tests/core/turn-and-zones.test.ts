@@ -2,9 +2,29 @@ import { describe, expect, it, vi } from "vitest";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { drawCard } from "../../src/game/engine/turnEngine";
 import { createInitialGame } from "../../src/game/state/createInitialGame";
+import { getPlayerFieldLimit } from "../../src/game/state/GameState";
+import { getCardDefinition } from "../../src/game/cards/cardRegistry";
 import { mainState, putCard } from "../helpers";
 
 describe("換牌與回合", () => {
+  it("混沌模式合併兩副不同陣營牌組，並保留兩個來源陣營", () => {
+    const state = createInitialGame({
+      factions: { P1: "DRAGON", P2: "MACHINE" },
+      deckFactions: { P1: ["DRAGON", "UNDEAD"], P2: ["MACHINE", "ALLIANCE"] },
+      shuffle: false,
+    });
+    const p1Cards = [...state.players.P1.hand, ...state.players.P1.deck];
+    const p2Cards = [...state.players.P2.hand, ...state.players.P2.deck];
+    expect(state.players.P1.deckFactions).toEqual(["DRAGON", "UNDEAD"]);
+    expect(state.players.P2.deckFactions).toEqual(["MACHINE", "ALLIANCE"]);
+    expect(p1Cards).toHaveLength(80);
+    expect(p2Cards).toHaveLength(78);
+    expect(new Set(p1Cards.map((card) => getCardDefinition(card.definitionId).faction))).toEqual(new Set(["DRAGON", "UNDEAD"]));
+    expect(new Set(p2Cards.map((card) => getCardDefinition(card.definitionId).faction))).toEqual(new Set(["MACHINE", "ALLIANCE"]));
+    expect(getPlayerFieldLimit(state, "P1")).toBe(7);
+    expect(getPlayerFieldLimit(state, "P2")).toBe(6);
+  });
+
   it("未指定種子時，每場對局使用新的隨機牌組與起始手牌順序", () => {
     const random = vi.spyOn(Math, "random")
       .mockReturnValueOnce(0.1)

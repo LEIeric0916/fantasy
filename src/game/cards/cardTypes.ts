@@ -92,8 +92,7 @@ export type EffectDefinition =
   | { type: "VANISH_OTHER_SAME_FIELDS"; count: number }
   | { type: "TRANSFORM_SELF_FIELD"; definitionId: string }
   | { type: "VANISH_SELF_IF_NO_FRIENDLY_FIELD"; definitionId: string }
-  | { type: "REDUCE_SELF_COUNTDOWN_BY_TURN_NUMBER" }
-  | { type: "RETURN_SELF_TO_FIELD_AND_TRANSFORM"; definitionId: string }
+  | { type: "REDUCE_SELF_COUNTDOWN_BY_OWN_TURN_COUNT" }
   | { type: "DAMAGE_ENEMY_HERO"; value: number }
   | { type: "GRANT_ALL_FRIENDLY_KEYWORD"; keyword: Keyword; subtypes?: string[] }
   | { type: "GRANT_TARGET_FRIENDLY_MINION_KEYWORD"; keyword: Keyword; subtypes?: string[] }

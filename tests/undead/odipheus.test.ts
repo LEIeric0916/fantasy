@@ -58,4 +58,45 @@ describe("不朽的懲戒魔龍 奧迪菲斯", () => {
     state = applyAction(state, { type: "SELECT_EFFECT_OPTION", playerId: "P1", optionId: "TOKEN_UNDEAD_BOOK_IMMORTAL" }).state;
     expect(state.players.P1.fields.map((card) => card.definitionId)).toContain("TOKEN_UNDEAD_BOOK_IMMORTAL");
   });
+
+  it("被皇家匕首主動攻擊並與其同時死亡時不會發動殺意", () => {
+    let state = mainState();
+    const dagger = putCard(state, "P1", "ALLIANCE_002", "MINION", "active-dagger");
+    const odipheus = putCard(state, "P2", "UNDEAD_012", "MINION", "defending-odipheus");
+
+    state = applyAction(state, {
+      type: "ATTACK",
+      playerId: "P1",
+      attackerId: dagger.instanceId,
+      target: { type: "MINION", instanceId: odipheus.instanceId },
+    }).state;
+
+    expect(state.pendingChoice).toBeUndefined();
+    expect(state.players.P1.graveyard.some((card) => card.instanceId === dagger.instanceId)).toBe(true);
+    expect(state.players.P2.graveyard.some((card) => card.instanceId === odipheus.instanceId)).toBe(true);
+    expect(state.players.P2.fields).toHaveLength(0);
+  });
+
+  it("奧斯但丁以戰吼效果傷害消滅奧迪菲斯時，奧斯但丁不會受到交戰或反擊傷害", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    state.players.P1.deck = [];
+    const augustin = putCard(state, "P1", "TOKEN_ALLIANCE_HERO_AUGUSTIN", "HAND", "augustin");
+    putCard(state, "P1", "TOKEN_ALLIANCE_ROYAL_GUARD", "HAND", "draw-fodder").zone = "DECK";
+    state.players.P1.deck.push(state.players.P1.hand.pop()!);
+    const odipheus = putCard(state, "P2", "UNDEAD_012", "MINION", "damaged-odipheus");
+    odipheus.currentHealth = 5;
+    odipheus.damageTaken = 2;
+
+    const played = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: augustin.instanceId });
+    expect(played.error).toBeUndefined();
+    state = played.state;
+    expect(state.pendingChoice).toMatchObject({ type: "EFFECT_CARDS" });
+    state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [odipheus.instanceId] }).state;
+
+    const survivingAugustin = state.players.P1.minions.find((card) => card.instanceId === augustin.instanceId);
+    expect(survivingAugustin).toMatchObject({ currentHealth: 5, damageTaken: 0 });
+    expect(state.players.P2.minions.some((card) => card.instanceId === odipheus.instanceId)).toBe(false);
+    expect(state.players.P2.graveyard.some((card) => card.instanceId === odipheus.instanceId)).toBe(true);
+  });
 });

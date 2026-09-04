@@ -1,6 +1,6 @@
 import { getCardDefinition, isCardImplemented } from "../cards/cardRegistry";
 import type { PlayerId } from "../cards/cardTypes";
-import type { EngineResult, GameState, RuleUndefined } from "../state/GameState";
+import { getPlayerFieldLimit, type EngineResult, type GameState, type RuleUndefined } from "../state/GameState";
 import { addLog } from "../utils/gameLog";
 import { resolveAttack, type AttackTarget } from "./combatEngine";
 import { InvalidActionError, NotImplementedError, RuleUndefinedError } from "./errors";
@@ -90,8 +90,11 @@ function playCard(state: GameState, playerId: PlayerId, instanceId: string): voi
     throw new InvalidActionError("手下區已滿（7/7），召喚失敗");
   }
   if (definition.cardType === "FIELD") {
-    const limit = state.rulesConfig.fieldLimits[player.faction];
-    if (limit === undefined) throw new RuleUndefinedError("FIELD_LIMIT", `${player.faction} 的立場上限尚未定義`);
+    const limit = getPlayerFieldLimit(state, playerId);
+    if (limit === undefined) {
+      const factions = player.deckFactions?.length > 1 ? player.deckFactions : [player.faction];
+      throw new RuleUndefinedError("FIELD_LIMIT", `${factions.join("+")} 的立場上限尚未定義`);
+    }
     if (limit !== null && player.fields.length >= limit) throw new InvalidActionError(`立場區已滿（${limit}/${limit}）`);
     if (definition.maxCopiesOnField !== undefined
       && player.fields.filter((field) => field.definitionId === definition.id).length >= definition.maxCopiesOnField) {

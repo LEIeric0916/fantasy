@@ -199,8 +199,8 @@
       "attack": 3,
       "health": 3,
       "deckCount": 3,
-      "keywords": ["EFFECT_SUMMON", "RUSH", "BATTLECRY", "DEATHRATTLE"],
-      "effectsText": "效果召喚：協作10時，若此牌以通常抽牌以外的方式加入手牌，將其效果召喚。衝刺。戰吼：給予1名敵方手下3點傷害。死亡之聲：抽1張牌。",
+      "keywords": ["EFFECT_SUMMON", "RUSH", "BATTLECRY"],
+      "effectsText": "效果召喚：協作10時，若此牌以通常抽牌以外的方式加入手牌，將其效果召喚。衝刺。戰吼：給予1名敵方手下3點傷害。",
       "generatedOnly": false,
       "notes": ""
     }
