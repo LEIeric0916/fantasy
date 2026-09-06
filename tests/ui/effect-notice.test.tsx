@@ -216,6 +216,22 @@ describe("效果未發動介面提示", () => {
     container.remove();
   });
 
+  it("舊對局殘留0血的手牌手下會顯示基礎生命", () => {
+    const state = mainState();
+    state.players.P1.hand = [];
+    const augustin = putCard(state, "P1", "TOKEN_ALLIANCE_HERO_AUGUSTIN", "HAND", "zero-health-display");
+    augustin.currentHealth = 0;
+    augustin.damageTaken = 5;
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
+    const hand = container.querySelector(`[data-instance-id="${augustin.instanceId}"]`)!;
+    expect(hand.querySelector(".stats")?.textContent).toContain("5 / 5");
+    act(() => root.unmount());
+    container.remove();
+  });
+
   it("拖曳可出牌手牌時我方場地發光，放開後才打出", () => {
     const state = mainState();
     state.players.P1.hand = [];

@@ -98,12 +98,12 @@ describe("黑暗之書 終末降臨", () => {
 });
 
 describe("終末之王 八獄", () => {
-  it("進場造成敵方全體5點傷害、恢復3HP，並以死靈術10傷害對手玩家", () => {
+  it("進場造成敵方全體5點傷害、恢復3HP，並以死靈術8給予對手玩家4點傷害", () => {
     const state = mainState();
     state.players.P1.heroHp = 20;
     state.players.P1.heroMaxHp = 30;
     state.players.P2.heroHp = 20;
-    state.players.P1.resources.necromancy = 10;
+    state.players.P1.resources.necromancy = 8;
     const survivor = putCard(state, "P2", "TOKEN_UNDEAD_PREACHER", "MINION", "survivor");
     putCard(state, "P2", "TOKEN_UNDEAD_GENERIC", "MINION", "destroyed");
 
@@ -113,7 +113,7 @@ describe("終末之王 八獄", () => {
     expect(survivor.currentHealth).toBe(1);
     expect(state.players.P2.minions).toHaveLength(1);
     expect(state.players.P1.heroHp).toBe(23);
-    expect(state.players.P2.heroHp).toBe(15);
+    expect(state.players.P2.heroHp).toBe(16);
     expect(state.players.P1.resources.necromancy).toBe(0);
   });
 });

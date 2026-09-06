@@ -19,6 +19,7 @@ import { getLegalEnemyEffectTargets } from "./targetingEngine";
 import { transformField, transformMinion } from "./transformEngine";
 import { reviveMinion } from "./reviveEngine";
 import { enqueueStateBasedEffectSummons, markHandEntryForEffectSummon } from "./effectSummonEngine";
+import { getSubtypeLabel } from "../cards/displayLabels";
 
 function notifyEffectSkipped(state: GameState, playerId: PlayerId, source: CardInstance, reason: string): void {
   const sourceName = getCardDefinition(source.definitionId).name;
@@ -43,7 +44,8 @@ function conditionFailureReason(condition: ConditionDefinition): string {
     case "MAX_MANA_EQUALS": return `最大水晶不等於 ${condition.value}`;
     case "MAX_MANA_AT_LEAST": return `最大水晶未達 ${condition.value}`;
     case "FRIENDLY_ORIGINAL_COST_AT_LEAST": return `我方場上沒有原始費用 ${condition.value} 以上的手下`;
-    case "FRIENDLY_FIELD_SUBTYPE": return `我方場上沒有符合 ${condition.subtype === "ARTIFACT" ? "神器" : condition.subtype} 的立場`;
+    case "FRIENDLY_FIELD_SUBTYPE": return `我方場上沒有符合「${getSubtypeLabel(condition.subtype)}」類型的立場`;
+    case "FRIENDLY_MINION_SUBTYPE": return `我方場上沒有符合「${getSubtypeLabel(condition.subtype)}」類型的${condition.excludeSource ? "其他" : ""}手下`;
     case "FRIENDLY_SAME_FIELD_COUNT_AT_LEAST": return `同名立場未達 ${condition.value} 張`;
     case "HERO_HP_BELOW": return `我方玩家生命未低於 ${condition.value}`;
     case "SUMMONED_THIS_GAME_AT_LEAST": return `本場累積召喚手下未達 ${condition.value} 名`;
@@ -76,6 +78,9 @@ function conditionMatches(
       });
     case "FRIENDLY_FIELD_SUBTYPE":
       return state.players[playerId].fields.some((card) => getCardDefinition(card.definitionId).subtype.includes(condition.subtype));
+    case "FRIENDLY_MINION_SUBTYPE":
+      return state.players[playerId].minions.some((card) => (!condition.excludeSource || card.instanceId !== source.instanceId)
+        && getCardDefinition(card.definitionId).subtype.includes(condition.subtype));
     case "FRIENDLY_SAME_FIELD_COUNT_AT_LEAST":
       return state.players[playerId].fields.filter((card) => card.definitionId === source.definitionId).length >= condition.value;
     case "HERO_HP_BELOW":
@@ -212,6 +217,31 @@ function resolveEffectList(
         });
         break;
       }
+      case "HEAL_ALL_FRIENDLY_MINIONS": {
+        let restoredTotal = 0;
+        for (const target of state.players[playerId].minions) {
+          if (target.currentHealth === null || target.maxHealth === null) continue;
+          const before = target.currentHealth;
+          target.currentHealth = Math.min(target.maxHealth, target.currentHealth + effect.value);
+          const restored = target.currentHealth - before;
+          target.damageTaken = Math.max(0, target.damageTaken - restored);
+          restoredTotal += restored;
+          if (restored > 0) {
+            addLog(state, "RESOURCE", `${target.definitionId} 恢復 ${restored} HP`, {
+              source: source.instanceId,
+              target: target.instanceId,
+              requested: effect.value,
+              restored,
+            });
+          }
+        }
+        addLog(state, "RESOURCE", `${playerId} 場上手下合計恢復 ${restoredTotal} HP`, {
+          source: source.instanceId,
+          requestedPerMinion: effect.value,
+          restoredTotal,
+        });
+        break;
+      }
       case "MODIFY_SELF_HEALTH":
         if (hasActiveKeyword(source, "INVINCIBLE")) {
           addLog(state, "PROTECTION", `${source.definitionId} 的無敵阻擋自身生命改值`, { instanceId: source.instanceId });
@@ -279,9 +309,25 @@ function resolveEffectList(
         addLog(state, "RESOURCE", `${playerId} 恢復${effect.value}水晶`, { source: source.definitionId, mana: player.mana });
         break;
       }
-      case "RETURN_SELF_TO_HAND":
+      case "RETURN_SELF_TO_HAND": {
         if (source.zone !== "HAND") moveCard(state, source, "HAND", "RETURN_SELF_TO_HAND");
+        const definition = getCardDefinition(source.definitionId);
+        source.currentCost = definition.originalCost;
+        source.currentAttack = definition.attack;
+        source.currentHealth = definition.health;
+        source.maxHealth = definition.health;
+        source.damageTaken = 0;
+        source.keywords = [...definition.keywords];
+        source.counters = { ...definition.initialCounters };
+        source.flags = {};
+        source.attacksUsedThisTurn = 0;
+        source.summonedOnTurn = null;
+        delete source.necroRevivedTurn;
+        source.silenced = false;
+        source.sealed = false;
+        addLog(state, "ZONE", `${definition.name} 返回手牌並恢復卡牌基礎狀態`, { instanceId: source.instanceId });
         break;
+      }
       case "RETURN_SELF_TO_DECK_SHUFFLE": {
         moveCard(state, source, "DECK", "ALTERNATE_RETURN_TO_DECK");
         const shuffled = shuffleSeeded(state.players[playerId].deck, state.rngSeed);
@@ -794,7 +840,7 @@ function resolveEffectList(
         const hits = state.players[playerId].fields.filter((field) => getCardDefinition(field.definitionId).subtype.includes(effect.subtype)).length;
         const candidates = getLegalEnemyEffectTargets(state, playerId).map((card) => card.instanceId);
         if (hits === 0 || candidates.length === 0) {
-          notifyEffectSkipped(state, playerId, source, hits === 0 ? `我方場上沒有符合 ${effect.subtype} 的立場` : "對手場上沒有可指定的合法手下");
+          notifyEffectSkipped(state, playerId, source, hits === 0 ? `我方場上沒有符合「${getSubtypeLabel(effect.subtype)}」的立場` : "對手場上沒有可指定的合法手下");
           break;
         }
         state.pendingChoice = {
@@ -972,7 +1018,7 @@ function resolveEffectList(
             && getCardDefinition(card.definitionId).subtype.includes(effect.subtype))
           .map((card) => card.instanceId);
         if (candidates.length === 0) {
-          notifyEffectSkipped(state, playerId, source, `手牌中沒有其他 ${effect.subtype} 手下可返回牌組`);
+          notifyEffectSkipped(state, playerId, source, `手牌中沒有其他「${getSubtypeLabel(effect.subtype)}」手下可返回牌組`);
           const boundary = skipCommaChain(effectIndex);
           if (boundary === undefined) return false;
           effectIndex = boundary;
@@ -982,7 +1028,7 @@ function resolveEffectList(
           type: "EFFECT_CARDS",
           playerId,
           sourceInstanceId: source.instanceId,
-          prompt: `指定手牌 1 張其他 ${effect.subtype} 手下返回牌組並洗牌`,
+          prompt: `指定手牌 1 張其他「${getSubtypeLabel(effect.subtype)}」手下返回牌組並洗牌`,
           count: 1,
           candidateInstanceIds: candidates,
           resolution: { type: "RETURN_HAND_MINION_TO_DECK_SHUFFLE_DRAW_BY_COST", threshold: effect.threshold, low: effect.low, high: effect.high },

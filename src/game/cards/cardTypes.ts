@@ -46,6 +46,7 @@ export type ConditionDefinition =
   | { type: "MAX_MANA_AT_LEAST"; value: number }
   | { type: "FRIENDLY_ORIGINAL_COST_AT_LEAST"; value: number }
   | { type: "FRIENDLY_FIELD_SUBTYPE"; subtype: string }
+  | { type: "FRIENDLY_MINION_SUBTYPE"; subtype: string; excludeSource?: boolean }
   | { type: "FRIENDLY_SAME_FIELD_COUNT_AT_LEAST"; value: number }
   | { type: "HERO_HP_BELOW"; value: number }
   | { type: "SUMMONED_THIS_GAME_AT_LEAST"; value: number }
@@ -58,6 +59,7 @@ export type EffectDefinition =
   | { type: "GAIN_MANA"; value: number }
   | { type: "DRAW"; value: number }
   | { type: "HEAL_HERO"; value: number }
+  | { type: "HEAL_ALL_FRIENDLY_MINIONS"; value: number }
   | { type: "MODIFY_SELF_HEALTH"; value: number }
   | { type: "MODIFY_SELF_ATTACK"; value: number }
   | { type: "MODIFY_SELF_ATTACK_UNTIL_LEAVES"; value: number }
@@ -169,6 +171,7 @@ export interface CardDefinition {
     | { event: "START_TURN_MAX_MANA_AT_LEAST"; value: number }
     | { event: "NECROMANCY_AT_LEAST"; value: number }
     | { event: "RECYCLE_CHARGE_AT_LEAST"; value: number }
+    | { event: "SUMMONED_THIS_GAME_AT_LEAST"; value: number }
     | { event: "NON_NORMAL_HAND_ENTRY_SUMMONED_THIS_GAME_AT_LEAST"; value: number };
   enterFieldEffects?: EffectDefinition[];
   activatedEffect?: {

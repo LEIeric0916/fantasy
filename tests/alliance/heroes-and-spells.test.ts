@@ -46,6 +46,48 @@ describe("絕杰榮耀與聯盟絕杰", () => {
     resolvePendingEffects(state);
     expect(state.players.P1.hand.some((card) => card.instanceId === hero.instanceId)).toBe(true);
     expect(state.players.P1.extraDeck.some((card) => card.instanceId === hero.instanceId)).toBe(false);
+    expect(hero).toMatchObject({ currentAttack: 5, currentHealth: 5, maxHealth: 5, damageTaken: 0 });
+  });
+
+  it("奧斯但丁死亡返回手牌後再次打出，不會因沿用0血而再次死亡", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    state.players.P1.summonedThisGame = 20;
+    const hero = putCard(state, "P1", "TOKEN_ALLIANCE_HERO_AUGUSTIN", "MINION", "replay-after-death");
+    hero.currentHealth = 0;
+    hero.damageTaken = 5;
+    destroyMinion(state, hero, "TEST_DEATH");
+    resolvePendingEffects(state);
+    expect(state.players.P1.hand.find((card) => card.instanceId === hero.instanceId)?.currentHealth).toBe(5);
+
+    const enemyOne = putCard(state, "P2", "ALLIANCE_012", "MINION", "enemy-one");
+    putCard(state, "P2", "ALLIANCE_012", "MINION", "enemy-two");
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: hero.instanceId }).state;
+    expect(state.pendingChoice).toMatchObject({ type: "EFFECT_CARDS" });
+    state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [enemyOne.instanceId] }).state;
+
+    expect(state.players.P1.minions.find((card) => card.instanceId === hero.instanceId)).toMatchObject({
+      currentHealth: 5,
+      damageTaken: 0,
+    });
+    expect(state.players.P1.hand.some((card) => card.instanceId === hero.instanceId)).toBe(false);
+  });
+
+  it("舊對局中殘留0血的手牌奧斯但丁，打出時會自動修復", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    const hero = putCard(state, "P1", "TOKEN_ALLIANCE_HERO_AUGUSTIN", "HAND", "legacy-zero-health");
+    hero.currentHealth = 0;
+    hero.damageTaken = 5;
+    const enemy = putCard(state, "P2", "ALLIANCE_012", "MINION", "legacy-enemy");
+
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: hero.instanceId }).state;
+    state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [enemy.instanceId] }).state;
+
+    expect(state.players.P1.minions.find((card) => card.instanceId === hero.instanceId)).toMatchObject({
+      currentHealth: 5,
+      damageTaken: 0,
+    });
   });
 
   it("瓦倫泰回合結束永久賦予場上手下傷害上限4，並給予玩家圣盾", () => {

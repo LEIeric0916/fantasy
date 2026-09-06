@@ -77,6 +77,23 @@ function playCard(state: GameState, playerId: PlayerId, instanceId: string): voi
   const card = player.hand.find((candidate) => candidate.instanceId === instanceId);
   if (!card) throw new InvalidActionError("卡牌不在我方手牌");
   const definition = getCardDefinition(card.definitionId);
+  if (definition.cardType === "MINION" && (card.currentHealth ?? 1) <= 0) {
+    const preservedCost = card.currentCost;
+    card.currentAttack = definition.attack;
+    card.currentHealth = definition.health;
+    card.maxHealth = definition.health;
+    card.damageTaken = 0;
+    card.keywords = [...definition.keywords];
+    card.counters = { ...definition.initialCounters };
+    card.flags = {};
+    card.attacksUsedThisTurn = 0;
+    card.summonedOnTurn = null;
+    delete card.necroRevivedTurn;
+    card.silenced = false;
+    card.sealed = false;
+    card.currentCost = preservedCost;
+    addLog(state, "RULE", `${definition.name} 修復手牌中殘留的0血狀態`, { instanceId: card.instanceId });
+  }
   if (!isCardImplemented(definition)) {
     const reason = definition.originalCost === null
       ? "卡牌關鍵數值為 null，不能猜測"

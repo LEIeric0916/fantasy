@@ -77,10 +77,10 @@ describe("瀏覽器入口流程", () => {
     click(button("已交接，顯示畫面"));
 
     expect(container.textContent).toContain("TURN 1 · MAIN");
-    expect(container.textContent).toContain("P1 · MACHINE");
-    expect(container.textContent).toContain("P2 · ALLIANCE");
+    expect(container.textContent).toContain("P1 · 機械");
+    expect(container.textContent).toContain("P2 · 聯盟");
     expect(container.textContent).toContain("手牌4");
-    expect(container.textContent).toContain("牌庫34");
+    expect(container.textContent).toContain("牌庫36");
   });
 
   it("P1 與 P2 陣營選單都能選擇隨機陣營", () => {
@@ -99,8 +99,8 @@ describe("瀏覽器入口流程", () => {
     click(button("確認換牌（0）"));
     click(button("已交接，顯示畫面"));
 
-    expect(container.textContent).toContain("P1 · DRAGON");
-    expect(container.textContent).toContain("P2 · MACHINE");
+    expect(container.textContent).toContain("P1 · 龍族");
+    expect(container.textContent).toContain("P2 · 機械");
     random.mockRestore();
   });
 
@@ -124,7 +124,7 @@ describe("瀏覽器入口流程", () => {
     click(button("已交接，顯示畫面"));
 
     expect(container.textContent).toContain("混沌模式");
-    expect(container.textContent).toContain("龍族＋不朽者");
+    expect(container.textContent).toContain("龍族＋不朽");
     expect(container.textContent).toContain("機械＋聯盟");
     for (const label of ["死靈數", "棄堆龍族", "回收充能", "協作數"]) {
       expect(container.textContent).toContain(label);
@@ -327,6 +327,8 @@ describe("瀏覽器入口流程", () => {
 
     click(container.querySelector<HTMLButtonElement>('button[aria-label="查看機械牌組"]')!);
     expect(container.textContent).toContain("機械帝國遊騎兵");
+    expect(container.textContent).toContain("機械・軍隊");
+    expect(container.textContent).not.toContain("MACHINE · ARMY");
     expect(container.textContent).not.toContain("赤焰的龍皇兵");
     expect(container.textContent).toContain("牌組卡");
     expect(container.textContent).toContain("預備卡表");

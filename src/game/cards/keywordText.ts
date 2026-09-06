@@ -20,7 +20,7 @@ export const KEYWORD_TEXT: Record<Keyword, KeywordText> = {
   DISCIPLINE: { label: "紀律", description: "在場時不受對手效果造成的攻擊／生命改值、轉變、沉默與封印；仍會受到效果傷害，我方與自身效果也可影響它。" },
   SANCTUARY: { label: "庇護", description: "在場時不能被效果或必殺直接消滅；仍可能因生命歸零或消失而離場。" },
   INVINCIBLE: { label: "無敵", description: "不受攻擊與效果傷害、改值、轉變、沉默、封印、直接消滅及消失。" },
-  LETHAL: { label: "必殺", description: "與此手下交戰的敵方手下，在交戰傷害結算後被消滅。" },
+  LETHAL: { label: "必殺", description: "只要與敵方手下完成交戰，傷害結算後便將其消滅；即使傷害為0或被聖盾術阻擋仍會生效。" },
   WINDFURY: { label: "風怒", description: "每回合可攻擊2次。" },
   ON_KILL: { label: "殺意", description: "具有殺意的手下主動攻擊並透過該次交戰消滅敵方手下，且結算後自身仍存活在場上時，發動牌面記載的效果。被攻擊時不會發動。" },
   AURA: { label: "光環", description: "來源在場期間，牌面記載的持續效果生效；來源離場時停止。" },

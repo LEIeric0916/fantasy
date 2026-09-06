@@ -4,8 +4,8 @@ import { createCardInstance } from "../../src/game/state/CardInstance";
 
 describe("卡牌資料", () => {
   it("完整載入六個 JSON 且 ID 唯一", () => {
-    expect(cardDefinitions).toHaveLength(104);
-    expect(new Set(cardDefinitions.map((card) => card.id)).size).toBe(104);
+    expect(cardDefinitions).toHaveLength(105);
+    expect(new Set(cardDefinitions.map((card) => card.id)).size).toBe(105);
     expect(validateCardData().filter((issue) => issue.code === "DUPLICATE_ID")).toEqual([]);
   });
 
@@ -30,15 +30,26 @@ describe("卡牌資料", () => {
     ]);
   });
 
-  it.each([["DRAGON", 40], ["UNDEAD", 40], ["MACHINE", 40], ["ALLIANCE", 38]] as const)(
+  it.each([["DRAGON", 40], ["UNDEAD", 40], ["MACHINE", 40], ["ALLIANCE", 40]] as const)(
     "%s 主牌張數嚴格使用資料值 %i",
     (faction, expected) => {
       expect(getMainDeckDefinitions(faction).reduce((sum, card) => sum + card.deckCount, 0)).toBe(expected);
     },
   );
 
-  it("不會自動補齊聯盟缺少的 2 張", () => {
-    expect(getMainDeckDefinitions("ALLIANCE").reduce((sum, card) => sum + card.deckCount, 0)).toBe(38);
+  it("聯盟新增亞斯特並調整銀彈後維持40張", () => {
+    expect(getMainDeckDefinitions("ALLIANCE").reduce((sum, card) => sum + card.deckCount, 0)).toBe(40);
+  });
+
+  it("軍刀、突擊官與爆襲萊恩皆為人類指揮官", () => {
+    for (const id of ["ALLIANCE_007", "ALLIANCE_004", "ALLIANCE_011"]) {
+      expect(getCardDefinition(id).subtype).toEqual(["HUMAN", "COMMANDER"]);
+    }
+  });
+
+  it("不朽牌組收錄2張瑞瑟特與3張亞恩", () => {
+    expect(getCardDefinition("UNDEAD_005").deckCount).toBe(2);
+    expect(getCardDefinition("UNDEAD_008").deckCount).toBe(3);
   });
 
   it("最後修正：皇家神騎士消滅對手最多3手下", () => {
@@ -46,12 +57,12 @@ describe("卡牌資料", () => {
     expect(definition.effectsText).toContain("消滅對手最多3手下。協作20");
   });
 
-  it("聯盟新增3張革命戰線銀彈克加魯", () => {
+  it("聯盟的革命戰線銀彈克加魯調整為2張", () => {
     const definition = getCardDefinition("ALLIANCE_013");
-    expect(definition.deckCount).toBe(3);
+    expect(definition.deckCount).toBe(2);
     expect(definition.keywords).toEqual(expect.arrayContaining(["EFFECT_SUMMON", "RUSH", "BATTLECRY"]));
     expect(definition.keywords).not.toContain("DEATHRATTLE");
-    expect(definition.effectSummon).toEqual({ event: "NON_NORMAL_HAND_ENTRY_SUMMONED_THIS_GAME_AT_LEAST", value: 10 });
+    expect(definition.effectSummon).toEqual({ event: "SUMMONED_THIS_GAME_AT_LEAST", value: 10 });
     expect(definition.effects).toEqual([{ type: "DAMAGE_TARGET_ENEMY_MINION", value: 3 }]);
     expect(definition.triggeredEffects?.DEATHRATTLE).toBeUndefined();
     expect(getCardDefinition("TOKEN_ALLIANCE_HEROIC_GLORY").originalCost).toBe(2);

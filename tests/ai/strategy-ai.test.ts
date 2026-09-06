@@ -4,7 +4,7 @@ import { evaluateFactionStrategy, FACTION_STRATEGY_PROFILES } from "../../src/ga
 import { chooseHeuristicAction } from "../../src/game/ai/heuristicPolicy";
 import { getActingPlayerId } from "../../src/game/ai/legalActionEngine";
 import { chooseSearchAction } from "../../src/game/ai/searchPolicy";
-import { evaluatePublicState } from "../../src/game/ai/stateEvaluator";
+import { estimateOpponentDeckTempoRisk, evaluatePublicState } from "../../src/game/ai/stateEvaluator";
 import { refreshHandCosts } from "../../src/game/engine/costEngine";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { createInitialGame } from "../../src/game/state/createInitialGame";
@@ -25,6 +25,19 @@ describe("AI 公開局面評分", () => {
     expect(evaluatePublicState(second, "P1")).toBe(evaluatePublicState(first, "P1"));
   });
 
+  it("依公開牌組與下回合水晶預測威脅，但不需要讀取實際手牌內容", () => {
+    const alliance = mainState();
+    alliance.players.P2.faction = "ALLIANCE";
+    alliance.players.P2.deckFactions = ["ALLIANCE"];
+    alliance.players.P2.maxMana = 7;
+    const neutral = structuredClone(alliance);
+    neutral.players.P2.faction = "NEUTRAL";
+    neutral.players.P2.deckFactions = ["NEUTRAL"];
+
+    expect(estimateOpponentDeckTempoRisk(alliance.players.P1, alliance.players.P2))
+      .toBeGreaterThan(estimateOpponentDeckTempoRisk(neutral.players.P1, neutral.players.P2));
+  });
+
   it.each([
     ["普通", chooseHeuristicAction],
     ["困難", chooseSearchAction],
@@ -39,6 +52,54 @@ describe("AI 公開局面評分", () => {
       attackerId: attacker.instanceId,
       target: { type: "HERO", playerId: "P2" },
     });
+  });
+
+  it.each([
+    ["普通", chooseHeuristicAction],
+    ["困難", chooseSearchAction],
+  ] as const)("%s聯盟 AI 使用狄翁時，會攻擊玩家並以攻擊時效果同時解場", (_label, choose) => {
+    const state = mainState();
+    state.players.P1.faction = "ALLIANCE";
+    state.players.P1.hand = [];
+    state.players.P1.heroHp = 10;
+    const dion = putCard(state, "P1", "TOKEN_ALLIANCE_HERO_DION", "MINION", "attack-trigger-face");
+    dion.summonedOnTurn = state.turnNumber;
+    putCard(state, "P2", "ALLIANCE_004", "MINION", "enemy-one");
+    putCard(state, "P2", "ALLIANCE_005", "MINION", "enemy-two");
+
+    expect(choose(state, "P1", 731).action).toEqual({
+      type: "ATTACK",
+      playerId: "P1",
+      attackerId: dion.instanceId,
+      target: { type: "HERO", playerId: "P2" },
+    });
+  });
+
+  it.each([
+    ["普通", chooseHeuristicAction],
+    ["困難", chooseSearchAction],
+  ] as const)("%s機械 AI 會用可行動的機械帝國士兵開始處理多名高威脅皇家戰士", (_label, choose) => {
+    const state = mainState();
+    state.players.P1.faction = "MACHINE";
+    state.players.P1.deckFactions = ["MACHINE"];
+    state.players.P1.hand = [];
+    state.players.P1.heroHp = 18;
+    const mulius = putCard(state, "P1", "MACHINE_014", "MINION", "threat-planning-mulius");
+    mulius.summonedOnTurn = state.turnNumber;
+    for (let index = 0; index < 6; index += 1) {
+      const soldier = putCard(state, "P1", "TOKEN_MACHINE_EMPIRE_SOLDIER", "MINION", `threat-planning-soldier-${index}`);
+      soldier.summonedOnTurn = state.turnNumber;
+    }
+    putCard(state, "P2", "ALLIANCE_010", "MINION", "threat-planning-warrior-1");
+    putCard(state, "P2", "ALLIANCE_010", "MINION", "threat-planning-warrior-2");
+
+    const action = choose(state, "P1", 947).action;
+    expect(action?.type).toBe("ATTACK");
+    if (action?.type !== "ATTACK") throw new Error("AI 應開始處理敵方場面");
+    if (action.target.type !== "MINION") throw new Error("AI 應攻擊敵方手下");
+    const targetInstanceId = action.target.instanceId;
+    expect(state.players.P1.minions.find((card) => card.instanceId === action.attackerId)?.definitionId).toBe("TOKEN_MACHINE_EMPIRE_SOLDIER");
+    expect(state.players.P2.minions.find((card) => card.instanceId === targetInstanceId)?.definitionId).toBe("ALLIANCE_010");
   });
 
   it("困難 AI 面對對方下回合斬殺場攻時會優先解場", () => {

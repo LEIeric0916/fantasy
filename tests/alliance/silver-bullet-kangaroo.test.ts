@@ -15,19 +15,19 @@ function putInDeck(state: ReturnType<typeof mainState>, suffix: string) {
 }
 
 describe("革命戰線 銀彈克加魯", () => {
-  it("是聯盟牌組中的3張3費3/3人類軍隊手下", () => {
+  it("是聯盟牌組中的2張3費3/3人類軍隊手下", () => {
     expect(getCardDefinition("ALLIANCE_013")).toMatchObject({
       name: "革命戰線 銀彈克加魯",
       faction: "ALLIANCE",
       originalCost: 3,
       attack: 3,
       health: 3,
-      deckCount: 3,
+      deckCount: 2,
       subtype: ["HUMAN", "ARMY"],
     });
   });
 
-  it("協作10時經檢索上手會提示效果召喚，確認後戰吼只指定敵方手下造成3點傷害", () => {
+  it("協作10時在手牌便會提示效果召喚，確認後戰吼只指定敵方手下造成3點傷害", () => {
     let state = mainState();
     state.players.P1.hand = [];
     state.players.P1.deck = [];
@@ -50,19 +50,27 @@ describe("革命戰線 銀彈克加魯", () => {
     expect(enemy.currentHealth).toBe(2);
   });
 
-  it("通常抽牌不觸發；協作未達10時以其他方式上手也不觸發", () => {
-    for (const [collaboration, reason] of [[10, "NORMAL_DRAW"], [9, "EFFECT:TEST"]] as const) {
-      const state = mainState();
-      state.players.P1.hand = [];
-      state.players.P1.deck = [];
-      state.players.P1.summonedThisGame = collaboration;
-      const kangaroo = putInDeck(state, `${collaboration}-${reason}`);
-      drawCard(state, "P1", reason);
-      enqueueStateBasedEffectSummons(state, "P1");
-      resolvePendingEffects(state);
-      expect(state.players.P1.hand.some((card) => card.instanceId === kangaroo.instanceId)).toBe(true);
-      expect(state.pendingChoice).toBeUndefined();
-    }
+  it("協作10時通常抽牌也能觸發；協作未達10時不觸發", () => {
+    const ready = mainState();
+    ready.players.P1.hand = [];
+    ready.players.P1.deck = [];
+    ready.players.P1.summonedThisGame = 10;
+    const readyKangaroo = putInDeck(ready, "normal-draw-ready");
+    drawCard(ready, "P1", "NORMAL_DRAW");
+    enqueueStateBasedEffectSummons(ready, "P1");
+    resolvePendingEffects(ready);
+    expect(ready.pendingChoice).toMatchObject({ type: "EFFECT_SUMMON_CONFIRM", sourceInstanceId: readyKangaroo.instanceId });
+
+    const notReady = mainState();
+    notReady.players.P1.hand = [];
+    notReady.players.P1.deck = [];
+    notReady.players.P1.summonedThisGame = 9;
+    const waitingKangaroo = putInDeck(notReady, "normal-draw-waiting");
+    drawCard(notReady, "P1", "EFFECT:TEST");
+    enqueueStateBasedEffectSummons(notReady, "P1");
+    resolvePendingEffects(notReady);
+    expect(notReady.players.P1.hand.some((card) => card.instanceId === waitingKangaroo.instanceId)).toBe(true);
+    expect(notReady.pendingChoice).toBeUndefined();
   });
 
   it("協作10時由效果抽牌上手仍會效果召喚，但被消滅時不再抽牌", () => {

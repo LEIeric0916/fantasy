@@ -3,20 +3,7 @@ import { cardDefinitions, cardRegistry } from "../game/cards/cardRegistry";
 import type { CardDefinition, CardType, Faction } from "../game/cards/cardTypes";
 import { getKeywordText } from "../game/cards/keywordText";
 import { GlossaryText, KeywordGlossaryButton } from "./GlossaryTerm";
-
-const factionLabels: Record<Faction, string> = {
-  DRAGON: "龍族",
-  UNDEAD: "不朽者",
-  MACHINE: "機械",
-  ALLIANCE: "聯盟",
-  NEUTRAL: "中立／衍生",
-};
-
-const cardTypeLabels: Record<CardType, string> = {
-  MINION: "手下",
-  SPELL: "法術",
-  FIELD: "立場",
-};
+import { cardTypeLabels, factionLabels, formatSubtypeLabels } from "../game/cards/displayLabels";
 
 const deckFactions: Faction[] = ["DRAGON", "UNDEAD", "MACHINE", "ALLIANCE"];
 type CatalogSectionKind = "DECK" | "RESERVE" | "GENERATED";
@@ -108,7 +95,7 @@ export function CardCatalog({ onBack }: Props) {
     .filter((card) => cardType === "ALL" || card.cardType === cardType)
     .filter((card) => {
       if (!normalizedQuery) return true;
-      return [card.name, card.effectsText, card.subtype.join(" "), ...card.keywords.map((keyword) => getKeywordText(keyword).label)]
+      return [card.name, card.effectsText, card.subtype.join(" "), formatSubtypeLabels(card.subtype), ...card.keywords.map((keyword) => getKeywordText(keyword).label)]
         .join(" ")
         .toLocaleLowerCase("zh-Hant")
         .includes(normalizedQuery);
@@ -182,7 +169,7 @@ function CatalogCardButton({ card, kind, onInspect }: { card: CardDefinition; ki
     <span className="catalog-cost">{card.originalCost ?? "?"}</span>
     <small>{factionLabels[card.faction]} · {cardTypeLabels[card.cardType]}</small>
     <strong>{card.name}</strong>
-    <span className="catalog-subtype">{card.subtype.join(" · ") || "無種族"}</span>
+    <span className="catalog-subtype">{formatSubtypeLabels(card.subtype)}</span>
     {card.cardType === "MINION" && <span className="catalog-stats"><b>⚔ {card.attack ?? "?"}</b><b>♥ {card.health ?? "?"}</b></span>}
     <span className="catalog-keywords">{card.keywords.map((keyword) => getKeywordText(keyword).label).join(" · ") || "無關鍵字"}</span>
     <span className="catalog-effect">{card.effectsText || "無卡牌效果"}</span>
@@ -196,7 +183,7 @@ function CatalogCardModal({ card, onInspect, onClose }: { card: CardDefinition; 
   return <div className="card-modal-backdrop" role="presentation" onClick={onClose}>
     <section className="card-modal" role="dialog" aria-modal="true" aria-label={`${card.name} 卡牌資訊`} onClick={(event) => event.stopPropagation()}>
       <button className="modal-close" onClick={onClose} aria-label="關閉卡牌資訊">×</button>
-      <p className="eyebrow">{factionLabels[card.faction]} · {cardTypeLabels[card.cardType]} · {card.subtype.join(" · ") || "無種族"}</p>
+      <p className="eyebrow">{factionLabels[card.faction]} · {cardTypeLabels[card.cardType]} · {formatSubtypeLabels(card.subtype)}</p>
       <h2>{card.name}</h2>
       <div className="card-modal-stats">
         <span>費用 <strong>{card.originalCost ?? "?"}</strong></span>

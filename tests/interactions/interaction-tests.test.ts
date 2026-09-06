@@ -83,6 +83,28 @@ describe("B. 戰斗與防護", () => {
     state = applyAction(state, { type: "ATTACK", playerId: "P1", attackerId: attacker.instanceId, target: { type: "MINION", instanceId: defender.instanceId } }).state;
     expect(state.players.P2.extraDeck.some((card) => card.instanceId === defender.instanceId)).toBe(true);
   });
+  it("B04-0｜必殺攻擊聖盾術手下時，即使傷害被阻擋仍會將其消滅", () => {
+    let state = mainState();
+    const attacker = putCard(state, "P1", "UNDEAD_001", "MINION", "lethal-vs-shield");
+    attacker.currentAttack = 0;
+    attacker.keywords.push("LETHAL");
+    const defender = putCard(state, "P2", "ALLIANCE_005", "MINION", "shielded-target");
+
+    state = applyAction(state, { type: "ATTACK", playerId: "P1", attackerId: attacker.instanceId, target: { type: "MINION", instanceId: defender.instanceId } }).state;
+
+    expect(state.players.P2.graveyard.some((card) => card.instanceId === defender.instanceId)).toBe(true);
+  });
+  it("B04-0b｜必殺防守手下未造成反擊傷害時，仍會消滅交戰的聖盾術攻擊者", () => {
+    let state = mainState();
+    const attacker = putCard(state, "P1", "ALLIANCE_005", "MINION", "shielded-attacker");
+    const defender = putCard(state, "P2", "UNDEAD_001", "MINION", "lethal-defender-zero");
+    defender.currentAttack = 0;
+    defender.keywords.push("LETHAL", "CANNOT_COUNTERATTACK");
+
+    state = applyAction(state, { type: "ATTACK", playerId: "P1", attackerId: attacker.instanceId, target: { type: "MINION", instanceId: defender.instanceId } }).state;
+
+    expect(state.players.P1.graveyard.some((card) => card.instanceId === attacker.instanceId)).toBe(true);
+  });
   it("B04-1｜庇護阻擋必殺，聖印龍失去聖盾後不會被皇家匕首直接消滅", () => {
     let state = mainState();
     state.activePlayerId = "P2";

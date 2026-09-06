@@ -172,7 +172,7 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
       ],
     },
   ],
-  ALLIANCE_011: [{ type: "SNAPSHOT_ENEMY_COUNT_AOE_HERO_DRAW_SELF_DEBUFF", aoeDamage: 4, heroDamage: 3, draw: 2 }],
+  ALLIANCE_011: [{ type: "SNAPSHOT_ENEMY_COUNT_AOE_HERO_DRAW_SELF_DEBUFF", aoeDamage: 4, heroDamage: 3, draw: 1 }],
   ALLIANCE_012: [
     { type: "DESTROY_DISTINCT_ENEMY_MINIONS", count: 3, minCount: 0 },
     { type: "SEGMENT_BREAK" },
@@ -183,6 +183,14 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
     },
   ],
   ALLIANCE_013: [{ type: "DAMAGE_TARGET_ENEMY_MINION", value: 3 }],
+  ALLIANCE_014: [
+    { type: "HEAL_HERO", value: 4 },
+    {
+      type: "CONDITIONAL",
+      condition: { type: "SUMMONED_THIS_GAME_AT_LEAST", value: 15 },
+      effects: [{ type: "GAIN_SELF_KEYWORD", keyword: "DIVINE_SHIELD" }],
+    },
+  ],
   TOKEN_ALLIANCE_HEROIC_GLORY: [{
     type: "HEROIC_GLORY",
     heroDefinitionIds: ["TOKEN_ALLIANCE_HERO_AUGUSTIN", "TOKEN_ALLIANCE_HERO_DION", "TOKEN_ALLIANCE_HERO_VALENTINE"],
@@ -360,7 +368,7 @@ const enterFieldEffects: Record<string, EffectDefinition[]> = {
   TOKEN_UNDEAD_FINAL_KING_HACHIGOKU: [
     { type: "DAMAGE_ALL_ENEMY_MINIONS", value: 5 },
     { type: "HEAL_HERO", value: 3 },
-    { type: "NECROMANCY", cost: 10, effects: [{ type: "DAMAGE_ENEMY_HERO", value: 5 }] },
+    { type: "NECROMANCY", cost: 8, effects: [{ type: "DAMAGE_ENEMY_HERO", value: 4 }] },
   ],
   UNDEAD_011: [{
     type: "SUMMON_WITH_KEYWORD_IF_FIELD",
@@ -466,6 +474,22 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
   },
   ALLIANCE_012: {
     DEATHRATTLE: [{ type: "SUMMON", definitionId: "TOKEN_ALLIANCE_ROYAL_PALADIN", count: 2 }],
+  },
+  ALLIANCE_014: {
+    END_TURN: [
+      {
+        type: "CONDITIONAL",
+        condition: { type: "FRIENDLY_MINION_SUBTYPE", subtype: "ARMY", excludeSource: true },
+        silentOnFailure: true,
+        effects: [{ type: "HEAL_ALL_FRIENDLY_MINIONS", value: 3 }],
+      },
+      {
+        type: "CONDITIONAL",
+        condition: { type: "FRIENDLY_MINION_SUBTYPE", subtype: "COMMANDER", excludeSource: true },
+        silentOnFailure: true,
+        effects: [{ type: "DAMAGE_TARGET_ENEMY_MINION", value: 5 }],
+      },
+    ],
   },
   TOKEN_ALLIANCE_HERO_AUGUSTIN: {
     DEATHRATTLE: [{ type: "RETURN_SELF_TO_HAND" }],
@@ -633,7 +657,7 @@ const effectSummons: Record<string, CardDefinition["effectSummon"]> = {
   DRAGON_010: { event: "START_TURN_MAX_MANA_AT_LEAST", value: 8 },
   UNDEAD_010: { event: "NECROMANCY_AT_LEAST", value: 10 },
   MACHINE_011: { event: "RECYCLE_CHARGE_AT_LEAST", value: 6 },
-  ALLIANCE_013: { event: "NON_NORMAL_HAND_ENTRY_SUMMONED_THIS_GAME_AT_LEAST", value: 10 },
+  ALLIANCE_013: { event: "SUMMONED_THIS_GAME_AT_LEAST", value: 10 },
 };
 
 const activatedEffects: Record<string, CardDefinition["activatedEffect"]> = {};
@@ -681,7 +705,7 @@ const fieldWinConditions: Record<string, CardDefinition["fieldWinCondition"]> = 
 };
 
 const maxFriendlyCombatKillTriggersPerTurn: Record<string, number> = {
-  UNDEAD_010: 3,
+  UNDEAD_010: 2,
 };
 
 const rawFiles = [dragonData, undeadData, machineData, allianceData, neutralData, tokenData] as unknown as CardFile[];
@@ -781,7 +805,7 @@ export function validateCardData(): CardDataIssue[] {
       issues.push({ code: "MISSING_EFFECT_IMPLEMENTATION", cardId: card.id, message: "光環只有文字，尚未連接持續或觸發效果" });
     }
   }
-  const expected: Partial<Record<Faction, number>> = { DRAGON: 40, UNDEAD: 40, MACHINE: 40, ALLIANCE: 38 };
+  const expected: Partial<Record<Faction, number>> = { DRAGON: 40, UNDEAD: 40, MACHINE: 40, ALLIANCE: 40 };
   for (const [faction, count] of Object.entries(expected) as [Faction, number][]) {
     const actual = getMainDeckDefinitions(faction).reduce((sum, card) => sum + card.deckCount, 0);
     if (actual !== count) issues.push({ code: "DECK_SIZE_MISMATCH", message: `${faction}: expected ${count}, got ${actual}` });

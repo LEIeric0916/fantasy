@@ -10,6 +10,7 @@ import { refreshHandCosts } from "../game/engine/costEngine";
 import { applyAction, type GameAction } from "../game/engine/gameEngine";
 import { getPlayerFieldLimit, playerHasFaction, type GameState, type PlayerState } from "../game/state/GameState";
 import { CardView } from "./CardView";
+import { cardTypeLabels, factionLabels, formatSubtypeLabels } from "../game/cards/displayLabels";
 
 const AI_ACTION_DELAY_MS = 2_000;
 const ACTION_ANIMATION_MS = 900;
@@ -29,11 +30,9 @@ function opponentOf(playerId: PlayerId): PlayerId {
   return playerId === "P1" ? "P2" : "P1";
 }
 
-const factionLabels = { DRAGON: "龍族", UNDEAD: "不朽者", MACHINE: "機械", ALLIANCE: "聯盟", NEUTRAL: "中立" } as const;
-
 function playerFactionLabel(player: PlayerState): string {
   const factions = player.deckFactions?.length > 1 ? player.deckFactions : [player.faction];
-  if (factions.length === 1) return player.faction;
+  if (factions.length === 1) return factionLabels[player.faction];
   return factions.map((faction) => factionLabels[faction]).join("＋");
 }
 
@@ -949,7 +948,7 @@ function CardDetailModal({ card, onClose, tutorialCloseHint = false }: { card: C
     <section className="card-modal" role="dialog" aria-modal="true" aria-label={`${definition.name} 卡牌資訊`} onClick={(event) => event.stopPropagation()}>
       <button className="modal-close" onClick={onClose} aria-label="關閉卡牌資訊">×</button>
       {tutorialCloseHint && <p className="tutorial-modal-hint">閱讀完成後，點擊資訊欄外任意一處即可關閉，並繼續下一步。</p>}
-      <p className="eyebrow">{definition.cardType} · {definition.subtype.join(" · ") || "無種族"}</p>
+      <p className="eyebrow">{cardTypeLabels[definition.cardType]} · {formatSubtypeLabels(definition.subtype)}</p>
       <h2>{definition.name}</h2>
       <div className="card-modal-stats">
         <span>費用 <strong>{card.currentCost ?? definition.originalCost ?? "?"}</strong></span>

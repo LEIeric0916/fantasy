@@ -112,8 +112,8 @@ export function resolveAttack(state: GameState, playerId: PlayerId, attackerId: 
   });
   const attackerProtectedFromLethal = hasActiveKeyword(attacker, "SANCTUARY") || hasActiveKeyword(attacker, "INVINCIBLE");
   const defenderProtectedFromLethal = hasActiveKeyword(defender, "SANCTUARY") || hasActiveKeyword(defender, "INVINCIBLE");
-  const attackerDead = (attacker.currentHealth ?? 1) <= 0 || (countered > 0 && hasActiveKeyword(defender, "LETHAL") && !attackerProtectedFromLethal);
-  const defenderDead = (defender.currentHealth ?? 1) <= 0 || (dealt > 0 && hasActiveKeyword(attacker, "LETHAL") && !defenderProtectedFromLethal);
+  const attackerDead = (attacker.currentHealth ?? 1) <= 0 || (hasActiveKeyword(defender, "LETHAL") && !attackerProtectedFromLethal);
+  const defenderDead = (defender.currentHealth ?? 1) <= 0 || (hasActiveKeyword(attacker, "LETHAL") && !defenderProtectedFromLethal);
   const timingContext = createTimingContext(state, `COMBAT:${attacker.instanceId}:${defender.instanceId}`);
   if (attackerDead) destroyMinion(state, attacker, "COMBAT_DEATH", timingContext);
   if (defenderDead) destroyMinion(state, defender, "COMBAT_DEATH", timingContext);

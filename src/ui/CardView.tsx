@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { getCardDefinition } from "../game/cards/cardRegistry";
 import { getCardKeywordText } from "../game/cards/keywordText";
 import type { CardInstance } from "../game/cards/cardTypes";
+import { cardTypeLabels, formatSubtypeLabels } from "../game/cards/displayLabels";
 
 interface Props {
   card: CardInstance;
@@ -45,6 +46,9 @@ export function CardView({
   const [entranceActive, setEntranceActive] = useState(Boolean(entering));
   const plagueMarks = card.counters.plagueMarks;
   const plagueThreshold = definition.transformAura?.counter === "plagueMarks" ? definition.transformAura.threshold : 6;
+  const displayedHandHealth = card.zone === "HAND" && card.currentHealth !== null && card.currentHealth <= 0
+    ? definition.health
+    : card.currentHealth;
   const boardStatuses = card.zone === "MINION" || card.zone === "FIELD" ? [
     ...(card.sealed ? [{ key: "sealed", label: "封印" }] : []),
     ...(card.keywords.includes("TAUNT") && !card.sealed ? [{ key: "taunt", label: "嘲諷" }] : []),
@@ -141,8 +145,8 @@ export function CardView({
       }} title={handSummary ? undefined : definition.effectsText}>
         <span className="cost">{card.currentCost ?? "?"}</span>
         <strong>{definition.name}</strong>
-        {!handSummary && <small>{definition.subtype.join(" · ") || definition.cardType}</small>}
-        {definition.cardType === "MINION" && !isBattleMinion && <span className="stats"><b className="hand-attack">{card.currentAttack ?? "?"}</b><i> / </i><b className="hand-health">{card.currentHealth ?? "?"}</b></span>}
+        {!handSummary && <small>{definition.subtype.length > 0 ? formatSubtypeLabels(definition.subtype) : cardTypeLabels[definition.cardType]}</small>}
+        {definition.cardType === "MINION" && !isBattleMinion && <span className="stats"><b className="hand-attack">{card.currentAttack ?? "?"}</b><i> / </i><b className="hand-health">{displayedHandHealth ?? "?"}</b></span>}
         {!handSummary && <small>{keywordText.map((keyword) => keyword.label).join(" · ") || "—"}</small>}
         {!handSummary && <span className="effect">{definition.effectsText || "無卡牌效果"}</span>}
       </button>

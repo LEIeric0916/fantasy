@@ -72,7 +72,7 @@
       "originalCost": 3,
       "attack": 2,
       "health": 2,
-      "deckCount": 3,
+      "deckCount": 2,
       "keywords": ["BATTLECRY", "DEATHRATTLE"],
       "effectsText": "戰吼：復活我方棄堆1張消耗3以下的手下。死亡之聲：若我方場上有黑暗之書，抽1張牌。",
       "generatedOnly": false,
@@ -117,7 +117,7 @@
       "originalCost": 4,
       "attack": 3,
       "health": 7,
-      "deckCount": 2,
+      "deckCount": 3,
       "keywords": ["RUSH", "TAUNT", "BATTLECRY", "AURA"],
       "effectsText": "衝刺，嘲諷。戰吼：捨棄1張手牌，召喚2張不同名的黑暗之書。光環：回合結束時恢復我方玩家3HP，使我方1名手下獲得聖盾術。",
       "generatedOnly": false,
@@ -149,9 +149,9 @@
       "health": 5,
       "deckCount": 3,
       "keywords": ["EFFECT_SUMMON", "BATTLECRY", "AURA"],
-      "effectsText": "效果召喚：死靈數為10以上時。戰吼：召喚1名「哀慟的佈道者」。光環：我方手下因交戰使對手手下消滅時，給予對手玩家2點傷害，一回合最多3次。",
+      "effectsText": "效果召喚：死靈數為10以上時。戰吼：召喚1名「哀慟的佈道者」。光環：我方手下因交戰使對手手下消滅時，給予對手玩家2點傷害，一回合最多2次。",
       "generatedOnly": false,
-      "notes": "保留正式卡表的2點傷害；效果傷害每張卡戎每回合最多發動3次；效果召喚條件為死靈數10以上。"
+      "notes": "保留正式卡表的2點傷害；效果傷害每張卡戎每回合最多發動2次；效果召喚條件為死靈數10以上。"
     },
     {
       "id": "UNDEAD_011",

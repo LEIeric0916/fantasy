@@ -1,10 +1,10 @@
 import { getCardDefinition } from "../cards/cardRegistry";
-import type { ConditionDefinition, EffectDefinition, PlayerId } from "../cards/cardTypes";
+import type { ConditionDefinition, EffectDefinition, Keyword, PlayerId } from "../cards/cardTypes";
 import { applyAction, type GameAction } from "../engine/gameEngine";
 import { playerHasFaction, type GameState } from "../state/GameState";
 import { getActingPlayerId, getLegalActions } from "./legalActionEngine";
 import { nextAiRandom, type RandomDecision } from "./randomPolicy";
-import { evaluatePublicCardValue, evaluatePublicState } from "./stateEvaluator";
+import { evaluatePublicCardValue, evaluatePublicMinionThreat, evaluatePublicState } from "./stateEvaluator";
 
 interface SearchCandidate { action: GameAction; state: GameState; score: number; tacticalScore: number }
 interface SearchBudget { remaining: number }
@@ -120,10 +120,19 @@ function projectedOpponentBurstRisk(state: GameState, playerId: PlayerId): numbe
 }
 
 function minionCanKill(attacker: { currentAttack: number | null; sealed: boolean; keywords: readonly string[] }, defender: { currentHealth: number | null; sealed: boolean; keywords: readonly string[] }): boolean {
-  if (attacker.sealed) return false;
-  if (!defender.sealed && (defender.keywords.includes("DIVINE_SHIELD") || defender.keywords.includes("INVINCIBLE"))) return false;
-  return (attacker.currentAttack ?? 0) >= (defender.currentHealth ?? Number.POSITIVE_INFINITY)
-    || attacker.keywords.includes("LETHAL");
+  const defenderHas = (keyword: Keyword) => !defender.sealed && defender.keywords.includes(keyword);
+  if (defenderHas("INVINCIBLE")) return false;
+  if (!attacker.sealed && attacker.keywords.includes("LETHAL") && !defenderHas("SANCTUARY")) return true;
+  if (defenderHas("DIVINE_SHIELD")) return false;
+  return (attacker.currentAttack ?? 0) >= (defender.currentHealth ?? Number.POSITIVE_INFINITY);
+}
+
+function canAttackMinionThisTurn(state: GameState, card: GameState["players"][PlayerId]["minions"][number]): boolean {
+  if (card.sealed) return false;
+  const attackLimit = card.keywords.includes("WINDFURY") ? 2 : 1;
+  if (card.attacksUsedThisTurn >= attackLimit) return false;
+  if (card.summonedOnTurn !== state.turnNumber) return true;
+  return card.keywords.includes("CHARGE") || card.keywords.includes("RUSH");
 }
 
 function playableCatastropheFlood(state: GameState, playerId: PlayerId): boolean {
@@ -162,18 +171,28 @@ function attackOutcomeScore(state: GameState, resultingState: GameState, playerI
   const attacker = state.players[playerId].minions.find((card) => card.instanceId === action.attackerId);
   if (!attacker) return 0;
   const attack = Math.max(0, attacker.currentAttack ?? 0);
+  const attackEffects = !attacker.sealed
+    ? getCardDefinition(attacker.definitionId).triggeredEffects?.ON_ATTACK
+    : undefined;
+  const clearsBoardOnAttack = attackEffects?.some((effect) => effect.type === "DAMAGE_ALL_ENEMY_MINIONS") ?? false;
   const hasAttackTrigger = !attacker.sealed && Boolean(
-    getCardDefinition(attacker.definitionId).triggeredEffects?.ON_ATTACK?.length
+    attackEffects?.length
     || getCardDefinition(attacker.definitionId).triggeredEffects?.ON_SELF_COMBAT_START?.length,
   );
   if (attack === 0 && !hasAttackTrigger) return -120;
   if (action.target.type === "HERO") {
     if (attack === 0) return -120;
     const opponent = state.players[playerId === "P1" ? "P2" : "P1"];
+    if (clearsBoardOnAttack) {
+      const opponentAfter = resultingState.players[opponent.id];
+      const removedMinions = Math.max(0, opponent.minions.length - opponentAfter.minions.length);
+      const removedAttack = Math.max(0, boardAttack(opponent.minions) - boardAttack(opponentAfter.minions));
+      return 80 + attack * 5 + removedMinions * 12 + removedAttack * 4;
+    }
     const risk = projectedOpponentBurstRisk(state, playerId);
     const killableThreat = opponent.minions
       .filter((card) => minionCanKill(attacker, card))
-      .sort((a, b) => evaluatePublicCardValue(b) - evaluatePublicCardValue(a))[0];
+      .sort((a, b) => evaluatePublicMinionThreat(b) - evaluatePublicMinionThreat(a))[0];
     if (!killableThreat) return 0;
     const threatAttack = Math.max(0, killableThreat.currentAttack ?? 0);
     if (risk >= -4 || state.players[playerId].heroHp <= 15) {
@@ -195,8 +214,15 @@ function attackOutcomeScore(state: GameState, resultingState: GameState, playerI
   const incomingAfter = boardAttack(resultingState.players[playerId === "P1" ? "P2" : "P1"].minions);
   const pressureRelief = Math.max(0, incomingBefore - incomingAfter);
   const risk = projectedOpponentBurstRisk(state, playerId);
-  let score = resultingDefender ? defenderHealthLost * 1.5 + (defenderShieldBroken ? 3 : 0) : 24 + evaluatePublicCardValue(defender) * 0.3;
+  const defenderThreat = evaluatePublicMinionThreat(defender);
+  let score = resultingDefender ? defenderHealthLost * 1.5 + (defenderShieldBroken ? 3 : 0) : 24 + defenderThreat * 0.3;
   score += pressureRelief * (risk >= -4 || state.players[playerId].heroHp <= 15 ? 9 : 3.2);
+  if (resultingDefender && (defenderHealthLost > 0 || defenderShieldBroken)) {
+    const followUpAttackers = resultingState.players[playerId].minions.filter((card) => canAttackMinionThisTurn(resultingState, card));
+    const followUpCanFinish = followUpAttackers.some((card) => !card.sealed && card.keywords.includes("LETHAL") && !resultingDefender.keywords.includes("SANCTUARY"))
+      || followUpAttackers.reduce((sum, card) => sum + Math.max(0, card.currentAttack ?? 0), 0) >= (resultingDefender.currentHealth ?? Number.POSITIVE_INFINITY);
+    if (followUpCanFinish) score += Math.min(42, 8 + defenderThreat * 0.55);
+  }
   if (defenderHealthLost === 0 && !defenderShieldBroken && resultingDefender) score -= 80;
   if (attackerShieldConsumed && resultingDefender && defenderHealthLost < Math.max(1, (defender.currentHealth ?? 1) / 2)) score -= 24;
   if (!resultingAttacker) score -= 8;
@@ -482,15 +508,18 @@ function boardSpaceActionScore(state: GameState, playerId: PlayerId, action: Gam
   const targetInstanceId = action.target.instanceId;
   const defender = opponent.minions.find((card) => card.instanceId === targetInstanceId);
   if (!attacker || !defender) return 0;
-  const attackerDies = !attacker.keywords.includes("DIVINE_SHIELD")
-    && !attacker.keywords.includes("INVINCIBLE")
-    && !defender.keywords.includes("CANNOT_COUNTERATTACK")
-    && ((defender.currentAttack ?? 0) >= (attacker.currentHealth ?? Number.POSITIVE_INFINITY)
-      || defender.keywords.includes("LETHAL"));
-  const defenderDies = !defender.keywords.includes("DIVINE_SHIELD")
-    && !defender.keywords.includes("INVINCIBLE")
-    && ((attacker.currentAttack ?? 0) >= (defender.currentHealth ?? Number.POSITIVE_INFINITY)
-      || attacker.keywords.includes("LETHAL"));
+  const attackerHas = (keyword: Keyword) => !attacker.sealed && attacker.keywords.includes(keyword);
+  const defenderHas = (keyword: Keyword) => !defender.sealed && defender.keywords.includes(keyword);
+  const attackerDies = !attackerHas("INVINCIBLE") && (
+    (defenderHas("LETHAL") && !attackerHas("SANCTUARY"))
+    || (!attackerHas("DIVINE_SHIELD") && !defenderHas("CANNOT_COUNTERATTACK")
+      && (defender.currentAttack ?? 0) >= (attacker.currentHealth ?? Number.POSITIVE_INFINITY))
+  );
+  const defenderDies = !defenderHas("INVINCIBLE") && (
+    (attackerHas("LETHAL") && !defenderHas("SANCTUARY"))
+    || (!defenderHas("DIVINE_SHIELD")
+      && (attacker.currentAttack ?? 0) >= (defender.currentHealth ?? Number.POSITIVE_INFINITY))
+  );
   if (attackerDies && defenderDies) return 120;
   if (attackerDies && !defenderDies) return -100;
   return 0;

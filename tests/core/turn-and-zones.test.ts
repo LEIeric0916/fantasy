@@ -18,7 +18,7 @@ describe("換牌與回合", () => {
     expect(state.players.P1.deckFactions).toEqual(["DRAGON", "UNDEAD"]);
     expect(state.players.P2.deckFactions).toEqual(["MACHINE", "ALLIANCE"]);
     expect(p1Cards).toHaveLength(80);
-    expect(p2Cards).toHaveLength(78);
+    expect(p2Cards).toHaveLength(80);
     expect(new Set(p1Cards.map((card) => getCardDefinition(card.definitionId).faction))).toEqual(new Set(["DRAGON", "UNDEAD"]));
     expect(new Set(p2Cards.map((card) => getCardDefinition(card.definitionId).faction))).toEqual(new Set(["MACHINE", "ALLIANCE"]));
     expect(getPlayerFieldLimit(state, "P1")).toBe(7);

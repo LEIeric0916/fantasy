@@ -77,12 +77,15 @@ describe("聯盟後期主牌", () => {
     state.players.P1.hand = [];
     for (let index = 0; index < 3; index += 1) putCard(state, "P2", "TOKEN_ALLIANCE_ROYAL_GUARD", "MINION", `enemy-${index}`);
     const ryan = putCard(state, "P1", "ALLIANCE_011", "HAND", "ryan");
+    const deckSizeBeforePlay = state.players.P1.deck.length;
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: ryan.instanceId }).state;
     const played = state.players.P1.minions.find((card) => card.instanceId === ryan.instanceId)!;
     expect(state.players.P2.minions).toHaveLength(0);
     expect(state.players.P2.heroHp).toBe(27);
     expect(played.currentAttack).toBe(4);
     expect(played.currentHealth).toBe(4);
+    expect(state.players.P1.hand).toHaveLength(1);
+    expect(state.players.P1.deck).toHaveLength(deckSizeBeforePlay - 1);
   });
 
   it("爆襲萊恩減值致死時生命停在0，不會留下負數", () => {

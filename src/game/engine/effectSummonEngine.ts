@@ -40,6 +40,7 @@ export function enqueueStateBasedEffectSummons(state: GameState, playerId: Playe
       && card.flags[`effectSummonQueuedTurn:${state.turnNumber}`] !== true
       && ((rule?.event === "NECROMANCY_AT_LEAST" && player.resources.necromancy >= rule.value)
         || (rule?.event === "RECYCLE_CHARGE_AT_LEAST" && player.resources.recycleCharge >= rule.value)
+        || (rule?.event === "SUMMONED_THIS_GAME_AT_LEAST" && player.summonedThisGame >= rule.value)
         || (rule?.event === "NON_NORMAL_HAND_ENTRY_SUMMONED_THIS_GAME_AT_LEAST" && card.flags.effectSummonEligibleFromNonNormalHandEntry === true));
   });
   enqueueGroups(state, playerId, sources, `EFFECT_SUMMON:STATE_BASED:${state.turnNumber}:${state.log.length}`);
