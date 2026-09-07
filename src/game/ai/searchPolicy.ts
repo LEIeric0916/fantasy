@@ -8,6 +8,7 @@ import { evaluatePublicCardValue, evaluatePublicMinionThreat, evaluatePublicStat
 
 interface SearchCandidate { action: GameAction; state: GameState; score: number; tacticalScore: number }
 interface SearchBudget { remaining: number }
+type MinionAttackAction = Extract<GameAction, { type: "ATTACK" }> & { target: { type: "MINION"; instanceId: string } };
 
 const ROYAL_HONOR_GUARD_ID = "TOKEN_ALLIANCE_ROYAL_HONOR_GUARD";
 const CATASTROPHE_FLOOD_ID = "UNDEAD_014";
@@ -133,6 +134,114 @@ function canAttackMinionThisTurn(state: GameState, card: GameState["players"][Pl
   if (card.attacksUsedThisTurn >= attackLimit) return false;
   if (card.summonedOnTurn !== state.turnNumber) return true;
   return card.keywords.includes("CHARGE") || card.keywords.includes("RUSH");
+}
+
+function attackerDiesInTrade(attacker: GameState["players"][PlayerId]["minions"][number], defender: GameState["players"][PlayerId]["minions"][number]): boolean {
+  if (!attacker.sealed && attacker.keywords.includes("INVINCIBLE")) return false;
+  if (!defender.sealed && defender.keywords.includes("LETHAL")
+    && (attacker.sealed || (!attacker.keywords.includes("SANCTUARY") && !attacker.keywords.includes("INVINCIBLE")))) return true;
+  if (!attacker.sealed && attacker.keywords.includes("DIVINE_SHIELD")) return false;
+  if (!defender.sealed && defender.keywords.includes("CANNOT_COUNTERATTACK")) return false;
+  return (defender.currentAttack ?? 0) >= (attacker.currentHealth ?? Number.POSITIVE_INFINITY);
+}
+
+function attackContribution(attacker: GameState["players"][PlayerId]["minions"][number], defender: GameState["players"][PlayerId]["minions"][number]): number {
+  const attack = Math.max(0, attacker.currentAttack ?? 0);
+  return defender.counters.damageCap === undefined ? attack : Math.min(attack, defender.counters.damageCap);
+}
+
+function canSubsetDefeatTarget(
+  attackers: readonly GameState["players"][PlayerId]["minions"][number][],
+  defender: GameState["players"][PlayerId]["minions"][number],
+): boolean {
+  if (!defender.sealed && defender.keywords.includes("INVINCIBLE")) return false;
+  if (attackers.some((attacker) => !attacker.sealed && attacker.keywords.includes("LETHAL")
+    && (defender.sealed || (!defender.keywords.includes("SANCTUARY") && !defender.keywords.includes("INVINCIBLE"))))) return true;
+  const contributions = attackers.map((attacker) => attackContribution(attacker, defender));
+  if (!defender.sealed && defender.keywords.includes("DIVINE_SHIELD")) {
+    if (attackers.length < 2) return false;
+    return contributions.reduce((sum, value) => sum + value, 0) - Math.min(...contributions) >= (defender.currentHealth ?? Number.POSITIVE_INFINITY);
+  }
+  return contributions.reduce((sum, value) => sum + value, 0) >= (defender.currentHealth ?? Number.POSITIVE_INFINITY);
+}
+
+/** 以最多七名攻擊者做小型子集合計算，不展開所有攻擊排列。 */
+export function chooseEfficientThreatClearAction(state: GameState, playerId: PlayerId): GameAction | undefined {
+  const legalActions = getLegalActions(state, playerId);
+  const immediateLethal = legalActions.some((action) => action.type === "ATTACK" && action.target.type === "HERO"
+    && (state.players[playerId].minions.find((card) => card.instanceId === action.attackerId)?.currentAttack ?? 0)
+      >= state.players[action.target.playerId].heroHp);
+  if (immediateLethal) return undefined;
+
+  const aoeFaceAttackers = new Set<string>();
+  for (const action of legalActions) {
+    if (action.type !== "ATTACK" || action.target.type !== "HERO") continue;
+    const attacker = state.players[playerId].minions.find((card) => card.instanceId === action.attackerId);
+    if (attacker && getCardDefinition(attacker.definitionId).triggeredEffects?.ON_ATTACK
+      ?.some((effect) => effect.type === "DAMAGE_ALL_ENEMY_MINIONS")) aoeFaceAttackers.add(action.attackerId);
+  }
+  const attacks = legalActions.filter((action): action is MinionAttackAction => action.type === "ATTACK"
+    && action.target.type === "MINION" && !aoeFaceAttackers.has(action.attackerId)
+    && (() => {
+      const attacker = state.players[playerId].minions.find((card) => card.instanceId === action.attackerId);
+      if (!attacker) return false;
+      if ((attacker.currentAttack ?? 0) > 0 || (!attacker.sealed && attacker.keywords.includes("LETHAL"))) return true;
+      const triggers = getCardDefinition(attacker.definitionId).triggeredEffects;
+      return !attacker.sealed && Boolean(triggers?.ON_ATTACK?.length || triggers?.ON_SELF_COMBAT_START?.length);
+    })());
+  if (attacks.length === 0) return undefined;
+  const opponent = state.players[playerId === "P1" ? "P2" : "P1"];
+  const player = state.players[playerId];
+  const urgent = projectedOpponentBurstRisk(state, playerId) >= -6 || player.heroHp <= 15;
+  let best: { action: MinionAttackAction; score: number } | undefined;
+
+  for (const defender of opponent.minions) {
+    const targetActions = attacks.filter((action) => action.target.instanceId === defender.instanceId);
+    if (targetActions.length === 0) continue;
+    const threat = evaluatePublicMinionThreat(defender);
+    const recurring = !defender.sealed && Boolean(getCardDefinition(defender.definitionId).triggeredEffects);
+    if ((defender.currentAttack ?? 0) < 4 && threat < 30 && !recurring) continue;
+
+    let cheapest: { actions: MinionAttackAction[]; attackers: GameState["players"][PlayerId]["minions"]; cost: number } | undefined;
+    const candidateCount = Math.min(7, targetActions.length);
+    for (let mask = 1; mask < (1 << candidateCount); mask += 1) {
+      const selectedActions = targetActions.slice(0, candidateCount).filter((_action, index) => (mask & (1 << index)) !== 0);
+      const selectedAttackers = selectedActions
+        .map((action) => player.minions.find((card) => card.instanceId === action.attackerId))
+        .filter((card) => card !== undefined);
+      if (selectedAttackers.length !== selectedActions.length || !canSubsetDefeatTarget(selectedAttackers, defender)) continue;
+      const cost = selectedAttackers.reduce((sum, attacker) => {
+        const deathWeight = attackerDiesInTrade(attacker, defender) ? 0.72 : 0.1;
+        const freshRushDiscount = attacker.summonedOnTurn === state.turnNumber
+          && !attacker.sealed && attacker.keywords.includes("RUSH") && !attacker.keywords.includes("CHARGE") ? 6 : 0;
+        return sum + Math.max(0.25, evaluatePublicCardValue(attacker) * deathWeight - freshRushDiscount);
+      }, 0) + selectedAttackers.length * 0.4;
+      if (!cheapest || cost < cheapest.cost) cheapest = { actions: selectedActions, attackers: selectedAttackers, cost };
+    }
+    if (!cheapest) continue;
+
+    const usesFreshRush = cheapest.attackers.some((attacker) => attacker.summonedOnTurn === state.turnNumber
+      && !attacker.sealed && attacker.keywords.includes("RUSH") && !attacker.keywords.includes("CHARGE"));
+    if (!urgent && !usesFreshRush) continue;
+    if (!urgent && cheapest.cost > threat * 1.05) continue;
+
+    const lethalAttacker = cheapest.attackers.find((attacker) => !attacker.sealed && attacker.keywords.includes("LETHAL")
+      && (defender.sealed || !defender.keywords.includes("SANCTUARY")));
+    const shielded = !defender.sealed && defender.keywords.includes("DIVINE_SHIELD") && !lethalAttacker;
+    const firstAttacker = lethalAttacker ?? [...cheapest.attackers].sort((left, right) => {
+      if (shielded) return attackContribution(left, defender) - attackContribution(right, defender);
+      const leftCost = evaluatePublicCardValue(left) * (attackerDiesInTrade(left, defender) ? 1 : 0.15);
+      const rightCost = evaluatePublicCardValue(right) * (attackerDiesInTrade(right, defender) ? 1 : 0.15);
+      return leftCost - rightCost;
+    })[0];
+    const firstAction = cheapest.actions.find((action) => action.attackerId === firstAttacker.instanceId);
+    if (!firstAction) continue;
+    const originalHealth = getCardDefinition(defender.definitionId).health ?? defender.maxHealth ?? defender.currentHealth ?? 0;
+    const completionBonus = Math.max(0, originalHealth - (defender.currentHealth ?? originalHealth)) * 5;
+    const score = threat + completionBonus + (urgent ? 22 : 0) + (usesFreshRush ? 12 : 0) - cheapest.cost;
+    if (!best || score > best.score) best = { action: firstAction, score };
+  }
+  return best?.action;
 }
 
 function playableCatastropheFlood(state: GameState, playerId: PlayerId): boolean {
@@ -480,6 +589,111 @@ function plannedExtraMinions(state: GameState, playerId: PlayerId, effects: read
   }, 0);
 }
 
+function staticSummonValue(definitionId: string): number {
+  const definition = getCardDefinition(definitionId);
+  const keywords = new Set(definition.keywords);
+  return (definition.attack ?? 0) * 3.2
+    + (definition.health ?? 0) * 2.2
+    + (keywords.has("TAUNT") ? 7 : 0)
+    + (keywords.has("DIVINE_SHIELD") ? 8 : 0)
+    + (keywords.has("RUSH") ? 5 : 0)
+    + (keywords.has("CHARGE") ? 8 : 0)
+    + (keywords.has("LETHAL") ? 7 : 0)
+    + (keywords.has("SANCTUARY") ? 8 : 0)
+    + (keywords.has("BATTLECRY") ? 5 : 0)
+    + (keywords.has("AURA") ? 6 : 0);
+}
+
+/** 按效果實際結算順序，估算打出手下後想召喚的衍生手下。 */
+function plannedSummonIds(state: GameState, playerId: PlayerId, effects: readonly EffectDefinition[] | undefined): string[] {
+  if (!effects) return [];
+  const result: string[] = [];
+  for (const effect of effects) {
+    if (effect.type === "SUMMON") {
+      for (let index = 0; index < effect.count; index += 1) result.push(effect.definitionId);
+    } else if (effect.type === "CHOOSE_DISTINCT_GENERATED_MINIONS") {
+      result.push(...effect.definitionIds
+        .map((definitionId) => ({ definitionId, value: staticSummonValue(definitionId) }))
+        .sort((left, right) => right.value - left.value)
+        .slice(0, effect.count)
+        .map((candidate) => candidate.definitionId));
+    } else if (effect.type === "CONDITIONAL" && planningConditionMatches(state, playerId, effect.condition)) {
+      result.push(...plannedSummonIds(state, playerId, effect.effects));
+    } else if (effect.type === "MECHANICAL_TECHNIQUE" && state.players[playerId].resources.recycleCharge >= effect.cost) {
+      result.push(...plannedSummonIds(state, playerId, effect.effects));
+    } else if (effect.type === "NECROMANCY" && state.players[playerId].resources.necromancy >= effect.cost) {
+      result.push(...plannedSummonIds(state, playerId, effect.effects));
+    }
+  }
+  return result;
+}
+
+interface BoardSpaceOpportunity { sourceInstanceId: string; unlockedDefinitionId: string; value: number }
+
+/** 找出多騰一格後，本回合可玩的卡會多召喚出的最高價值手下。 */
+function bestBoardSpaceOpportunity(state: GameState, playerId: PlayerId): BoardSpaceOpportunity | undefined {
+  const player = state.players[playerId];
+  const availableSlots = state.rulesConfig.minionLimit - player.minions.length;
+  let best: BoardSpaceOpportunity | undefined;
+  for (const card of player.hand) {
+    if (card.currentCost === null || card.currentCost > player.mana) continue;
+    const definition = getCardDefinition(card.definitionId);
+    if (definition.cardType !== "MINION") continue;
+    const summons = plannedSummonIds(state, playerId, definition.effects);
+    const slotsForSummons = Math.max(0, availableSlots - 1);
+    const unlockedDefinitionId = summons[slotsForSummons];
+    if (!unlockedDefinitionId) continue;
+    const value = staticSummonValue(unlockedDefinitionId);
+    if (!best || value > best.value) best = { sourceInstanceId: card.instanceId, unlockedDefinitionId, value };
+  }
+  return best;
+}
+
+function hasCombatLethal(state: GameState, playerId: PlayerId, actions: readonly GameAction[]): boolean {
+  const opponentId = playerId === "P1" ? "P2" : "P1";
+  const faceAttackerIds = new Set(actions
+    .filter((action) => action.type === "ATTACK" && action.target.type === "HERO" && action.target.playerId === opponentId)
+    .map((action) => action.type === "ATTACK" ? action.attackerId : ""));
+  const totalFaceDamage = state.players[playerId].minions
+    .filter((card) => faceAttackerIds.has(card.instanceId))
+    .reduce((sum, card) => sum + Math.max(0, card.currentAttack ?? 0), 0);
+  return totalFaceDamage >= state.players[opponentId].heroHp;
+}
+
+/**
+ * 不展開搜尋樹，直接比較「犧牲手下的價值」與「騰出一格解鎖的召喚價值」。
+ * 本回合已有斬殺時絕不為空位放棄打臉。
+ */
+export function chooseEfficientBoardSpaceAction(state: GameState, playerId: PlayerId): GameAction | undefined {
+  const opportunity = bestBoardSpaceOpportunity(state, playerId);
+  if (!opportunity) return undefined;
+  const legalActions = getLegalActions(state, playerId);
+  if (hasCombatLethal(state, playerId, legalActions)) return undefined;
+
+  const player = state.players[playerId];
+  const opponentId = playerId === "P1" ? "P2" : "P1";
+  const incomingBoardAttack = boardAttack(state.players[opponentId].minions);
+  let best: { action: MinionAttackAction; score: number } | undefined;
+  for (const action of legalActions) {
+    if (action.type !== "ATTACK" || action.target.type !== "MINION") continue;
+    const minionAction = action as MinionAttackAction;
+    const attacker = player.minions.find((card) => card.instanceId === minionAction.attackerId);
+    const defender = state.players[opponentId].minions.find((card) => card.instanceId === minionAction.target.instanceId);
+    if (!attacker || !defender || !attackerDiesInTrade(attacker, defender)) continue;
+    if (!attacker.sealed && attacker.keywords.includes("TAUNT") && incomingBoardAttack >= player.heroHp) continue;
+
+    const sacrificeCost = evaluatePublicCardValue(attacker) + Math.max(0, attacker.currentAttack ?? 0) * 1.5;
+    const defenderDamageValue = Math.min(
+      Math.max(0, attacker.currentAttack ?? 0),
+      Math.max(0, defender.currentHealth ?? 0),
+    ) * 2.5 + (minionCanKill(attacker, defender) ? evaluatePublicCardValue(defender) * 1.5 : 0);
+    const score = opportunity.value * 1.25 + defenderDamageValue - sacrificeCost;
+    if (score < 18) continue;
+    if (!best || score > best.score) best = { action: minionAction, score };
+  }
+  return best?.action;
+}
+
 function needsBoardSpaceForHand(state: GameState, playerId: PlayerId): boolean {
   const player = state.players[playerId];
   const availableSlots = state.rulesConfig.minionLimit - player.minions.length;
@@ -521,7 +735,14 @@ function boardSpaceActionScore(state: GameState, playerId: PlayerId, action: Gam
       && (attacker.currentAttack ?? 0) >= (defender.currentHealth ?? Number.POSITIVE_INFINITY))
   );
   if (attackerDies && defenderDies) return 120;
-  if (attackerDies && !defenderDies) return -100;
+  if (attackerDies && !defenderDies) {
+    const opportunity = bestBoardSpaceOpportunity(state, playerId);
+    if (opportunity) {
+      const sacrificeCost = evaluatePublicCardValue(attacker) + Math.max(0, attacker.currentAttack ?? 0) * 1.5;
+      return opportunity.value * 1.25 - sacrificeCost;
+    }
+    return -100;
+  }
   return 0;
 }
 
@@ -677,13 +898,13 @@ function search(state: GameState, playerId: PlayerId, depth: number, beamWidth: 
 }
 
 /** 有限搜尋會展開 AI 當前回合的連續決策；輪到對手時停止，用公開局面估算下回合威脅。 */
-export function chooseSearchAction(state: GameState, playerId: PlayerId, seed: number, depth = 7, beamWidth = 14, nodeBudget = 650): RandomDecision {
+export function chooseSearchAction(state: GameState, playerId: PlayerId, seed: number, depth = 7, beamWidth = 10, nodeBudget = 360): RandomDecision {
   const legalActions = getLegalActions(state, playerId);
-  const hasImmediateLethal = legalActions.some((action) => {
-    if (action.type !== "ATTACK" || action.target.type !== "HERO") return false;
-    const attacker = state.players[playerId].minions.find((card) => card.instanceId === action.attackerId);
-    return (attacker?.currentAttack ?? 0) >= state.players[action.target.playerId].heroHp;
-  });
+  const hasImmediateLethal = hasCombatLethal(state, playerId, legalActions);
+  const boardSpaceAction = chooseEfficientBoardSpaceAction(state, playerId);
+  if (!hasImmediateLethal && boardSpaceAction) return { action: boardSpaceAction, seed };
+  const plannedClear = chooseEfficientThreatClearAction(state, playerId);
+  if (!hasImmediateLethal && plannedClear) return { action: plannedClear, seed };
   if (!hasImmediateLethal) {
     const spaceTrades = legalActions
       .filter((action) => action.type === "ATTACK" && action.target.type === "MINION")

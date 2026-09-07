@@ -182,14 +182,18 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
       effects: [{ type: "DAMAGE_ENEMY_HERO", value: 4 }],
     },
   ],
-  ALLIANCE_013: [{ type: "DAMAGE_TARGET_ENEMY_MINION", value: 3 }],
-  ALLIANCE_014: [
-    { type: "HEAL_HERO", value: 4 },
+  ALLIANCE_013: [
+    { type: "DAMAGE_TARGET_ENEMY_MINION", value: 3 },
+    { type: "SEGMENT_BREAK" },
     {
       type: "CONDITIONAL",
       condition: { type: "SUMMONED_THIS_GAME_AT_LEAST", value: 15 },
-      effects: [{ type: "GAIN_SELF_KEYWORD", keyword: "DIVINE_SHIELD" }],
+      effects: [{ type: "GRANT_TARGET_FRIENDLY_MINION_KEYWORD", keyword: "RUSH", excludeSource: true }],
     },
+  ],
+  ALLIANCE_014: [
+    { type: "HEAL_HERO", value: 4 },
+    { type: "DESTROY_TARGET_ENEMY_MINION" },
   ],
   TOKEN_ALLIANCE_HEROIC_GLORY: [{
     type: "HEROIC_GLORY",
@@ -487,7 +491,10 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
         type: "CONDITIONAL",
         condition: { type: "FRIENDLY_MINION_SUBTYPE", subtype: "COMMANDER", excludeSource: true },
         silentOnFailure: true,
-        effects: [{ type: "DAMAGE_TARGET_ENEMY_MINION", value: 5 }],
+        effects: [
+          { type: "MODIFY_SELF_HEALTH", value: 2 },
+          { type: "MODIFY_TARGET_FRIENDLY_MINION_STATS", attack: 0, health: 2, excludeSource: true },
+        ],
       },
     ],
   },

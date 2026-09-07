@@ -4,7 +4,7 @@ import type { GameState } from "../state/GameState";
 import { getLegalActions } from "./legalActionEngine";
 import { nextAiRandom, type RandomDecision } from "./randomPolicy";
 import { evaluatePublicState } from "./stateEvaluator";
-import { tacticalActionScore } from "./searchPolicy";
+import { chooseEfficientBoardSpaceAction, chooseEfficientThreatClearAction, tacticalActionScore } from "./searchPolicy";
 
 function actionBias(action: GameAction, hasAlternative: boolean): number {
   if (action.type === "END_TURN" && hasAlternative) return -0.2;
@@ -13,6 +13,10 @@ function actionBias(action: GameAction, hasAlternative: boolean): number {
 }
 
 export function chooseHeuristicAction(state: GameState, playerId: PlayerId, seed: number): RandomDecision {
+  const boardSpaceAction = chooseEfficientBoardSpaceAction(state, playerId);
+  if (boardSpaceAction) return { action: boardSpaceAction, seed };
+  const plannedClear = chooseEfficientThreatClearAction(state, playerId);
+  if (plannedClear) return { action: plannedClear, seed };
   const actions = getLegalActions(state, playerId);
   if (actions.length === 0) return { seed };
   let bestScore = Number.NEGATIVE_INFINITY;

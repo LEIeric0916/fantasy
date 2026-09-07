@@ -104,6 +104,7 @@ export type PendingChoice =
         | { type: "REVIVE_MINION" }
         | { type: "SEAL_MINION" }
         | { type: "GRANT_MINION_KEYWORD"; keyword: import("../cards/cardTypes").Keyword }
+        | { type: "MODIFY_MINION_STATS"; attack: number; health: number }
         | { type: "RETURN_HAND_TO_DECK_MACHINE_DISCOUNT"; reductionPerCard: number }
         | { type: "SET_CARD_COST_ZERO" }
         | { type: "RETURN_HAND_MINION_TO_DECK_SHUFFLE_DRAW_BY_COST"; threshold: number; low: number; high: number }

@@ -98,7 +98,8 @@ export type EffectDefinition =
   | { type: "REDUCE_SELF_COUNTDOWN_BY_OWN_TURN_COUNT" }
   | { type: "DAMAGE_ENEMY_HERO"; value: number }
   | { type: "GRANT_ALL_FRIENDLY_KEYWORD"; keyword: Keyword; subtypes?: string[] }
-  | { type: "GRANT_TARGET_FRIENDLY_MINION_KEYWORD"; keyword: Keyword; subtypes?: string[] }
+  | { type: "GRANT_TARGET_FRIENDLY_MINION_KEYWORD"; keyword: Keyword; subtypes?: string[]; excludeSource?: boolean }
+  | { type: "MODIFY_TARGET_FRIENDLY_MINION_STATS"; attack: number; health: number; excludeSource?: boolean }
   | { type: "GAIN_SELF_KEYWORD"; keyword: Keyword }
   | { type: "RETURN_HAND_MINION_TO_DECK_SHUFFLE_DRAW_BY_COST"; subtype: string; threshold: number; low: number; high: number }
   | { type: "SEARCH_DECK"; cardType?: CardType; definitionId?: string }

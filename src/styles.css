@@ -146,6 +146,8 @@ h2 { margin: 1.1rem 0 .5rem; font-size: .78rem; letter-spacing: .12em; text-tran
 .battle-stats b { padding: 0; font: 950 clamp(1rem, 1.35vw, 1.4rem)/1 ui-monospace, monospace; text-shadow: 0 1px 2px #000; }
 .attack-stat { color: #ffd83d; }
 .health-stat { color: #ff5148; }
+.battle-stats b.stat-buffed, .card .stats b.stat-buffed { color: #79ee78; text-shadow: 0 0 7px #3dff6e99, 0 1px 2px #000; }
+.battle-stats b.stat-reduced, .card .stats b.stat-reduced { color: #ff9b96; text-shadow: 0 0 5px #ff625f66, 0 1px 2px #000; }
 .battle-stats em { position: absolute; left: 50%; bottom: 115%; min-width: 2rem; padding: .1rem .25rem; border-radius: 5px; background: #080a0de8; font: 950 1.25rem/1 ui-monospace, monospace; text-align: center; transform: translateX(-50%); animation: stat-change-float .95s ease-out both; }
 .battle-stats em.positive { color: #8cff78; }
 .battle-stats em.negative { color: #ff655c; }

@@ -102,6 +102,42 @@ describe("AI 公開局面評分", () => {
     expect(state.players.P2.minions.find((card) => card.instanceId === targetInstanceId)?.definitionId).toBe("ALLIANCE_010");
   });
 
+  it.each([
+    ["普通", chooseHeuristicAction],
+    ["困難", chooseSearchAction],
+  ] as const)("%s機械 AI 會連續用衝刺手下完成對高攻高血威脅的交換", (_label, choose) => {
+    let state = mainState();
+    state.players.P1.faction = "MACHINE";
+    state.players.P1.deckFactions = ["MACHINE"];
+    state.players.P1.hand = [];
+    state.players.P1.heroHp = 18;
+    const priest = putCard(state, "P1", "TOKEN_MACHINE_PRIEST", "MINION", "continuous-zero-attack-priest");
+    for (let index = 0; index < 4; index += 1) {
+      const soldier = putCard(state, "P1", "TOKEN_MACHINE_EMPIRE_SOLDIER", "MINION", `continuous-rush-${index}`);
+      soldier.summonedOnTurn = state.turnNumber;
+    }
+    const threat = putCard(state, "P2", "ALLIANCE_010", "MINION", "continuous-large-threat");
+    threat.currentAttack = 8;
+    threat.currentHealth = 8;
+    threat.maxHealth = 8;
+
+    const attacks: string[] = [];
+    for (let step = 0; step < 4; step += 1) {
+      const action = choose(state, "P1", 1200 + step).action;
+      expect(action?.type).toBe("ATTACK");
+      if (action?.type !== "ATTACK" || action.target.type !== "MINION") throw new Error("AI 應持續攻擊高威脅手下");
+      expect(action.target.instanceId).toBe(threat.instanceId);
+      expect(action.attackerId).not.toBe(priest.instanceId);
+      attacks.push(action.attackerId);
+      state = applyAction(state, action).state;
+    }
+
+    expect(new Set(attacks).size).toBe(4);
+    expect(state.players.P2.minions.some((card) => card.instanceId === threat.instanceId)).toBe(false);
+    expect(state.players.P1.minions.filter((card) => card.definitionId === "TOKEN_MACHINE_EMPIRE_SOLDIER")).toHaveLength(0);
+    expect(state.players.P1.minions.some((card) => card.instanceId === priest.instanceId)).toBe(true);
+  });
+
   it("困難 AI 面對對方下回合斬殺場攻時會優先解場", () => {
     const state = mainState();
     state.players.P1.hand = [];
@@ -618,6 +654,37 @@ describe("AI 公開局面評分", () => {
       target: { type: "MINION" as const, instanceId: threat.instanceId },
     };
     expect(chooseSearchAction(state, "P1", 309).action).toEqual(tradeAction);
+  });
+
+  it.each([
+    ["普通", chooseHeuristicAction],
+    ["困難", chooseSearchAction],
+  ] as const)("%s機械 AI 無法斬殺時會犧牲低價值手下，替奧古斯的神造物騰出空位", (_label, choose) => {
+    const state = mainState();
+    state.players.P1.faction = "MACHINE";
+    state.players.P1.deckFactions = ["MACHINE"];
+    state.players.P1.hand = [];
+    state.players.P1.deck = [];
+    state.players.P1.heroHp = 2;
+    state.players.P1.resources.recycleCharge = 15;
+
+    const sacrifice = putCard(state, "P1", "MACHINE_002", "MINION", "augustus-space-sacrifice");
+    for (let index = 0; index < 3; index += 1) {
+      putCard(state, "P1", "TOKEN_MACHINE_PRIEST", "MINION", `augustus-space-priest-${index}`);
+    }
+    const defender = putCard(state, "P2", "UNDEAD_001", "MINION", "augustus-space-defender");
+    defender.currentAttack = 1;
+    defender.currentHealth = 3;
+    defender.maxHealth = 3;
+    putCard(state, "P1", "MACHINE_013", "HAND", "augustus-space-payoff");
+    refreshHandCosts(state);
+
+    expect(choose(state, "P1", 319).action).toEqual({
+      type: "ATTACK",
+      playerId: "P1",
+      attackerId: sacrifice.instanceId,
+      target: { type: "MINION", instanceId: defender.instanceId },
+    });
   });
 
   it("困難聯盟 AI 局面安全且本回合能補足協作15時會先累積協作再打皇家戰士", () => {

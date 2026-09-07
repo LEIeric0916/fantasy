@@ -22,7 +22,7 @@ describe("革命戰線 銀彈克加魯", () => {
       originalCost: 3,
       attack: 3,
       health: 3,
-      deckCount: 2,
+      deckCount: 3,
       subtype: ["HUMAN", "ARMY"],
     });
   });
@@ -71,6 +71,24 @@ describe("革命戰線 銀彈克加魯", () => {
     resolvePendingEffects(notReady);
     expect(notReady.players.P1.hand.some((card) => card.instanceId === waitingKangaroo.instanceId)).toBe(true);
     expect(notReady.pendingChoice).toBeUndefined();
+  });
+
+  it("協作15時戰吼可指定其他我方1名手下獲得衝刺，但不能指定自己", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    state.players.P1.summonedThisGame = 14;
+    state.players.P1.effectSummonUsedThisTurn = ["ALLIANCE_013"];
+    const kangaroo = putCard(state, "P1", "ALLIANCE_013", "HAND", "collaboration-rush");
+    const friendly = putCard(state, "P1", "UNDEAD_001", "MINION", "rush-target");
+    const enemy = putCard(state, "P2", "DRAGON_001", "MINION", "damage-target");
+
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: kangaroo.instanceId }).state;
+    state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [enemy.instanceId] }).state;
+
+    expect(state.pendingChoice).toMatchObject({ type: "EFFECT_CARDS", candidateInstanceIds: [friendly.instanceId] });
+    expect(state.pendingChoice?.type === "EFFECT_CARDS" && state.pendingChoice.candidateInstanceIds).not.toContain(kangaroo.instanceId);
+    state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [friendly.instanceId] }).state;
+    expect(state.players.P1.minions.find((card) => card.instanceId === friendly.instanceId)?.keywords).toContain("RUSH");
   });
 
   it("協作10時由效果抽牌上手仍會效果召喚，但被消滅時不再抽牌", () => {

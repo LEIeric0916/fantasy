@@ -69,6 +69,13 @@ export function CardView({
     ...(card.keywords.includes("SANCTUARY") ? [{ key: "sanctuary", label: "庇護白盾" }] : []),
   ];
   const isBattleMinion = card.zone === "MINION" && definition.cardType === "MINION";
+  const attackTone = definition.attack !== null && card.currentAttack !== null
+    ? card.currentAttack > definition.attack ? "stat-buffed" : card.currentAttack < definition.attack ? "stat-reduced" : ""
+    : "";
+  const healthValueForTone = isBattleMinion ? card.currentHealth : displayedHandHealth;
+  const healthTone = definition.health !== null && healthValueForTone !== null
+    ? healthValueForTone > definition.health ? "stat-buffed" : healthValueForTone < definition.health ? "stat-reduced" : ""
+    : "";
 
   useEffect(() => {
     const previous = previousStats.current;
@@ -146,13 +153,13 @@ export function CardView({
         <span className="cost">{card.currentCost ?? "?"}</span>
         <strong>{definition.name}</strong>
         {!handSummary && <small>{definition.subtype.length > 0 ? formatSubtypeLabels(definition.subtype) : cardTypeLabels[definition.cardType]}</small>}
-        {definition.cardType === "MINION" && !isBattleMinion && <span className="stats"><b className="hand-attack">{card.currentAttack ?? "?"}</b><i> / </i><b className="hand-health">{displayedHandHealth ?? "?"}</b></span>}
+        {definition.cardType === "MINION" && !isBattleMinion && <span className="stats"><b className={`hand-attack ${attackTone}`}>{card.currentAttack ?? "?"}</b><i> / </i><b className={`hand-health ${healthTone}`}>{displayedHandHealth ?? "?"}</b></span>}
         {!handSummary && <small>{keywordText.map((keyword) => keyword.label).join(" · ") || "—"}</small>}
         {!handSummary && <span className="effect">{definition.effectsText || "無卡牌效果"}</span>}
       </button>
       {isBattleMinion && <span className="battle-stats" aria-label={`攻擊 ${card.currentAttack ?? "未知"}，生命 ${card.currentHealth ?? "未知"}`}>
-        <span className="attack-stat"><i aria-hidden="true">⚔</i><b>{card.currentAttack ?? "?"}</b>{statChange?.attack && <em key={`a-${statChange.key}`} className={statChange.attack > 0 ? "positive" : "negative"}>{statChange.attack > 0 ? "+" : ""}{statChange.attack}</em>}</span>
-        <span className="health-stat"><i aria-hidden="true">♥</i><b>{card.currentHealth ?? "?"}</b>{statChange?.health && <em key={`h-${statChange.key}`} className={statChange.health > 0 ? "positive" : "negative"}>{statChange.health > 0 ? "+" : ""}{statChange.health}</em>}</span>
+        <span className="attack-stat"><i aria-hidden="true">⚔</i><b className={attackTone}>{card.currentAttack ?? "?"}</b>{statChange?.attack && <em key={`a-${statChange.key}`} className={statChange.attack > 0 ? "positive" : "negative"}>{statChange.attack > 0 ? "+" : ""}{statChange.attack}</em>}</span>
+        <span className="health-stat"><i aria-hidden="true">♥</i><b className={healthTone}>{card.currentHealth ?? "?"}</b>{statChange?.health && <em key={`h-${statChange.key}`} className={statChange.health > 0 ? "positive" : "negative"}>{statChange.health > 0 ? "+" : ""}{statChange.health}</em>}</span>
       </span>}
       {onInspect && <button className="inspect-card" onClick={onInspect} aria-label={`檢視 ${definition.name} 卡牌資訊`}>詳細</button>}
     </article>

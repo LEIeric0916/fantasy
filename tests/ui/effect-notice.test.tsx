@@ -273,6 +273,29 @@ describe("效果未發動介面提示", () => {
     container.remove();
   });
 
+  it("手下數值高於原始值時顯示綠色狀態，低於原始值時顯示淡紅色狀態", () => {
+    const state = mainState();
+    const changed = putCard(state, "P1", "UNDEAD_008", "MINION", "colored-stats");
+    changed.currentAttack = 4;
+    changed.currentHealth = 6;
+    const buffedHealth = putCard(state, "P1", "ALLIANCE_001", "MINION", "buffed-health");
+    buffedHealth.currentHealth = 3;
+    buffedHealth.maxHealth = 3;
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
+
+    const changedCard = container.querySelector(`[data-instance-id="${changed.instanceId}"]`)!;
+    expect(changedCard.querySelector(".attack-stat b")?.classList.contains("stat-buffed")).toBe(true);
+    expect(changedCard.querySelector(".health-stat b")?.classList.contains("stat-reduced")).toBe(true);
+    const buffedCard = container.querySelector(`[data-instance-id="${buffedHealth.instanceId}"]`)!;
+    expect(buffedCard.querySelector(".health-stat b")?.classList.contains("stat-buffed")).toBe(true);
+
+    act(() => root.unmount());
+    container.remove();
+  });
+
   it("回合結束效果先由目前玩家完成，完成後才顯示交接畫面", () => {
     const state = mainState();
     putCard(state, "P1", "DRAGON_005", "MINION", "end-turn-ui");

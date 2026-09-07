@@ -57,13 +57,22 @@ describe("卡牌資料", () => {
     expect(definition.effectsText).toContain("消滅對手最多3手下。協作20");
   });
 
-  it("聯盟的革命戰線銀彈克加魯調整為2張", () => {
+  it("聯盟的賈維斯為2張、革命戰線銀彈克加魯為3張", () => {
+    expect(getCardDefinition("ALLIANCE_003").deckCount).toBe(2);
     const definition = getCardDefinition("ALLIANCE_013");
-    expect(definition.deckCount).toBe(2);
+    expect(definition.deckCount).toBe(3);
     expect(definition.keywords).toEqual(expect.arrayContaining(["EFFECT_SUMMON", "RUSH", "BATTLECRY"]));
     expect(definition.keywords).not.toContain("DEATHRATTLE");
     expect(definition.effectSummon).toEqual({ event: "SUMMONED_THIS_GAME_AT_LEAST", value: 10 });
-    expect(definition.effects).toEqual([{ type: "DAMAGE_TARGET_ENEMY_MINION", value: 3 }]);
+    expect(definition.effects).toEqual([
+      { type: "DAMAGE_TARGET_ENEMY_MINION", value: 3 },
+      { type: "SEGMENT_BREAK" },
+      {
+        type: "CONDITIONAL",
+        condition: { type: "SUMMONED_THIS_GAME_AT_LEAST", value: 15 },
+        effects: [{ type: "GRANT_TARGET_FRIENDLY_MINION_KEYWORD", keyword: "RUSH", excludeSource: true }],
+      },
+    ]);
     expect(definition.triggeredEffects?.DEATHRATTLE).toBeUndefined();
     expect(getCardDefinition("TOKEN_ALLIANCE_HEROIC_GLORY").originalCost).toBe(2);
   });

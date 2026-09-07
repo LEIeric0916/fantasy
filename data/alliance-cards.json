@@ -48,7 +48,7 @@
       "originalCost": 2,
       "attack": 0,
       "health": 1,
-      "deckCount": 3,
+      "deckCount": 2,
       "keywords": ["BATTLECRY", "AURA"],
       "effectsText": "戰吼：召喚1名「民兵」，抽1張牌。光環：我方每召喚1手下，抽1張牌；一回合最多發動1次。",
       "generatedOnly": false,
@@ -89,7 +89,7 @@
       "name": "革命戰線 銀翼刻柏斯",
       "faction": "ALLIANCE",
       "cardType": "MINION",
-      "subtype": ["HUMAN", "ARMY"],
+      "subtype": ["HUMAN", "COMMANDER"],
       "originalCost": 4,
       "attack": 3,
       "health": 4,
@@ -198,9 +198,9 @@
       "originalCost": 3,
       "attack": 3,
       "health": 3,
-      "deckCount": 2,
+      "deckCount": 3,
       "keywords": ["EFFECT_SUMMON", "RUSH", "BATTLECRY"],
-      "effectsText": "效果召喚：協作10。衝刺。戰吼：給予1名敵方手下3點傷害。",
+      "effectsText": "效果召喚：協作10。衝刺。戰吼：給予1名敵方手下3點傷害。協作15：賦予其他我方1名手下衝刺。",
       "generatedOnly": false,
       "notes": ""
     },
@@ -215,7 +215,7 @@
       "health": 5,
       "deckCount": 3,
       "keywords": ["DISCIPLINE", "BATTLECRY"],
-      "effectsText": "紀律。戰吼：恢復我方玩家4HP。協作15：獲得聖盾術。我方回合結束時，依據我方場上其他手下類型發動以下效果：軍隊：恢復我方場上手下3HP；指揮官：給予對手1名手下5點傷害。",
+      "effectsText": "紀律。戰吼：恢復我方玩家4HP，消滅1名敵方手下。我方回合結束時，依據我方場上其他手下類型發動以下效果：軍隊：恢復我方場上手下3HP；指揮官：使此手下與我方另1名手下+0/+2。",
       "generatedOnly": false,
       "notes": ""
     }

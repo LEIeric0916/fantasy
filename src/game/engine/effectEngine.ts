@@ -747,6 +747,7 @@ function resolveEffectList(
         const candidates = state.players[playerId].minions.filter((card) => {
           const definition = getCardDefinition(card.definitionId);
           return (!effect.subtypes || effect.subtypes.every((subtype) => definition.subtype.includes(subtype)))
+            && (!effect.excludeSource || card.instanceId !== source.instanceId)
             && !hasActiveKeyword(card, "INVINCIBLE");
         });
         if (candidates.length === 0) {
@@ -761,6 +762,26 @@ function resolveEffectList(
           count: 1,
           candidateInstanceIds: candidates.map((card) => card.instanceId),
           resolution: { type: "GRANT_MINION_KEYWORD", keyword: effect.keyword },
+          remainingEffects,
+        };
+        return false;
+      }
+      case "MODIFY_TARGET_FRIENDLY_MINION_STATS": {
+        const candidates = state.players[playerId].minions.filter((card) =>
+          (!effect.excludeSource || card.instanceId !== source.instanceId)
+          && !hasActiveKeyword(card, "INVINCIBLE"));
+        if (candidates.length === 0) {
+          notifyEffectSkipped(state, playerId, source, "我方場上沒有可獲得數值增益的其他手下");
+          return false;
+        }
+        state.pendingChoice = {
+          type: "EFFECT_CARDS",
+          playerId,
+          sourceInstanceId: source.instanceId,
+          prompt: `指定我方1名手下獲得+${effect.attack}/+${effect.health}`,
+          count: 1,
+          candidateInstanceIds: candidates.map((card) => card.instanceId),
+          resolution: { type: "MODIFY_MINION_STATS", attack: effect.attack, health: effect.health },
           remainingEffects,
         };
         return false;
@@ -1673,6 +1694,18 @@ export function selectEffectCards(state: GameState, playerId: PlayerId, instance
     } else if (choice.resolution.type === "GRANT_MINION_KEYWORD") {
       if (!target.keywords.includes(choice.resolution.keyword)) target.keywords.push(choice.resolution.keyword);
       addLog(state, "ACTION", `${target.definitionId} 獲得 ${choice.resolution.keyword}`, { source: source.instanceId, target: target.instanceId });
+    } else if (choice.resolution.type === "MODIFY_MINION_STATS") {
+      if (hasActiveKeyword(target, "INVINCIBLE")) {
+        addLog(state, "PROTECTION", `${target.definitionId} 的無敵阻擋面板改值`, { source: source.instanceId, target: target.instanceId });
+      } else {
+        if (target.currentAttack === null || target.currentHealth === null || target.maxHealth === null) {
+          throw new RuleUndefinedError("NULL_MINION_STATS", "手下面板為 null，不能改值", target.definitionId);
+        }
+        target.currentAttack += choice.resolution.attack;
+        target.currentHealth += choice.resolution.health;
+        target.maxHealth += choice.resolution.health;
+        addLog(state, "RESOURCE", `${target.definitionId} +${choice.resolution.attack}/+${choice.resolution.health}`, { source: source.instanceId, target: target.instanceId });
+      }
     } else {
       target.sealed = true;
       addLog(state, "ACTION", `${target.definitionId} 被永久封印至離場`, { source: source.instanceId, target: target.instanceId });
