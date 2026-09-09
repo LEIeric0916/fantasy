@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-project.ps1 dev",
     "build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-project.ps1 build",
+    "build:ci": "tsc -b && vite build",
     "test": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-project.ps1 test run",
+    "test:ci": "vitest run",
     "test:watch": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-project.ps1 test",
     "check": "npm run test && npm run build"
   },
