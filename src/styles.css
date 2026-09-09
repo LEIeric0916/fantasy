@@ -383,7 +383,13 @@ summary { cursor: pointer; font-weight: 700; }
 .tutorial-level-2.tutorial-step-2 .hand-health,
 .tutorial-level-2.tutorial-step-14 [data-instance-id="tutorial-knight-apprentice"] .health-stat { outline: 3px solid #ffe45c; outline-offset: 2px; border-radius: 3px; color: #fff3a3; box-shadow: 0 0 14px #ffe45caa; }
 .tutorial-level-2.tutorial-step-8 .hand-card .inspect-card,
-.tutorial-level-2.tutorial-step-20 .hand-card .inspect-card { z-index: 94; border: 3px solid #ffe45c; color: #fff6b0; box-shadow: 0 0 0 2px #111418, 0 0 18px #ffe45ccc; pointer-events: auto; animation: ready-pulse 1.25s ease-in-out infinite; }
+.tutorial-level-2.tutorial-step-20 .hand-card .inspect-card,
+.tutorial-level-3.tutorial-step-5 .hand-card .inspect-card,
+.tutorial-level-4.tutorial-step-1 .hand-card .inspect-card,
+.tutorial-level-5.tutorial-step-1 .hand-card .inspect-card,
+.tutorial-level-6.tutorial-step-1 .hand-card .inspect-card,
+.tutorial-level-7.tutorial-step-1 .hand-card .inspect-card,
+.tutorial-level-8.tutorial-step-1 .hand-card .inspect-card { z-index: 94; border: 3px solid #ffe45c; color: #fff6b0; box-shadow: 0 0 0 2px #111418, 0 0 18px #ffe45ccc; pointer-events: auto; animation: ready-pulse 1.25s ease-in-out infinite; }
 .tutorial-level-2.tutorial-step-3 .hand-panel, .tutorial-level-2.tutorial-step-3 .active-side,
 .tutorial-level-2.tutorial-step-10 .hand-panel, .tutorial-level-2.tutorial-step-10 .active-side,
 .tutorial-level-2.tutorial-step-22 .hand-panel, .tutorial-level-2.tutorial-step-22 .active-side,
@@ -410,6 +416,58 @@ summary { cursor: pointer; font-weight: 700; }
 .tutorial-arrow-level-1.tutorial-arrow-step-5 { left: calc(50% + 1rem); bottom: 17%; transform: rotate(90deg); }
 .tutorial-arrow-level-3.tutorial-arrow-step-2 { right: auto; top: auto; left: calc(50% - 1.5rem); bottom: 12%; transform: rotate(90deg); }
 .tutorial-arrow-level-3.tutorial-arrow-step-4 { bottom: 27%; transform: rotate(-90deg); }
+.tutorial-keyword-target { outline: 3px solid #ffe45c; outline-offset: 3px; box-shadow: 0 0 18px #ffe45ccc; animation: ready-pulse 1.1s ease-in-out infinite; }
+.tutorial-level-4 .board-side, .tutorial-level-5 .board-side, .tutorial-level-6 .board-side, .tutorial-level-7 .board-side, .tutorial-level-8 .board-side { perspective: none; }
+.tutorial-level-4.tutorial-step-0 .hand-panel,
+.tutorial-level-4.tutorial-step-1 [data-instance-id="tutorial-shield-apprentice"],
+.tutorial-level-4.tutorial-step-2 [data-instance-id="tutorial-shield-apprentice"],
+.tutorial-level-4.tutorial-step-3 .hand-panel, .tutorial-level-4.tutorial-step-3 .active-side,
+.tutorial-level-4.tutorial-step-4 .tutorial-end-turn,
+.tutorial-level-4.tutorial-step-5 [data-instance-id="tutorial-shield-target"], .tutorial-level-4.tutorial-step-5 [data-instance-id="tutorial-shield-apprentice"],
+.tutorial-level-4.tutorial-step-6 [data-instance-id="tutorial-shield-apprentice"],
+.tutorial-level-5.tutorial-step-0 .hand-panel,
+.tutorial-level-5.tutorial-step-1 [data-instance-id="tutorial-kill-apprentice"],
+.tutorial-level-5.tutorial-step-2 [data-instance-id="tutorial-kill-apprentice"],
+.tutorial-level-5.tutorial-step-3 .hand-panel, .tutorial-level-5.tutorial-step-3 .active-side,
+.tutorial-level-5.tutorial-step-4 [data-instance-id="tutorial-kill-apprentice"], .tutorial-level-5.tutorial-step-4 [data-instance-id="tutorial-kill-target"],
+.tutorial-level-5.tutorial-step-5 .hand-panel,
+.tutorial-level-6.tutorial-step-0 .hand-panel,
+.tutorial-level-6.tutorial-step-1 [data-instance-id="tutorial-windfury-apprentice"],
+.tutorial-level-6.tutorial-step-2 [data-instance-id="tutorial-windfury-apprentice"],
+.tutorial-level-6.tutorial-step-3 .hand-panel, .tutorial-level-6.tutorial-step-3 .active-side,
+.tutorial-level-6.tutorial-step-4 .tutorial-end-turn,
+.tutorial-level-6.tutorial-step-5 [data-instance-id="tutorial-windfury-apprentice"],
+.tutorial-level-6.tutorial-step-6 [data-instance-id="tutorial-windfury-apprentice"], .tutorial-level-6.tutorial-step-6 .opponent-side .player-panel,
+.tutorial-level-6.tutorial-step-7 [data-instance-id="tutorial-windfury-apprentice"], .tutorial-level-6.tutorial-step-7 .opponent-side .player-panel,
+.tutorial-level-7.tutorial-step-0 .hand-panel,
+.tutorial-level-7.tutorial-step-1 [data-instance-id="tutorial-deathrattle-apprentice"],
+.tutorial-level-7.tutorial-step-2 [data-instance-id="tutorial-deathrattle-apprentice"],
+.tutorial-level-7.tutorial-step-3 .hand-panel, .tutorial-level-7.tutorial-step-3 .active-side,
+.tutorial-level-7.tutorial-step-4 .tutorial-end-turn,
+.tutorial-level-7.tutorial-step-5 [data-instance-id="tutorial-effect-enemy-warrior"], .tutorial-level-7.tutorial-step-5 [data-instance-id="tutorial-deathrattle-apprentice"],
+.tutorial-level-7.tutorial-step-6 .hand-panel,
+.tutorial-level-8.tutorial-step-0 .hand-panel,
+.tutorial-level-8.tutorial-step-1 [data-instance-id="tutorial-battlecry-apprentice"],
+.tutorial-level-8.tutorial-step-2 [data-instance-id="tutorial-battlecry-apprentice"],
+.tutorial-level-8.tutorial-step-3 .hand-panel, .tutorial-level-8.tutorial-step-3 .active-side,
+.tutorial-level-8.tutorial-step-4 .hand-panel { position: relative; z-index: 91; outline: 3px solid #d7ff55; outline-offset: -2px; background-color: #46545f; box-shadow: 0 0 0 2px #111418, 0 0 24px #d7ff55aa; filter: brightness(1.15) saturate(1.1); pointer-events: none; }
+.tutorial-level-3.tutorial-step-5 .hand-card .inspect-card,
+.tutorial-level-4.tutorial-step-1 .hand-card .inspect-card,
+.tutorial-level-5.tutorial-step-1 .hand-card .inspect-card,
+.tutorial-level-6.tutorial-step-1 .hand-card .inspect-card,
+.tutorial-level-7.tutorial-step-1 .hand-card .inspect-card,
+.tutorial-level-8.tutorial-step-1 .hand-card .inspect-card,
+.tutorial-level-4.tutorial-step-3 .hand-panel, .tutorial-level-4.tutorial-step-3 .active-side,
+.tutorial-level-4.tutorial-step-4 .tutorial-end-turn,
+.tutorial-level-5.tutorial-step-3 .hand-panel, .tutorial-level-5.tutorial-step-3 .active-side,
+.tutorial-level-5.tutorial-step-4 [data-instance-id="tutorial-kill-apprentice"], .tutorial-level-5.tutorial-step-4 [data-instance-id="tutorial-kill-target"],
+.tutorial-level-6.tutorial-step-3 .hand-panel, .tutorial-level-6.tutorial-step-3 .active-side,
+.tutorial-level-6.tutorial-step-4 .tutorial-end-turn,
+.tutorial-level-6.tutorial-step-6 [data-instance-id="tutorial-windfury-apprentice"], .tutorial-level-6.tutorial-step-6 .opponent-side .player-panel,
+.tutorial-level-6.tutorial-step-7 [data-instance-id="tutorial-windfury-apprentice"], .tutorial-level-6.tutorial-step-7 .opponent-side .player-panel,
+.tutorial-level-7.tutorial-step-3 .hand-panel, .tutorial-level-7.tutorial-step-3 .active-side,
+.tutorial-level-7.tutorial-step-4 .tutorial-end-turn,
+.tutorial-level-8.tutorial-step-3 .hand-panel, .tutorial-level-8.tutorial-step-3 .active-side { pointer-events: auto; }
 .tutorial-level-2 .board-side { perspective: none; }
 .tutorial-arrow-level-2 { right: auto; top: auto; left: calc(50% - 1.5rem); bottom: 8%; transform: rotate(90deg); }
 .tutorial-arrow-level-2.tutorial-arrow-step-1 { left: calc(50% - 3.2rem); bottom: 7%; }

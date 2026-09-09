@@ -21,6 +21,7 @@ const DARK_BOOK_DEFINITION_IDS = [
 const implementedEffects: Record<string, EffectDefinition[]> = {
   TOKEN_COIN: [{ type: "GAIN_MANA", value: 1 }],
   NEUTRAL_001: [{ type: "DRAW", value: 1 }],
+  NEUTRAL_010: [{ type: "DRAW", value: 1 }],
   MACHINE_001: [{ type: "ADD_GENERATED_TO_HAND", definitionId: "TOKEN_MACHINE_ARTIFACT_BOX", count: 2 }],
   MACHINE_002: [
     { type: "GAIN_RECYCLE_CHARGE", value: 1 },
@@ -385,6 +386,12 @@ const enterFieldEffects: Record<string, EffectDefinition[]> = {
 };
 
 const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffects"]> = {
+  NEUTRAL_008: {
+    ON_KILL: [{ type: "DRAW", value: 1 }],
+  },
+  NEUTRAL_009: {
+    DEATHRATTLE: [{ type: "DRAW", value: 1 }],
+  },
   TOKEN_MACHINE_ARTIFACT_BOX: {
     LAST_WORDS: [{ type: "DRAW", value: 1 }, { type: "GAIN_RECYCLE_CHARGE", value: 1 }],
   },
@@ -839,7 +846,7 @@ export function isCardImplemented(definition: CardDefinition): boolean {
     const structuralOnly = definition.effectsText
       .split(/[、，,。.\s]+/)
       .filter(Boolean)
-      .every((text) => ["嘲諷", "衝刺", "衝鋒", "聖盾術", "庇護"].includes(text));
+      .every((text) => ["嘲諷", "衝刺", "衝鋒", "聖盾術", "風怒", "庇護"].includes(text));
     return Boolean(definition.effects?.length)
       || Boolean(definition.enterFieldEffects?.length)
       || Boolean(definition.triggeredEffects)

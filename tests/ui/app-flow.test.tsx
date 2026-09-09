@@ -159,12 +159,13 @@ describe("瀏覽器入口流程", () => {
 
   it("新手教學第一關會依序介紹介面並等待玩家拖曳皇家衛兵出牌", () => {
     changeSelect("遊玩類型", "TUTORIAL");
+    changeSelect("教學篇章", "INFO");
     changeSelect("教學關卡", "1");
     expect(container.querySelector('select[aria-label="P1 玩家陣營"]')).toBeNull();
     expect(container.querySelector('select[aria-label="對戰模式"]')).toBeNull();
     click(button("開始教學"));
 
-    expect(container.textContent).toContain("新手教學 · 第一關");
+    expect(container.textContent).toContain("新手教學 · 資訊篇 · 第一關");
     expect(container.textContent).toContain("場地區：手下與立場");
     for (const expected of ["配置：牌組與手牌", "玩家資訊區", "先看看你的手牌", "查看卡牌詳細資訊"]) {
       click(container.querySelector<HTMLElement>(".tutorial-overlay")!);
@@ -200,10 +201,11 @@ describe("瀏覽器入口流程", () => {
 
   it("新手教學第二關會完整引導出牌、嘲諷、衝刺、反擊、衝鋒與勝利", () => {
     changeSelect("遊玩類型", "TUTORIAL");
+    changeSelect("教學篇章", "COMBAT");
     changeSelect("教學關卡", "2");
     click(button("開始教學"));
 
-    expect(container.textContent).toContain("新手教學 · 第二關");
+    expect(container.textContent).toContain("新手教學 · 戰鬥篇 · 第一關");
     expect(container.textContent).toContain("認識戰士學徒");
     expect(container.textContent).toContain("生命2/30");
     expect(container.textContent).toContain("生命6/30");
@@ -225,7 +227,9 @@ describe("瀏覽器入口流程", () => {
     click(container.querySelector<HTMLElement>(".tutorial-overlay")!);
     expect(container.textContent).toContain("請查看騎士學徒");
     click(container.querySelector<HTMLButtonElement>('button[aria-label="檢視 騎士學徒 卡牌資訊"]')!);
-    expect(container.textContent).toContain("點擊資訊欄外任意一處即可關閉");
+    expect(container.textContent).toContain("請先點擊黃色框標示的專有名詞");
+    click(button("衝刺"));
+    click(container.querySelector<HTMLButtonElement>('button[aria-label="關閉衝刺規則提示"]')!);
     click(container.querySelector<HTMLElement>(".card-modal-backdrop")!);
     expect(container.textContent).toContain("衝刺");
     click(container.querySelector<HTMLElement>(".tutorial-overlay")!);
@@ -254,6 +258,8 @@ describe("瀏覽器入口流程", () => {
     click(container.querySelector<HTMLElement>(".tutorial-overlay")!);
     expect(container.textContent).toContain("請查看刺客學徒");
     click(container.querySelector<HTMLButtonElement>('button[aria-label="檢視 刺客學徒 卡牌資訊"]')!);
+    click(button("衝鋒"));
+    click(container.querySelector<HTMLButtonElement>('button[aria-label="關閉衝鋒規則提示"]')!);
     click(container.querySelector<HTMLElement>(".card-modal-backdrop")!);
     expect(container.textContent).toContain("衝鋒");
     click(container.querySelector<HTMLElement>(".tutorial-overlay")!);
@@ -270,10 +276,11 @@ describe("瀏覽器入口流程", () => {
 
   it("新手教學第三關會教玩家施放一般法術，再打出立場", () => {
     changeSelect("遊玩類型", "TUTORIAL");
+    changeSelect("教學篇章", "SPELL");
     changeSelect("教學關卡", "3");
     click(button("開始教學"));
 
-    expect(container.textContent).toContain("新手教學 · 第三關");
+    expect(container.textContent).toContain("新手教學 · 法術篇 · 第一關");
     expect(container.textContent).toContain("法術分為一般法術與立場");
     click(container.querySelector<HTMLElement>(".tutorial-overlay")!);
     expect(container.textContent).toContain("魔法知識");
@@ -293,10 +300,15 @@ describe("瀏覽器入口流程", () => {
 
     expect(container.textContent).toContain("法術效果已經結算");
     expect(container.textContent).toContain("機械帝國兵工廠");
-    for (const expected of ["立場會留在立場區", "查看機械帝國兵工廠", "請打出機械帝國兵工廠"]) {
+    for (const expected of ["立場會留在立場區", "查看機械帝國兵工廠"]) {
       click(container.querySelector<HTMLElement>(".tutorial-overlay")!);
       expect(container.textContent).toContain(expected);
     }
+    click(container.querySelector<HTMLButtonElement>('button[aria-label="檢視 機械帝國兵工廠 卡牌資訊"]')!);
+    click(button("入場曲"));
+    click(container.querySelector<HTMLButtonElement>('button[aria-label="關閉入場曲規則提示"]')!);
+    click(container.querySelector<HTMLElement>(".card-modal-backdrop")!);
+    expect(container.textContent).toContain("請打出機械帝國兵工廠");
 
     const arsenal = container.querySelector<HTMLElement>('.hand [data-instance-id]')!;
     expect(arsenal.getAttribute("draggable")).toBe("true");
@@ -314,6 +326,42 @@ describe("瀏覽器入口流程", () => {
     expect(container.querySelector('.minion-zone [data-instance-id]')).not.toBeNull();
     click(container.querySelector<HTMLElement>(".tutorial-overlay")!);
     expect(container.textContent).toContain("第三關完成！");
+  });
+
+  it("教學依資訊、戰鬥、效果、法術分篇，且查看詳細後必須閱讀專有名詞", () => {
+    changeSelect("遊玩類型", "TUTORIAL");
+    const chapter = container.querySelector<HTMLSelectElement>('select[aria-label="教學篇章"]')!;
+    expect([...chapter.options].map((option) => option.textContent)).toEqual(["資訊篇", "戰鬥篇", "效果篇", "法術篇"]);
+
+    changeSelect("教學篇章", "COMBAT");
+    const level = container.querySelector<HTMLSelectElement>('select[aria-label="教學關卡"]')!;
+    expect([...level.options].map((option) => option.textContent)).toEqual(["第一關：戰鬥基礎", "第二關：聖盾術", "第三關：殺意", "第四關：風怒"]);
+    changeSelect("教學關卡", "4");
+    click(button("開始教學"));
+
+    expect(container.textContent).toContain("這一小關只教聖盾術");
+    click(container.querySelector<HTMLElement>(".tutorial-overlay")!);
+    click(container.querySelector<HTMLButtonElement>('button[aria-label="檢視 聖盾術學徒 卡牌資訊"]')!);
+    expect(container.textContent).toContain("請先點擊黃色框標示的專有名詞");
+    click(container.querySelector<HTMLButtonElement>('button[aria-label="關閉卡牌資訊"]')!);
+    expect(container.querySelector('[aria-label="聖盾術學徒 卡牌資訊"]')).not.toBeNull();
+
+    click(container.querySelector<HTMLButtonElement>(".tutorial-keyword-target .glossary-term-button")!);
+    expect(container.querySelector('[aria-label="聖盾術規則提示"]')).not.toBeNull();
+    click(container.querySelector<HTMLButtonElement>('button[aria-label="關閉聖盾術規則提示"]')!);
+    click(container.querySelector<HTMLButtonElement>('button[aria-label="關閉卡牌資訊"]')!);
+    expect(container.textContent).toContain("聖盾術會抵擋傷害");
+  });
+
+  it("效果篇將死亡之聲與戰吼拆成兩個獨立小關", () => {
+    changeSelect("遊玩類型", "TUTORIAL");
+    changeSelect("教學篇章", "EFFECT");
+    const level = container.querySelector<HTMLSelectElement>('select[aria-label="教學關卡"]')!;
+    expect([...level.options].map((option) => option.textContent)).toEqual(["第一關：死亡之聲", "第二關：戰吼"]);
+    click(button("開始教學"));
+    expect(container.textContent).toContain("新手教學 · 效果篇 · 第一關");
+    expect(container.textContent).toContain("這一小關只教死亡之聲");
+    expect(container.textContent).toContain("死亡之聲學徒");
   });
 
   it("可從起始頁面開啟卡表、篩選卡牌並查看詳細資訊", () => {

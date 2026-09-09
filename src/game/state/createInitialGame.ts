@@ -236,3 +236,93 @@ export function createThirdTutorialGame(): GameState {
   state.effectNotices = [];
   return state;
 }
+
+function clearTutorialZones(state: GameState): void {
+  for (const playerId of ["P1", "P2"] as const) {
+    const player = state.players[playerId];
+    player.deck = [];
+    player.hand = [];
+    player.minions = [];
+    player.fields = [];
+    player.graveyard = [];
+    player.removed = [];
+    player.extraDeck = [];
+    player.mulliganDone = true;
+    player.normalDraws = 1;
+    player.coinGranted = true;
+  }
+  state.phase = "MAIN";
+  state.turnNumber = 1;
+  state.log = [];
+  state.effectNotices = [];
+}
+
+export function createFourthTutorialGame(): GameState {
+  const state = createInitialGame({ factions: { P1: "ALLIANCE", P2: "ALLIANCE" }, startingPlayerId: "P1", seed: 4, shuffle: false });
+  clearTutorialZones(state);
+  state.players.P1.hand.push(createTestCard("NEUTRAL_006", "P1", "HAND", "tutorial-shield-apprentice"));
+  const enemy = createTestCard("NEUTRAL_002", "P2", "MINION", "tutorial-shield-target");
+  enemy.summonedOnTurn = 0;
+  state.players.P2.minions.push(enemy);
+  state.players.P2.deck.push(createTestCard("NEUTRAL_001", "P2", "DECK", "tutorial-shield-opponent-draw"));
+  state.players.P1.mana = 2;
+  state.players.P1.maxMana = 2;
+  state.players.P1.turnsStarted = 1;
+  state.players.P2.maxMana = 1;
+  return state;
+}
+
+export function createFifthTutorialGame(): GameState {
+  const state = createInitialGame({ factions: { P1: "ALLIANCE", P2: "ALLIANCE" }, startingPlayerId: "P1", seed: 5, shuffle: false });
+  clearTutorialZones(state);
+  state.players.P1.hand.push(createTestCard("NEUTRAL_008", "P1", "HAND", "tutorial-kill-apprentice"));
+  state.players.P1.deck.push(createTestCard("NEUTRAL_002", "P1", "DECK", "tutorial-kill-draw-warrior"));
+  const enemy = createTestCard("NEUTRAL_002", "P2", "MINION", "tutorial-kill-target");
+  enemy.summonedOnTurn = 0;
+  state.players.P2.minions.push(enemy);
+  state.players.P1.mana = 4;
+  state.players.P1.maxMana = 4;
+  state.players.P1.turnsStarted = 1;
+  return state;
+}
+
+export function createSixthTutorialGame(): GameState {
+  const state = createInitialGame({ factions: { P1: "ALLIANCE", P2: "ALLIANCE" }, startingPlayerId: "P1", seed: 6, shuffle: false });
+  clearTutorialZones(state);
+  state.players.P1.hand.push(createTestCard("NEUTRAL_007", "P1", "HAND", "tutorial-windfury-apprentice"));
+  state.players.P2.deck.push(createTestCard("NEUTRAL_001", "P2", "DECK", "tutorial-windfury-opponent-draw"));
+  state.players.P1.deck.push(createTestCard("NEUTRAL_002", "P1", "DECK", "tutorial-windfury-turn-draw"));
+  state.players.P1.mana = 2;
+  state.players.P1.maxMana = 2;
+  state.players.P1.turnsStarted = 1;
+  state.players.P2.maxMana = 1;
+  return state;
+}
+
+export function createSeventhTutorialGame(): GameState {
+  const state = createInitialGame({ factions: { P1: "ALLIANCE", P2: "ALLIANCE" }, startingPlayerId: "P1", seed: 7, shuffle: false });
+  clearTutorialZones(state);
+  state.players.P1.hand.push(createTestCard("NEUTRAL_009", "P1", "HAND", "tutorial-deathrattle-apprentice"));
+  state.players.P1.deck.push(createTestCard("NEUTRAL_002", "P1", "DECK", "tutorial-deathrattle-draw-warrior"));
+  const enemy = createTestCard("NEUTRAL_002", "P2", "MINION", "tutorial-effect-enemy-warrior");
+  enemy.summonedOnTurn = 0;
+  state.players.P2.minions.push(enemy);
+  state.players.P2.deck.push(createTestCard("NEUTRAL_001", "P2", "DECK", "tutorial-effect-opponent-draw"));
+  state.players.P1.mana = 2;
+  state.players.P1.maxMana = 2;
+  state.players.P1.turnsStarted = 1;
+  state.players.P2.maxMana = 1;
+  return state;
+}
+
+export function createEighthTutorialGame(): GameState {
+  const state = createInitialGame({ factions: { P1: "ALLIANCE", P2: "ALLIANCE" }, startingPlayerId: "P1", seed: 8, shuffle: false });
+  clearTutorialZones(state);
+  state.players.P1.hand.push(createTestCard("NEUTRAL_010", "P1", "HAND", "tutorial-battlecry-apprentice"));
+  state.players.P1.deck.push(createTestCard("NEUTRAL_002", "P1", "DECK", "tutorial-battlecry-draw-warrior"));
+  state.players.P2.minions.push(createTestCard("NEUTRAL_002", "P2", "MINION", "tutorial-effect-enemy-warrior"));
+  state.players.P1.mana = 2;
+  state.players.P1.maxMana = 2;
+  state.players.P1.turnsStarted = 1;
+  return state;
+}

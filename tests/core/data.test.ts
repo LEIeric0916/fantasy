@@ -4,8 +4,8 @@ import { createCardInstance } from "../../src/game/state/CardInstance";
 
 describe("卡牌資料", () => {
   it("完整載入六個 JSON 且 ID 唯一", () => {
-    expect(cardDefinitions).toHaveLength(105);
-    expect(new Set(cardDefinitions.map((card) => card.id)).size).toBe(105);
+    expect(cardDefinitions).toHaveLength(110);
+    expect(new Set(cardDefinitions.map((card) => card.id)).size).toBe(110);
     expect(validateCardData().filter((issue) => issue.code === "DUPLICATE_ID")).toEqual([]);
   });
 
@@ -18,8 +18,8 @@ describe("卡牌資料", () => {
     expect(card.effects).toEqual([{ type: "DRAW", value: 1 }]);
   });
 
-  it("中立牌堆包含戰鬥教學使用的四種學徒", () => {
-    expect(["NEUTRAL_002", "NEUTRAL_003", "NEUTRAL_004", "NEUTRAL_005"].map((id) => {
+  it("中立牌堆包含教學使用的學徒", () => {
+    expect(["NEUTRAL_002", "NEUTRAL_003", "NEUTRAL_004", "NEUTRAL_005", "NEUTRAL_006", "NEUTRAL_007", "NEUTRAL_008", "NEUTRAL_009", "NEUTRAL_010"].map((id) => {
       const card = getCardDefinition(id);
       return [card.name, card.originalCost, card.attack, card.health, card.keywords];
     })).toEqual([
@@ -27,6 +27,11 @@ describe("卡牌資料", () => {
       ["守備學徒", 2, 1, 3, ["TAUNT"]],
       ["騎士學徒", 3, 3, 2, ["RUSH"]],
       ["刺客學徒", 4, 3, 3, ["CHARGE"]],
+      ["聖盾術學徒", 2, 1, 1, ["DIVINE_SHIELD"]],
+      ["風怒學徒", 2, 1, 1, ["WINDFURY"]],
+      ["殺意學徒", 4, 3, 5, ["RUSH", "ON_KILL"]],
+      ["死亡之聲學徒", 2, 1, 1, ["DEATHRATTLE"]],
+      ["戰吼學徒", 2, 1, 1, ["BATTLECRY"]],
     ]);
   });
 

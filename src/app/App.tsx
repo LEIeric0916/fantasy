@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { AiDifficulty } from "../game/ai/aiPolicy";
 import type { Faction, PlayerId } from "../game/cards/cardTypes";
-import { createFirstTutorialGame, createInitialGame, createSecondTutorialGame, createThirdTutorialGame } from "../game/state/createInitialGame";
+import { createEighthTutorialGame, createFifthTutorialGame, createFirstTutorialGame, createFourthTutorialGame, createInitialGame, createSecondTutorialGame, createSeventhTutorialGame, createSixthTutorialGame, createThirdTutorialGame } from "../game/state/createInitialGame";
 import { CardCatalog } from "../ui/CardCatalog";
 import { GameBoard } from "../ui/GameBoard";
 import { Glossary } from "../ui/Glossary";
@@ -17,6 +17,23 @@ type EntryMode = "BATTLE" | "CHAOS" | "TUTORIAL";
 type GameMode = "LOCAL" | "RANDOM_AI" | "HEURISTIC_AI" | "SEARCH_AI" | "WATCH_AI_HEURISTIC";
 type SpectatorViewMode = "FOLLOW_ACTION" | "FIXED";
 type FactionSelection = Faction | "RANDOM";
+export type TutorialLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+type TutorialChapter = "INFO" | "COMBAT" | "EFFECT" | "SPELL";
+
+const tutorialLevels: Record<TutorialChapter, { value: TutorialLevel; label: string }[]> = {
+  INFO: [{ value: 1, label: "第一關：遊戲介面與打出手下" }],
+  COMBAT: [
+    { value: 2, label: "第一關：戰鬥基礎" },
+    { value: 4, label: "第二關：聖盾術" },
+    { value: 5, label: "第三關：殺意" },
+    { value: 6, label: "第四關：風怒" },
+  ],
+  EFFECT: [
+    { value: 7, label: "第一關：死亡之聲" },
+    { value: 8, label: "第二關：戰吼" },
+  ],
+  SPELL: [{ value: 3, label: "第一關：一般法術與立場" }],
+};
 
 function resolveFaction(selection: FactionSelection): Faction {
   if (selection !== "RANDOM") return selection;
@@ -43,7 +60,8 @@ export default function App() {
   const [startingMode, setStartingMode] = useState<PlayerId | "RANDOM">("RANDOM");
   const [startingPlayerId, setStartingPlayerId] = useState<PlayerId>("P1");
   const [entryMode, setEntryMode] = useState<EntryMode>("BATTLE");
-  const [tutorialLevel, setTutorialLevel] = useState<1 | 2 | 3>(1);
+  const [tutorialChapter, setTutorialChapter] = useState<TutorialChapter>("INFO");
+  const [tutorialLevel, setTutorialLevel] = useState<TutorialLevel>(1);
   const [gameMode, setGameMode] = useState<GameMode>("LOCAL");
   const [spectatorViewMode, setSpectatorViewMode] = useState<SpectatorViewMode>("FOLLOW_ACTION");
 
@@ -88,14 +106,27 @@ export default function App() {
               <option value="TUTORIAL">新手教學</option>
             </select>
           </label>
-          {entryMode === "TUTORIAL" && <label>
-            教學關卡
-            <select aria-label="教學關卡" value={tutorialLevel} onChange={(event) => setTutorialLevel(Number(event.target.value) as 1 | 2 | 3)}>
-              <option value={1}>第一關：遊戲介面與打出手下</option>
-              <option value={2}>第二關：手下戰鬥</option>
-              <option value={3}>第三關：一般法術與立場</option>
-            </select>
-          </label>}
+          {entryMode === "TUTORIAL" && <>
+            <label>
+              教學篇章
+              <select aria-label="教學篇章" value={tutorialChapter} onChange={(event) => {
+                const chapter = event.target.value as TutorialChapter;
+                setTutorialChapter(chapter);
+                setTutorialLevel(tutorialLevels[chapter][0].value);
+              }}>
+                <option value="INFO">資訊篇</option>
+                <option value="COMBAT">戰鬥篇</option>
+                <option value="EFFECT">效果篇</option>
+                <option value="SPELL">法術篇</option>
+              </select>
+            </label>
+            <label>
+              教學關卡
+              <select aria-label="教學關卡" value={tutorialLevel} onChange={(event) => setTutorialLevel(Number(event.target.value) as TutorialLevel)}>
+                {tutorialLevels[tutorialChapter].map((level) => <option value={level.value} key={level.value}>{level.label}</option>)}
+              </select>
+            </label>
+          </>}
           {entryMode === "CHAOS" && <p className="mode-description">雙方每場各自隨機取得兩副不同牌組，合併並洗牌後進行對戰。</p>}
           {entryMode !== "TUTORIAL" && <label>
             對戰模式
@@ -146,7 +177,14 @@ export default function App() {
     );
   }
   const initialState = entryMode === "TUTORIAL"
-    ? tutorialLevel === 1 ? createFirstTutorialGame() : tutorialLevel === 2 ? createSecondTutorialGame() : createThirdTutorialGame()
+    ? tutorialLevel === 1 ? createFirstTutorialGame()
+      : tutorialLevel === 2 ? createSecondTutorialGame()
+        : tutorialLevel === 3 ? createThirdTutorialGame()
+          : tutorialLevel === 4 ? createFourthTutorialGame()
+            : tutorialLevel === 5 ? createFifthTutorialGame()
+              : tutorialLevel === 6 ? createSixthTutorialGame()
+                : tutorialLevel === 7 ? createSeventhTutorialGame()
+                  : createEighthTutorialGame()
     : createInitialGame({
     factions: resolvedFactions,
     deckFactions: resolvedDeckFactions,
