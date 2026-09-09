@@ -17,6 +17,9 @@ project-temp/
 !.env.example
 *.local
 
+# Local development handoff notes
+SESSION_HANDOFF.md
+
 # Logs
 *.log
 npm-debug.log*
