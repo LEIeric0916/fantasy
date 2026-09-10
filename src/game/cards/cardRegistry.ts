@@ -344,7 +344,6 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
   ],
   UNDEAD_009: [{ type: "REVIVE_FRIENDLY_GRAVE_MINION", minOriginalCost: 5 }],
   UNDEAD_010: [{ type: "SUMMON", definitionId: "TOKEN_UNDEAD_PREACHER", count: 1 }],
-  TOKEN_UNDEAD_PREACHER: [{ type: "GAIN_NECROMANCY", value: 3 }],
   UNDEAD_012: [{ type: "DESTROY_ALL_ENEMY_MINIONS" }],
   UNDEAD_013: [
     { type: "DISCOVER_TOP", bonusReveal: 2, count: 3, cardType: "MINION", discardFromSelected: 1 },
@@ -361,6 +360,7 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
     doomFieldDefinitionId: "TOKEN_UNDEAD_DOOMSDAY_BOOK",
     bonusSummonDefinitionId: "TOKEN_UNDEAD_CATASTROPHE_KNIGHT",
     bonusSummonCount: 2,
+    maxValue: 5,
   }],
 };
 
@@ -574,7 +574,7 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
     }],
   },
   TOKEN_UNDEAD_PREACHER: {
-    DEATHRATTLE: [{ type: "DRAW", value: 1 }],
+    DEATHRATTLE: [{ type: "GAIN_NECROMANCY", value: 3 }],
   },
   TOKEN_UNDEAD_BOOK_IMMORTAL: {
     GROWTH: [

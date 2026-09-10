@@ -105,7 +105,7 @@
       "faction": "ALLIANCE",
       "cardType": "MINION",
       "subtype": ["HUMAN", "COMMANDER"],
-      "originalCost": 5,
+      "originalCost": 4,
       "attack": 3,
       "health": 3,
       "deckCount": 3,

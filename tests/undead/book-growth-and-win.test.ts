@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getCardDefinition } from "../../src/game/cards/cardRegistry";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { beginTurn } from "../../src/game/engine/turnEngine";
+import { summonGeneratedField } from "../../src/game/engine/summonEngine";
 import { mainState, putCard } from "../helpers";
 
 describe("黑暗之書成長與末日勝利", () => {
@@ -70,6 +71,16 @@ describe("黑暗之書成長與末日勝利", () => {
     state = applyAction(state, { type: "END_TURN", playerId: "P1" }).state;
     expect(state.phase).toBe("GAME_OVER");
     expect(state.winner).toBe("P1");
+    expect(state.loseReason).toBe("DOOMSDAY_BOOK");
+  });
+
+  it("第4張末日之書由效果直接召喚時也立即獲勝", () => {
+    const state = mainState();
+    for (let index = 0; index < 4; index += 1) {
+      expect(summonGeneratedField(state, "P2", "TOKEN_UNDEAD_DOOMSDAY_BOOK")).toBe(true);
+    }
+    expect(state.phase).toBe("GAME_OVER");
+    expect(state.winner).toBe("P2");
     expect(state.loseReason).toBe("DOOMSDAY_BOOK");
   });
 });

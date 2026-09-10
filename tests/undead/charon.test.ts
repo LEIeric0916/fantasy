@@ -5,7 +5,7 @@ import { destroyMinion } from "../../src/game/engine/zoneEngine";
 import { mainState, putCard } from "../helpers";
 
 describe("悼念的騎士 卡戎", () => {
-  it("我方回合死靈數達到10時，從當時手牌效果召喚並在原觸發完成後發動戰吼", () => {
+  it("我方回合死靈數達到10時，從當時手牌效果召喚且佈道者不再發動戰吼", () => {
     let state = mainState();
     state.players.P1.resources.necromancy = 9;
     const charon = putCard(state, "P1", "UNDEAD_010", "HAND", "effect-summon");
@@ -14,18 +14,28 @@ describe("悼念的騎士 卡戎", () => {
     resolvePendingEffects(state);
     expect(state.pendingChoice).toMatchObject({ type: "EFFECT_SUMMON_CONFIRM", sourceInstanceId: charon.instanceId });
     state = applyAction(state, { type: "CONFIRM_EFFECT_SUMMON", playerId: "P1" }).state;
-    expect(state.players.P1.resources.necromancy).toBe(13);
+    expect(state.players.P1.resources.necromancy).toBe(10);
     expect(state.players.P1.minions.some((card) => card.instanceId === charon.instanceId)).toBe(true);
     expect(state.players.P1.minions.some((card) => card.definitionId === "TOKEN_UNDEAD_PREACHER")).toBe(true);
   });
 
-  it("正常從手牌打出時，戰吼召喚哀慟的布道者", () => {
+  it("正常從手牌打出時，戰吼召喚哀慟的佈道者但不增加死靈數", () => {
     let state = mainState();
     state.players.P1.hand = [];
     const charon = putCard(state, "P1", "UNDEAD_010", "HAND", "normal");
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: charon.instanceId }).state;
     expect(state.players.P1.minions.some((card) => card.definitionId === "TOKEN_UNDEAD_PREACHER")).toBe(true);
-    expect(state.players.P1.resources.necromancy).toBe(3);
+    expect(state.players.P1.resources.necromancy).toBe(0);
+  });
+
+  it("哀慟的佈道者被消滅時依通用規則+1，並以死亡之聲額外增加3死靈數", () => {
+    const state = mainState();
+    state.players.P1.hand = [];
+    const preacher = putCard(state, "P1", "TOKEN_UNDEAD_PREACHER", "MINION", "preacher-death");
+    destroyMinion(state, preacher, "TEST");
+    resolvePendingEffects(state);
+    expect(state.players.P1.resources.necromancy).toBe(4);
+    expect(state.players.P1.hand).toHaveLength(0);
   });
 
   it("友方手下因交戰消滅敵方手下時，每張在場卡戎給予對手玩家2傷", () => {

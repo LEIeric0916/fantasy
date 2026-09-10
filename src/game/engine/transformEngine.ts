@@ -49,6 +49,7 @@ export function transformMinion(state: GameState, card: CardInstance, definition
 }
 
 export function checkDoomsdayWin(state: GameState, playerId: CardInstance["controllerId"]): boolean {
+  if (state.phase === "GAME_OVER") return state.winner === playerId && state.loseReason === "DOOMSDAY_BOOK";
   const winningField = state.players[playerId].fields.find((field) => {
     const condition = getCardDefinition(field.definitionId).fieldWinCondition;
     if (!condition) return false;

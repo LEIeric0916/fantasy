@@ -327,7 +327,7 @@
       "cardType": "MINION",
       "subtype": ["SPELLBEING"],
       "originalCost": 5,
-      "attack": 5,
+      "attack": 4,
       "health": 3,
       "deckCount": 0,
       "keywords": ["RUSH", "DEATHRATTLE"],
@@ -375,10 +375,10 @@
       "attack": 4,
       "health": 6,
       "deckCount": 0,
-      "keywords": ["TAUNT", "RUSH", "WINDFURY", "BATTLECRY", "DEATHRATTLE"],
-      "effectsText": "戰吼：死靈數+3。死亡之聲：抽1張牌。",
+      "keywords": ["TAUNT", "RUSH", "WINDFURY", "DEATHRATTLE"],
+      "effectsText": "死亡之聲：死靈數+3。",
       "generatedOnly": true,
-      "notes": "最後更正確認是增加死靈數3，不是死靈術。"
+      "notes": "取消戰吼與抽牌效果。死亡之聲額外增加死靈數3；自身被消滅仍會依通用規則另計1死靈數。"
     },
     {
       "id": "TOKEN_UNDEAD_BOOK_IMMORTAL",

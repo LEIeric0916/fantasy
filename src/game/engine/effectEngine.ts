@@ -419,16 +419,17 @@ function resolveEffectList(
           if (hasActiveKeyword(enemy, "DISCIPLINE")) continue;
           if (transformMinion(state, enemy, effect.transformDefinitionId)) transformedCount += 1;
         }
+        const x = Math.min(transformedCount, effect.maxValue ?? transformedCount);
         const damageTargets = [...state.players[opponentOf(playerId)].minions];
         const timingContext = createTimingContext(state, `CATASTROPHE_FLOOD:${source.instanceId}`);
-        for (const target of damageTargets) dealDamageToMinion(state, target, transformedCount, source.instanceId, "EFFECT");
+        for (const target of damageTargets) dealDamageToMinion(state, target, x, source.instanceId, "EFFECT");
         for (const target of damageTargets.filter((card) => (card.currentHealth ?? 1) <= 0)) {
           destroyMinion(state, target, "EFFECT_DAMAGE_DEATH", timingContext);
         }
         const player = state.players[playerId];
         const before = player.heroHp;
-        player.heroHp = Math.min(player.heroMaxHp, player.heroHp + transformedCount);
-        addLog(state, "RESOURCE", `${playerId} 因災厄洪流恢復 ${player.heroHp - before} HP`, { transformedCount });
+        player.heroHp = Math.min(player.heroMaxHp, player.heroHp + x);
+        addLog(state, "RESOURCE", `${playerId} 因災厄洪流恢復 ${player.heroHp - before} HP`, { transformedCount, x });
         if (player.fields.some((field) => field.definitionId === effect.doomFieldDefinitionId)) {
           for (let count = 0; count < effect.bonusSummonCount; count += 1) {
             summonGeneratedMinion(state, playerId, effect.bonusSummonDefinitionId);

@@ -304,11 +304,12 @@ describe("E. 死靈、棄牌與復活", () => {
     resolvePendingEffects(state);
     expect(state.players.P1.resources.necromancy).toBe(1);
   });
-  it("E02｜死靈數 +X 不消耗資源", () => {
+  it("E02｜哀慟的佈道者死亡時依通用規則與死亡之聲增加死靈數", () => {
     const state = mainState();
     const preacher = putCard(state, "P1", "TOKEN_UNDEAD_PREACHER", "MINION", "preacher");
-    resolveEffects(state, "P1", preacher, getCardDefinition(preacher.definitionId).effects ?? []);
-    expect(state.players.P1.resources.necromancy).toBe(3);
+    destroyMinion(state, preacher, "TEST");
+    resolvePendingEffects(state);
+    expect(state.players.P1.resources.necromancy).toBe(4);
   });
   it("E03｜死靈復活：由場上死亡", () => {
     const state = mainState();

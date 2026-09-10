@@ -28,8 +28,8 @@ describe("銀翼刻柏斯與革命軍刀達斯", () => {
     state.players.P1.deck.push(candidate);
     const das = putCard(state, "P1", "ALLIANCE_007", "HAND", "das");
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: das.instanceId }).state;
-    expect(getCardDefinition("ALLIANCE_007").originalCost).toBe(5);
-    expect(state.players.P1.mana).toBe(7);
+    expect(getCardDefinition("ALLIANCE_007").originalCost).toBe(4);
+    expect(state.players.P1.mana).toBe(8);
     expect(state.pendingChoice).toMatchObject({ type: "EFFECT_CARDS" });
     if (state.pendingChoice?.type !== "EFFECT_CARDS") throw new Error("expected discover choice");
     const chosen = state.pendingChoice.candidateInstanceIds[0];

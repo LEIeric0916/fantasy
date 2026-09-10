@@ -11,6 +11,7 @@ import { confirmEffectSummon, resolveEffects, resolvePendingEffects, selectEffec
 import { selectCountdownOrder } from "./countdownEngine";
 import { refreshHandCosts } from "./costEngine";
 import { enqueueSpellPlayedEffectSummons } from "./effectSummonEngine";
+import { checkDoomsdayWin } from "./transformEngine";
 
 export type GameAction =
   | { type: "MULLIGAN"; playerId: PlayerId; instanceIds: string[] }
@@ -156,6 +157,7 @@ function playCard(state: GameState, playerId: PlayerId, instanceId: string): voi
   }
   if (definition.cardType === "FIELD") {
     moveCard(state, card, "FIELD", "PLAY_FIELD");
+    if (checkDoomsdayWin(state, playerId)) return;
     resolveEffects(state, playerId, card, definition.effects ?? []);
     return;
   }

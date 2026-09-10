@@ -113,7 +113,7 @@ export type EffectDefinition =
   | { type: "CHOOSE_EFFECT_SUMMON_COPY"; definitionId: string; candidateInstanceIds: string[] }
   | { type: "COPY_HAND_SPELL_EFFECT" }
   | { type: "SCALED_END_TURN_CHOICE"; maxManaThreshold: number; bonus: number }
-  | { type: "CATASTROPHE_FLOOD"; transformDefinitionId: string; doomFieldDefinitionId: string; bonusSummonDefinitionId: string; bonusSummonCount: number }
+  | { type: "CATASTROPHE_FLOOD"; transformDefinitionId: string; doomFieldDefinitionId: string; bonusSummonDefinitionId: string; bonusSummonCount: number; maxValue?: number }
   | { type: "DISCARD_HAND"; count: number }
   | { type: "SEAL_TARGET_ENEMY_MINION" }
   | { type: "GAIN_NECROMANCY"; value: number }

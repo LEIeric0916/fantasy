@@ -35,7 +35,20 @@ describe("災厄洪流", () => {
     state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: spell.instanceId }).state;
     const knights = state.players.P1.minions.filter((card) => card.definitionId === "TOKEN_UNDEAD_CATASTROPHE_KNIGHT");
     expect(knights).toHaveLength(2);
-    expect(knights.every((card) => card.currentAttack === 5 && card.currentHealth === 3)).toBe(true);
+    expect(knights.every((card) => card.currentAttack === 4 && card.currentHealth === 3)).toBe(true);
+  });
+
+  it("敵方有超過5名可轉變手下時，災厄洪流的傷害與恢復X仍以5為上限", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    state.players.P1.heroHp = 20;
+    for (let index = 0; index < 6; index += 1) {
+      putCard(state, "P2", "TOKEN_MACHINE_DESTROYER", "MINION", `cap-target-${index}`);
+    }
+    const spell = putCard(state, "P1", "UNDEAD_014", "HAND", "cap-five");
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: spell.instanceId }).state;
+    expect(state.players.P1.heroHp).toBe(25);
+    expect(state.players.P2.extraDeck.filter((card) => card.definitionId === "TOKEN_UNDEAD_GENERIC")).toHaveLength(6);
   });
 
   it("災厄騎士死亡之聲給予對手玩家3點傷害", () => {

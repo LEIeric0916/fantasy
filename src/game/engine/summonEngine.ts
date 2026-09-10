@@ -8,6 +8,7 @@ import type { CardInstance } from "../cards/cardTypes";
 import { moveCard } from "./zoneEngine";
 import { enqueueTriggeredEffects } from "./triggerEngine";
 import { createTimingContext } from "./simultaneousEngine";
+import { checkDoomsdayWin } from "./transformEngine";
 
 export function canTriggerEffectSummonFromHand(state: GameState, playerId: PlayerId): boolean {
   return state.players[playerId].minions.length < state.rulesConfig.minionLimit;
@@ -126,5 +127,6 @@ export function summonGeneratedField(state: GameState, playerId: PlayerId, defin
   if (enterEffects.length) {
     enqueueTriggeredEffects(state, card, enterEffects, "ENTER_FIELD", createTimingContext(state, `ENTER_FIELD:${card.instanceId}`));
   }
+  checkDoomsdayWin(state, playerId);
   return true;
 }
