@@ -140,6 +140,7 @@ export function CardView({
       {protectionEmblems.length > 0 && <span className="protection-emblems" aria-label={`防護效果：${protectionEmblems.map((emblem) => emblem.label).join("、")}`}>
         {protectionEmblems.map((emblem) => <span className={`status-emblem ${emblem.key}-emblem`} aria-label={emblem.label} title={emblem.label} key={emblem.key} />)}
       </span>}
+      {actionable && <span className="action-ready-indicator" aria-label="此手下可以攻擊"><i aria-hidden="true">⚔</i></span>}
       {boardStatuses.length > 0 && <span className="status-strip" aria-label={`狀態：${boardStatuses.map((status) => status.label).join("、")}`}>{boardStatuses.map((status) => <small className={`status-badge ${status.key}`} title={status.description} key={status.key}>{status.label}</small>)}</span>}
       {plagueMarks !== undefined && <span className="counter-badge plague-counter" aria-label={`瘟疫標記 ${plagueMarks}`}><small>瘟疫</small><strong>{plagueMarks}</strong><small>/ {plagueThreshold}</small></span>}
       {card.counters.countdown !== undefined && <span className="counter-badge countdown-badge" aria-label={`目前倒數 ${card.counters.countdown}`}><small>倒數</small><strong>{card.counters.countdown}</strong></span>}

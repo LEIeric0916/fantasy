@@ -182,6 +182,7 @@ describe("效果未發動介面提示", () => {
     expect(container.querySelector(`[data-instance-id="${playable.instanceId}"]`)?.classList.contains("playable")).toBe(true);
     const attackerElement = container.querySelector<HTMLElement>(`[data-instance-id="${attacker.instanceId}"]`)!;
     expect(attackerElement.classList.contains("actionable")).toBe(true);
+    expect(attackerElement.querySelector('[aria-label="此手下可以攻擊"]')).not.toBeNull();
     expect(attackerElement.getAttribute("draggable")).toBe("true");
     const dataTransfer = { effectAllowed: "none", dropEffect: "none", setData: () => undefined };
     const dragStart = new Event("dragstart", { bubbles: true });
@@ -310,6 +311,82 @@ describe("效果未發動介面提示", () => {
     const damage = [...container.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.includes("給予對手所有手下"))!;
     act(() => damage.click());
     expect(container.textContent).toContain("請交給 P2");
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  it("完成交接後以中央橙框提示對方回合結束並輪到自己", () => {
+    vi.useFakeTimers();
+    const state = mainState();
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
+    const endTurn = [...container.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "結束回合")!;
+    act(() => endTurn.click());
+    const handoff = [...container.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "已交接，顯示畫面")!;
+    act(() => handoff.click());
+    const transition = container.querySelector(".turn-transition");
+    expect(transition?.textContent).toContain("對方回合結束");
+    expect(transition?.textContent).toContain("輪到你的回合");
+    act(() => vi.advanceTimersByTime(1_900));
+    expect(container.querySelector(".turn-transition")).toBeNull();
+    act(() => root.unmount());
+    container.remove();
+    vi.useRealTimers();
+  });
+
+  it("玩家結束回合交給 AI 時不顯示大型回合提示", () => {
+    vi.useFakeTimers();
+    const state = mainState();
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} aiPlayerId="P2" aiDifficulty="RANDOM" />));
+    const endTurn = [...container.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "結束回合")!;
+    act(() => endTurn.click());
+    expect(container.querySelector(".turn-transition")).toBeNull();
+    act(() => root.unmount());
+    container.remove();
+    vi.useRealTimers();
+  });
+
+  it("頂端與回合提示使用當前玩家自己的回合數", () => {
+    vi.useFakeTimers();
+    const state = mainState();
+    state.turnNumber = 9;
+    state.players.P1.turnsStarted = 5;
+    state.players.P2.turnsStarted = 4;
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
+    expect(container.querySelector(".eyebrow")?.textContent).toContain("TURN 5");
+    expect(container.querySelector(".eyebrow")?.textContent).not.toContain("TURN 9");
+    const endTurn = [...container.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "結束回合")!;
+    act(() => endTurn.click());
+    const handoff = [...container.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "已交接，顯示畫面")!;
+    act(() => handoff.click());
+    expect(container.querySelector(".eyebrow")?.textContent).toContain("TURN 5");
+    expect(container.querySelector(".turn-transition small")?.textContent).toBe("TURN 5");
+    act(() => root.unmount());
+    container.remove();
+    vi.useRealTimers();
+  });
+
+  it("玩家勝利時顯示勝利面板與煙火層", () => {
+    const state = mainState();
+    state.phase = "GAME_OVER";
+    state.winner = "P1";
+    state.loseReason = "DOOMSDAY_BOOK";
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
+    expect(container.querySelector(".result-overlay.victory")).not.toBeNull();
+    expect(container.querySelectorAll(".victory-fireworks i")).toHaveLength(5);
+    expect(container.querySelector(".result-panel")?.textContent).toContain("勝利！");
+    expect(container.querySelector(".result-panel")?.textContent).toContain("集齊 4 本末日之書");
     act(() => root.unmount());
     container.remove();
   });

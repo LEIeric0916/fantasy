@@ -14,6 +14,7 @@ import { cardTypeLabels, factionLabels, formatSubtypeLabels } from "../game/card
 
 const AI_ACTION_DELAY_MS = 2_000;
 const ACTION_ANIMATION_MS = 900;
+const TURN_ANNOUNCEMENT_MS = 1_800;
 
 type ActionAnimation = {
   key: number;
@@ -26,6 +27,12 @@ type ActionAnimation = {
 
 type ActionAnimationLabel = Omit<ActionAnimation, "key" | "from" | "to">;
 
+type TurnAnnouncement = {
+  key: number;
+  activePlayerId: PlayerId;
+  turnNumber: number;
+};
+
 function opponentOf(playerId: PlayerId): PlayerId {
   return playerId === "P1" ? "P2" : "P1";
 }
@@ -34,6 +41,13 @@ function playerFactionLabel(player: PlayerState): string {
   const factions = player.deckFactions?.length > 1 ? player.deckFactions : [player.faction];
   if (factions.length === 1) return factionLabels[player.faction];
   return factions.map((faction) => factionLabels[faction]).join("＋");
+}
+
+function resultReason(reason: GameState["loseReason"]): string {
+  if (reason === "HP_ZERO") return "對手生命歸零";
+  if (reason === "DECK_OUT") return "對手牌庫耗盡";
+  if (reason === "DOOMSDAY_BOOK") return "集齊 4 本末日之書";
+  return "對局結束";
 }
 
 export function formatLogMessage(message: string): string {
@@ -108,10 +122,12 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
   const [fixedSpectatorPlayerId, setFixedSpectatorPlayerId] = useState<PlayerId>("P1");
   const [draggedHandCardId, setDraggedHandCardId] = useState<string>();
   const [actionAnimation, setActionAnimation] = useState<ActionAnimation>();
+  const [turnAnnouncement, setTurnAnnouncement] = useState<TurnAnnouncement>();
   const [tutorialStep, setTutorialStep] = useState<number | undefined>(tutorialLevel ? 0 : undefined);
   const [tutorialKeywordViewed, setTutorialKeywordViewed] = useState(false);
   const aiSeed = useRef((initialState.rngSeed ^ 0xa17a17) >>> 0);
   const aiStepCount = useRef(0);
+  const previousActivePlayerId = useRef(initialState.activePlayerId);
   const actingPlayerId = getActingPlayerId(state);
   const aiDifficulties: Partial<Record<PlayerId, AiDifficulty>> = aiPlayers ?? (aiPlayerId ? { [aiPlayerId]: aiDifficulty } : {});
   const actingAiDifficulty = actingPlayerId ? aiDifficulties[actingPlayerId] : undefined;
@@ -177,6 +193,7 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
   const active = state.players[perspectivePlayerId];
   const opponentId: PlayerId = perspectivePlayerId === "P1" ? "P2" : "P1";
   const opponent = state.players[opponentId];
+  const activeTurnNumber = state.players[state.activePlayerId].turnsStarted;
   const activeFieldSlots = getPlayerFieldLimit(state, active.id) ?? 7;
   const opponentFieldSlots = getPlayerFieldLimit(state, opponent.id) ?? 7;
   const allCards = useMemo(() => (["P1", "P2"] as const).flatMap((playerId) => {
@@ -239,6 +256,31 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
     const timer = window.setTimeout(() => setActionAnimation(undefined), ACTION_ANIMATION_MS);
     return () => window.clearTimeout(timer);
   }, [actionAnimation]);
+
+  useEffect(() => {
+    const previousPlayerId = previousActivePlayerId.current;
+    previousActivePlayerId.current = state.activePlayerId;
+    if (state.phase === "GAME_OVER") {
+      setTurnAnnouncement(undefined);
+      return;
+    }
+    if (tutorialMode || state.phase === "MULLIGAN" || previousPlayerId === state.activePlayerId) return;
+    if (state.activePlayerId !== perspectivePlayerId) {
+      setTurnAnnouncement(undefined);
+      return;
+    }
+    setTurnAnnouncement({
+      key: Date.now(),
+      activePlayerId: state.activePlayerId,
+      turnNumber: activeTurnNumber,
+    });
+  }, [activeTurnNumber, perspectivePlayerId, state.activePlayerId, state.phase, tutorialMode]);
+
+  useEffect(() => {
+    if (!turnAnnouncement || privacyGate) return;
+    const timer = window.setTimeout(() => setTurnAnnouncement(undefined), TURN_ANNOUNCEMENT_MS);
+    return () => window.clearTimeout(timer);
+  }, [privacyGate, turnAnnouncement]);
 
   useEffect(() => {
     if (aiPaused || !actingPlayerId || !actingAiDifficulty || !aiActing || state.phase === "GAME_OVER") return;
@@ -577,7 +619,7 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
   return (
     <main className={`game-board ${tutorialMode ? `tutorial-board tutorial-level-${tutorialLevel} tutorial-step-${tutorialStep}` : ""}`}>
       <header className="game-header">
-        <div><p className="eyebrow">{tutorialMode ? `新手教學 · ${tutorialMeta(tutorialLevel!).chapter} · ${tutorialMeta(tutorialLevel!).lesson}` : `TURN ${state.turnNumber} · ${state.phase}`}</p><h1>戰記 <span>{tutorialMode ? tutorialMeta(tutorialLevel!).title : chaosMode ? "混沌模式" : "規則驗證臺"}</span></h1></div>
+        <div><p className="eyebrow">{tutorialMode ? `新手教學 · ${tutorialMeta(tutorialLevel!).chapter} · ${tutorialMeta(tutorialLevel!).lesson}` : `TURN ${activeTurnNumber} · ${state.phase}`}</p><h1>戰記 <span>{tutorialMode ? tutorialMeta(tutorialLevel!).title : chaosMode ? "混沌模式" : "規則驗證臺"}</span></h1></div>
         <div className="actions"><button className="quiet" onClick={onRestart}>{tutorialMode ? "離開教學" : "重新開始"}</button>{fixedSpectatorView && <button className="quiet" onClick={toggleFixedSpectator}>切換到{fixedSpectatorPlayerId === "P1" ? "P2" : "P1"}視角</button>}{Object.keys(aiDifficulties).length > 0 && <button className="quiet" onClick={() => setAiPaused((paused) => !paused)}>{aiPaused ? "開始AI" : "暫停AI"}</button>}{fixedSpectatorView && <span className="ai-thinking">固定視角：{fixedSpectatorPlayerId}</span>}{aiActing && <span className="ai-thinking">{aiPaused ? "AI 已暫停" : "AI 思考中…"}</span>}{((!tutorialMode && !aiActing && state.activePlayerId === active.id && state.phase === "MAIN" && !state.pendingChoice) || (secondTutorial && (tutorialStep === 5 || tutorialStep === 16)) || (fourthTutorial && tutorialStep === 4) || (sixthTutorial && tutorialStep === 4) || (seventhTutorial && tutorialStep === 4)) && <button className={tutorialMode ? "tutorial-end-turn" : ""} onClick={() => dispatch({ type: "END_TURN", playerId: active.id })}>結束回合</button>}</div>
       </header>
       {actionAnimation && <div className={`action-animation ${actionAnimation.type === "PLAY" ? "play-animation" : "attack-animation"}`} role="status" aria-live="polite">
@@ -585,7 +627,19 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
         <span className="action-card-label" style={actionLabelStyle}>{actionAnimation.playerId} · {actionAnimation.label}</span>
       </div>}
       {aiAnnouncement && <p className="ai-action-notice" role="status" aria-live="polite">{aiAnnouncement}</p>}
-      {state.phase === "GAME_OVER" && <section className="result"><strong>{state.winner} 獲勝</strong><span>{state.loseReason}</span></section>}
+      {turnAnnouncement && <section className="turn-transition" role="status" aria-live="assertive" key={turnAnnouncement.key}>
+        <small>TURN {turnAnnouncement.turnNumber}</small>
+        <strong>對方回合結束</strong>
+        <span>輪到你的回合</span>
+      </section>}
+      {state.phase === "GAME_OVER" && <section className={`result-overlay ${state.winner === perspectivePlayerId ? "victory" : "defeat"}`} role="status" aria-live="assertive">
+        {state.winner === perspectivePlayerId && <span className="victory-fireworks" aria-hidden="true"><i /><i /><i /><i /><i /></span>}
+        <div className="result-panel">
+          <small>{state.winner === perspectivePlayerId ? "VICTORY" : "MATCH OVER"}</small>
+          <strong>{state.winner === perspectivePlayerId ? "勝利！" : `${state.winner} 獲勝`}</strong>
+          <span>{state.winner === perspectivePlayerId ? `${state.winner} 獲勝 · ` : ""}{resultReason(state.loseReason)}</span>
+        </div>
+      </section>}
       {message && <p className="error">{message}</p>}
       {state.effectNotices.length > 0 && <section className="effect-notices" role="status" aria-live="polite">
         <strong>效果未發動</strong>
