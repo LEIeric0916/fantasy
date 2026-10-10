@@ -650,6 +650,21 @@
       "effectsText": "衝刺，嘲諷。",
       "generatedOnly": true,
       "notes": "聯盟衍生牌不進棄堆。"
+    },
+    {
+      "id": "TOKEN_HERO_KNIGHT_GUARD",
+      "name": "騎士護衛",
+      "faction": "NEUTRAL",
+      "cardType": "MINION",
+      "subtype": ["HUMAN"],
+      "originalCost": 2,
+      "attack": 2,
+      "health": 2,
+      "deckCount": 0,
+      "keywords": ["TAUNT"],
+      "effectsText": "嘲諷。",
+      "generatedOnly": true,
+      "notes": "英雄模式中由騎士的英雄技能召喚。"
     }
   ]
 }

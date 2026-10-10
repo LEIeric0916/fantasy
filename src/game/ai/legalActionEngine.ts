@@ -2,6 +2,8 @@ import { getCardDefinition, isCardImplemented } from "../cards/cardRegistry";
 import type { CardInstance, PlayerId } from "../cards/cardTypes";
 import { getLegalAttackTargets } from "../engine/combatEngine";
 import type { GameAction } from "../engine/gameEngine";
+import { getHeroSkillTargets, heroSkillUnavailableReason } from "../engine/heroEngine";
+import { getHeroDefinition } from "../heroes/heroDefinitions";
 import { getPlayerFieldLimit, type GameState } from "../state/GameState";
 
 function combinations<T>(items: readonly T[], minCount: number, maxCount: number): T[][] {
@@ -88,6 +90,16 @@ export function getLegalActions(state: GameState, playerId: PlayerId): GameActio
     if (!activated) continue;
     const available = activated.resource === "NECROMANCY" ? player.resources.necromancy : player.resources.recycleCharge;
     if (available >= activated.cost) actions.push({ type: "ACTIVATE_FIELD", playerId, instanceId: field.instanceId });
+  }
+  if (!heroSkillUnavailableReason(state, playerId) && player.hero) {
+    const heroDefinition = getHeroDefinition(player.hero.id);
+    if (heroDefinition.target === "NONE") {
+      actions.push({ type: "ACTIVATE_HERO_SKILL", playerId });
+    } else {
+      for (const target of getHeroSkillTargets(state, playerId)) {
+        actions.push({ type: "ACTIVATE_HERO_SKILL", playerId, targetInstanceId: target.instanceId });
+      }
+    }
   }
   for (const attacker of player.minions) {
     for (const target of getLegalAttackTargets(state, attacker.instanceId)) {

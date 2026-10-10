@@ -5,6 +5,7 @@ import { createEighthTutorialGame, createFifthTutorialGame, createFirstTutorialG
 import { CardCatalog } from "../ui/CardCatalog";
 import { GameBoard } from "../ui/GameBoard";
 import { Glossary } from "../ui/Glossary";
+import { heroDefinitions, type HeroId } from "../game/heroes/heroDefinitions";
 
 const factionOptions: { value: Faction; label: string }[] = [
   { value: "DRAGON", label: "龍族（40 張）" },
@@ -13,7 +14,7 @@ const factionOptions: { value: Faction; label: string }[] = [
   { value: "ALLIANCE", label: "聯盟（40 張）" },
 ];
 
-type EntryMode = "BATTLE" | "CHAOS" | "TUTORIAL";
+type EntryMode = "BATTLE" | "HERO" | "CHAOS" | "TUTORIAL";
 type GameMode = "LOCAL" | "RANDOM_AI" | "HEURISTIC_AI" | "SEARCH_AI" | "WATCH_AI_HEURISTIC";
 type SpectatorViewMode = "FOLLOW_ACTION" | "FIXED";
 type FactionSelection = Faction | "RANDOM";
@@ -55,6 +56,8 @@ export default function App() {
   const [showGlossary, setShowGlossary] = useState(false);
   const [p1Faction, setP1Faction] = useState<FactionSelection>("DRAGON");
   const [p2Faction, setP2Faction] = useState<FactionSelection>("UNDEAD");
+  const [p1Hero, setP1Hero] = useState<HeroId>("PALADIN");
+  const [p2Hero, setP2Hero] = useState<HeroId>("COMMANDER");
   const [resolvedFactions, setResolvedFactions] = useState<Record<PlayerId, Faction>>({ P1: "DRAGON", P2: "UNDEAD" });
   const [resolvedDeckFactions, setResolvedDeckFactions] = useState<Record<PlayerId, Faction[]>>({ P1: ["DRAGON"], P2: ["UNDEAD"] });
   const [startingMode, setStartingMode] = useState<PlayerId | "RANDOM">("RANDOM");
@@ -102,6 +105,7 @@ export default function App() {
             遊玩類型
             <select aria-label="遊玩類型" value={entryMode} onChange={(event) => setEntryMode(event.target.value as EntryMode)}>
               <option value="BATTLE">一般對戰</option>
+              <option value="HERO">英雄模式</option>
               <option value="CHAOS">混沌模式</option>
               <option value="TUTORIAL">新手教學</option>
             </select>
@@ -128,6 +132,7 @@ export default function App() {
             </label>
           </>}
           {entryMode === "CHAOS" && <p className="mode-description">雙方每場各自隨機取得兩副不同牌組，合併並洗牌後進行對戰。</p>}
+          {entryMode === "HERO" && <p className="mode-description">雙方各自選擇英雄與牌組。英雄技能每回合最多使用1次，並有整場使用次數限制。</p>}
           {entryMode !== "TUTORIAL" && <label>
             對戰模式
             <select aria-label="對戰模式" value={gameMode} onChange={(event) => setGameMode(event.target.value as GameMode)}>
@@ -145,18 +150,30 @@ export default function App() {
               <option value="FIXED">固定視角（預設 P1，可手動切換）</option>
             </select>
           </label>}
-          {entryMode === "BATTLE" && <label>
+          {(entryMode === "BATTLE" || entryMode === "HERO") && <label>
             P1 玩家陣營
             <select aria-label="P1 玩家陣營" value={p1Faction} onChange={(event) => setP1Faction(event.target.value as FactionSelection)}>
               <option value="RANDOM">隨機陣營</option>
               {factionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </label>}
-          {entryMode === "BATTLE" && <label>
+          {(entryMode === "BATTLE" || entryMode === "HERO") && <label>
             P2 玩家陣營
             <select aria-label="P2 玩家陣營" value={p2Faction} onChange={(event) => setP2Faction(event.target.value as FactionSelection)}>
               <option value="RANDOM">隨機陣營</option>
               {factionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          </label>}
+          {entryMode === "HERO" && <label>
+            P1 英雄
+            <select aria-label="P1 英雄" value={p1Hero} onChange={(event) => setP1Hero(event.target.value as HeroId)}>
+              {heroDefinitions.map((hero) => <option key={hero.id} value={hero.id}>{hero.name}（{hero.maxUses}次）</option>)}
+            </select>
+          </label>}
+          {entryMode === "HERO" && <label>
+            P2 英雄
+            <select aria-label="P2 英雄" value={p2Hero} onChange={(event) => setP2Hero(event.target.value as HeroId)}>
+              {heroDefinitions.map((hero) => <option key={hero.id} value={hero.id}>{hero.name}（{hero.maxUses}次）</option>)}
             </select>
           </label>}
           {entryMode !== "TUTORIAL" && <label>
@@ -168,7 +185,7 @@ export default function App() {
             </select>
           </label>}
           <div className="setup-actions">
-            <button onClick={startGame}>{entryMode === "TUTORIAL" ? "開始教學" : entryMode === "CHAOS" ? "建立混沌對局" : "建立對局"}</button>
+            <button onClick={startGame}>{entryMode === "TUTORIAL" ? "開始教學" : entryMode === "CHAOS" ? "建立混沌對局" : entryMode === "HERO" ? "建立英雄對局" : "建立對局"}</button>
             <button className="quiet" onClick={() => setShowCatalog(true)}>查看卡表</button>
             <button className="quiet" onClick={() => setShowGlossary(true)}>專有名詞圖鑑</button>
           </div>
@@ -189,6 +206,7 @@ export default function App() {
     factions: resolvedFactions,
     deckFactions: resolvedDeckFactions,
     startingPlayerId,
+    heroes: entryMode === "HERO" ? { P1: p1Hero, P2: p2Hero } : undefined,
   });
   const aiDifficulty: AiDifficulty | undefined = gameMode === "RANDOM_AI"
     ? "RANDOM"

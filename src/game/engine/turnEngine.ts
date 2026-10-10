@@ -55,6 +55,7 @@ export function beginTurn(state: GameState): void {
   player.summonedThisTurn = 0;
   player.cardsPlayedThisTurn = 0;
   player.effectSummonUsedThisTurn = [];
+  if (player.hero) player.hero.skillUsedThisTurn = false;
   player.summonedDragonOriginalCostThisTurn = 0;
   for (const minion of player.minions) minion.attacksUsedThisTurn = 0;
   if (player.maxMana < state.rulesConfig.normalMaxMana) player.maxMana += 1;

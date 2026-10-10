@@ -1,4 +1,5 @@
 import type { CardInstance, EffectDefinition, Faction, PlayerId } from "../cards/cardTypes";
+import type { HeroId } from "../heroes/heroDefinitions";
 
 export type GamePhase =
   | "MULLIGAN"
@@ -52,6 +53,11 @@ export interface PlayerState {
   nextHighCostDragonReductionMinCost: number | null;
   nextHighCostDragonReduction: number;
   heroDivineShield: boolean;
+  hero?: {
+    id: HeroId;
+    skillUses: number;
+    skillUsedThisTurn: boolean;
+  };
 }
 
 export interface GameLogEntry {

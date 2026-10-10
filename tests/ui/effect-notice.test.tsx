@@ -4,6 +4,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
 import { describeAiAction, GameBoard } from "../../src/ui/GameBoard";
+import { applyAction } from "../../src/game/engine/gameEngine";
 import { moveCard } from "../../src/game/engine/zoneEngine";
 import { mainState, putCard } from "../helpers";
 
@@ -255,6 +256,45 @@ describe("效果未發動介面提示", () => {
     act(() => activeSide.dispatchEvent(drop));
     expect(container.querySelector(`.hand-panel [data-instance-id="${playable.instanceId}"]`)).toBeNull();
     expect(container.querySelector(`.active-side .minion-zone [data-instance-id="${playable.instanceId}"]`)).not.toBeNull();
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  it("亞恩在召喚回合完成戰吼後，可點擊選取並以衝刺攻擊敵方手下", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    const yaan = putCard(state, "P1", "UNDEAD_008", "HAND", "ui-rush-after-battlecry");
+    const discard = putCard(state, "P1", "DRAGON_001", "HAND", "ui-rush-discard");
+    const enemy = putCard(state, "P2", "DRAGON_001", "MINION", "ui-rush-target");
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: yaan.instanceId }).state;
+    state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [discard.instanceId] }).state;
+    state = applyAction(state, { type: "SELECT_EFFECT_OPTION", playerId: "P1", optionId: "TOKEN_UNDEAD_BOOK_PLAGUE" }).state;
+    state = applyAction(state, { type: "SELECT_EFFECT_OPTION", playerId: "P1", optionId: "TOKEN_UNDEAD_BOOK_REVENGE" }).state;
+
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
+    const yaanElement = container.querySelector<HTMLElement>(`[data-instance-id="${yaan.instanceId}"]`)!;
+    expect(yaanElement.classList.contains("actionable")).toBe(true);
+    const yaanSurface = yaanElement.querySelector<HTMLButtonElement>(".card-surface")!;
+    const mousePointerEvent = (type: string) => {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.defineProperties(event, {
+        pointerType: { value: "mouse" },
+        pointerId: { value: 1 },
+        clientX: { value: 100 },
+        clientY: { value: 100 },
+      });
+      return event;
+    };
+    act(() => yaanElement.dispatchEvent(mousePointerEvent("pointerdown")));
+    act(() => yaanElement.dispatchEvent(mousePointerEvent("pointerup")));
+    act(() => yaanSurface.click());
+    expect(yaanElement.classList.contains("selected")).toBe(true);
+    act(() => container.querySelector<HTMLElement>(`[data-instance-id="${enemy.instanceId}"] .card-surface`)!.click());
+    expect(container.querySelector(`[data-instance-id="${enemy.instanceId}"]`)).toBeNull();
+
     act(() => root.unmount());
     container.remove();
   });

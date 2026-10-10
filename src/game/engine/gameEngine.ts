@@ -12,12 +12,14 @@ import { selectCountdownOrder } from "./countdownEngine";
 import { refreshHandCosts } from "./costEngine";
 import { enqueueSpellPlayedEffectSummons } from "./effectSummonEngine";
 import { checkDoomsdayWin } from "./transformEngine";
+import { activateHeroSkill } from "./heroEngine";
 
 export type GameAction =
   | { type: "MULLIGAN"; playerId: PlayerId; instanceIds: string[] }
   | { type: "PLAY_CARD"; playerId: PlayerId; instanceId: string }
   | { type: "PLAY_ALTERNATE"; playerId: PlayerId; instanceId: string }
   | { type: "ACTIVATE_FIELD"; playerId: PlayerId; instanceId: string }
+  | { type: "ACTIVATE_HERO_SKILL"; playerId: PlayerId; targetInstanceId?: string }
   | { type: "ATTACK"; playerId: PlayerId; attackerId: string; target: AttackTarget }
   | { type: "END_TURN"; playerId: PlayerId }
   | { type: "SELECT_DISCARD"; playerId: PlayerId; instanceIds: string[] }
@@ -223,6 +225,7 @@ function executeMutable(state: GameState, action: GameAction): void {
     case "PLAY_CARD": return playCard(state, action.playerId, action.instanceId);
     case "PLAY_ALTERNATE": return playAlternate(state, action.playerId, action.instanceId);
     case "ACTIVATE_FIELD": return activateField(state, action.playerId, action.instanceId);
+    case "ACTIVATE_HERO_SKILL": return activateHeroSkill(state, action.playerId, action.targetInstanceId);
     case "ATTACK": return resolveAttack(state, action.playerId, action.attackerId, action.target);
     case "END_TURN": return requestEndTurn(state, action.playerId);
     case "SELECT_DISCARD": return discardForHandLimit(state, action.playerId, action.instanceIds);

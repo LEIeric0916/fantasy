@@ -8,6 +8,8 @@ import type { CardInstance, PlayerId } from "../game/cards/cardTypes";
 import { getLegalAttackTargets } from "../game/engine/combatEngine";
 import { refreshHandCosts } from "../game/engine/costEngine";
 import { applyAction, type GameAction } from "../game/engine/gameEngine";
+import { getHeroSkillTargets, heroSkillUnavailableReason } from "../game/engine/heroEngine";
+import { getHeroDefinition } from "../game/heroes/heroDefinitions";
 import { getPlayerFieldLimit, playerHasFaction, type GameState, type PlayerState } from "../game/state/GameState";
 import { CardView } from "./CardView";
 import { cardTypeLabels, factionLabels, formatSubtypeLabels } from "../game/cards/displayLabels";
@@ -55,6 +57,10 @@ export function formatLogMessage(message: string): string {
 }
 
 export function describeAiAction(state: GameState, action: GameAction): string {
+  if (action.type === "ACTIVATE_HERO_SKILL") {
+    const hero = state.players[action.playerId].hero;
+    return hero ? `${action.playerId} AI 發動英雄技能「${getHeroDefinition(hero.id).skillName}」` : `${action.playerId} AI 發動英雄技能`;
+  }
   if (action.type === "PLAY_CARD" || action.type === "PLAY_ALTERNATE") {
     const card = state.players[action.playerId].hand.find((candidate) => candidate.instanceId === action.instanceId);
     const name = card ? getCardDefinition(card.definitionId).name : "未知卡牌";
@@ -121,12 +127,18 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
   const [aiPaused, setAiPaused] = useState(false);
   const [fixedSpectatorPlayerId, setFixedSpectatorPlayerId] = useState<PlayerId>("P1");
   const [draggedHandCardId, setDraggedHandCardId] = useState<string>();
+  const [touchSelectedHandCardId, setTouchSelectedHandCardId] = useState<string>();
   const [actionAnimation, setActionAnimation] = useState<ActionAnimation>();
   const [turnAnnouncement, setTurnAnnouncement] = useState<TurnAnnouncement>();
+  const [heroSkillTargeting, setHeroSkillTargeting] = useState(false);
+  const [heroSkillInfoOpen, setHeroSkillInfoOpen] = useState(false);
   const [tutorialStep, setTutorialStep] = useState<number | undefined>(tutorialLevel ? 0 : undefined);
   const [tutorialKeywordViewed, setTutorialKeywordViewed] = useState(false);
   const aiSeed = useRef((initialState.rngSeed ^ 0xa17a17) >>> 0);
   const aiStepCount = useRef(0);
+  const heroSkillLongPressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const heroSkillInfoTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const heroSkillLongPressTriggered = useRef(false);
   const previousActivePlayerId = useRef(initialState.activePlayerId);
   const actingPlayerId = getActingPlayerId(state);
   const aiDifficulties: Partial<Record<PlayerId, AiDifficulty>> = aiPlayers ?? (aiPlayerId ? { [aiPlayerId]: aiDifficulty } : {});
@@ -142,6 +154,7 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
   const eighthTutorial = tutorialLevel === 8;
   const tutorialMode = Boolean(tutorialLevel);
   const chaosMode = !tutorialMode && Object.values(state.players).some((player) => (player.deckFactions?.length ?? 1) > 1);
+  const heroMode = !tutorialMode && Boolean(state.players.P1.hero && state.players.P2.hero);
   const tutorialInspectDefinitionId = firstTutorial && tutorialStep === 4
     ? "TOKEN_ALLIANCE_ROYAL_GUARD"
     : secondTutorial && tutorialStep === 8
@@ -193,6 +206,10 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
   const active = state.players[perspectivePlayerId];
   const opponentId: PlayerId = perspectivePlayerId === "P1" ? "P2" : "P1";
   const opponent = state.players[opponentId];
+  const activeHeroDefinition = active.hero ? getHeroDefinition(active.hero.id) : undefined;
+  const opponentHeroDefinition = opponent.hero ? getHeroDefinition(opponent.hero.id) : undefined;
+  const activeHeroSkillReason = active.hero ? heroSkillUnavailableReason(state, active.id) : undefined;
+  const heroSkillTargets = active.hero ? getHeroSkillTargets(state, active.id) : [];
   const activeTurnNumber = state.players[state.activePlayerId].turnsStarted;
   const activeFieldSlots = getPlayerFieldLimit(state, active.id) ?? 7;
   const opponentFieldSlots = getPlayerFieldLimit(state, opponent.id) ?? 7;
@@ -205,6 +222,37 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
     return card ? getCardDefinition(card.definitionId).name : "未知卡牌";
   };
   const legalTargets = useMemo(() => attackerId ? getLegalAttackTargets(state, attackerId) : [], [state, attackerId]);
+  const isHeroSkillTarget = (instanceId: string) => heroSkillTargeting && heroSkillTargets.some((card) => card.instanceId === instanceId);
+
+  useEffect(() => {
+    setHeroSkillTargeting(false);
+    setHeroSkillInfoOpen(false);
+  }, [state.activePlayerId]);
+
+  useEffect(() => () => {
+    if (heroSkillLongPressTimer.current) clearTimeout(heroSkillLongPressTimer.current);
+    if (heroSkillInfoTimer.current) clearTimeout(heroSkillInfoTimer.current);
+  }, []);
+
+  function showHeroSkillInfo() {
+    if (heroSkillInfoTimer.current) clearTimeout(heroSkillInfoTimer.current);
+    setHeroSkillInfoOpen(true);
+    heroSkillInfoTimer.current = setTimeout(() => setHeroSkillInfoOpen(false), 3_500);
+  }
+
+  function startHeroSkillLongPress() {
+    if (heroSkillLongPressTimer.current) clearTimeout(heroSkillLongPressTimer.current);
+    heroSkillLongPressTriggered.current = false;
+    heroSkillLongPressTimer.current = setTimeout(() => {
+      heroSkillLongPressTriggered.current = true;
+      showHeroSkillInfo();
+    }, 550);
+  }
+
+  function clearHeroSkillLongPress() {
+    if (heroSkillLongPressTimer.current) clearTimeout(heroSkillLongPressTimer.current);
+    heroSkillLongPressTimer.current = undefined;
+  }
 
   function centerOfElement(element: Element | null): { x: number; y: number } | undefined {
     if (!element) return undefined;
@@ -392,10 +440,10 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
     return !aiActing && !state.pendingChoice && getLegalAttackTargets(state, card.instanceId).length > 0;
   }
 
-  function playDraggedHandCard() {
-    if (!draggedHandCardId) return;
-    const card = active.hand.find((candidate) => candidate.instanceId === draggedHandCardId);
+  function playHandCard(instanceId: string) {
+    const card = active.hand.find((candidate) => candidate.instanceId === instanceId);
     setDraggedHandCardId(undefined);
+    setTouchSelectedHandCardId(undefined);
     if (!card) return;
     if (canPlay(card)) {
       dispatch({ type: "PLAY_CARD", playerId: active.id, instanceId: card.instanceId });
@@ -404,11 +452,22 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
     if (canUseAlternate(card)) dispatch({ type: "PLAY_ALTERNATE", playerId: active.id, instanceId: card.instanceId });
   }
 
+  function playDraggedHandCard() {
+    if (draggedHandCardId) playHandCard(draggedHandCardId);
+  }
+
+  function finishTouchHandDrag(instanceId: string, clientX: number, clientY: number) {
+    const target = document.elementFromPoint(clientX, clientY);
+    if (target?.closest(".active-side")) playHandCard(instanceId);
+    else setDraggedHandCardId(undefined);
+  }
+
   function dispatch(action: GameAction, gateAfter = false) {
     const result = applyAction(state, action);
     let nextState = result.state;
     setMessage(result.error ? `${result.error.code}：${result.error.message}` : "");
     setAiAnnouncement("");
+    if (action.type === "ACTIVATE_HERO_SKILL") setHeroSkillTargeting(false);
     if (!result.error) {
       if (firstTutorial && tutorialStep === 6 && action.type === "PLAY_CARD") {
         const playedCard = state.players[action.playerId].hand.find((card) => card.instanceId === action.instanceId);
@@ -619,7 +678,7 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
   return (
     <main className={`game-board ${tutorialMode ? `tutorial-board tutorial-level-${tutorialLevel} tutorial-step-${tutorialStep}` : ""}`}>
       <header className="game-header">
-        <div><p className="eyebrow">{tutorialMode ? `新手教學 · ${tutorialMeta(tutorialLevel!).chapter} · ${tutorialMeta(tutorialLevel!).lesson}` : `TURN ${activeTurnNumber} · ${state.phase}`}</p><h1>戰記 <span>{tutorialMode ? tutorialMeta(tutorialLevel!).title : chaosMode ? "混沌模式" : "規則驗證臺"}</span></h1></div>
+        <div><p className="eyebrow">{tutorialMode ? `新手教學 · ${tutorialMeta(tutorialLevel!).chapter} · ${tutorialMeta(tutorialLevel!).lesson}` : `TURN ${activeTurnNumber} · ${state.phase}`}</p><h1>戰記 <span>{tutorialMode ? tutorialMeta(tutorialLevel!).title : heroMode ? "英雄模式" : chaosMode ? "混沌模式" : "規則驗證臺"}</span></h1></div>
         <div className="actions"><button className="quiet" onClick={onRestart}>{tutorialMode ? "離開教學" : "重新開始"}</button>{fixedSpectatorView && <button className="quiet" onClick={toggleFixedSpectator}>切換到{fixedSpectatorPlayerId === "P1" ? "P2" : "P1"}視角</button>}{Object.keys(aiDifficulties).length > 0 && <button className="quiet" onClick={() => setAiPaused((paused) => !paused)}>{aiPaused ? "開始AI" : "暫停AI"}</button>}{fixedSpectatorView && <span className="ai-thinking">固定視角：{fixedSpectatorPlayerId}</span>}{aiActing && <span className="ai-thinking">{aiPaused ? "AI 已暫停" : "AI 思考中…"}</span>}{((!tutorialMode && !aiActing && state.activePlayerId === active.id && state.phase === "MAIN" && !state.pendingChoice) || (secondTutorial && (tutorialStep === 5 || tutorialStep === 16)) || (fourthTutorial && tutorialStep === 4) || (sixthTutorial && tutorialStep === 4) || (seventhTutorial && tutorialStep === 4)) && <button className={tutorialMode ? "tutorial-end-turn" : ""} onClick={() => dispatch({ type: "END_TURN", playerId: active.id })}>結束回合</button>}</div>
       </header>
       {actionAnimation && <div className={`action-animation ${actionAnimation.type === "PLAY" ? "play-animation" : "attack-animation"}`} role="status" aria-live="polite">
@@ -682,10 +741,10 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
       </section>}
 
       <section className="battlefield" aria-label="完整對戰區域">
-        {attackerId && <div className="attack-drag-indicator" role="status" aria-live="polite"><span aria-hidden="true">➤</span><b>拖曳至攻擊目標</b></div>}
+        {(attackerId || heroSkillTargeting) && <div className="attack-drag-indicator" role="status" aria-live="polite"><span aria-hidden="true">➤</span><b>{heroSkillTargeting ? "請點選英雄技能的目標" : "拖曳至攻擊目標"}</b></div>}
         <div className="board-side opponent-side">
           <section
-            className={`player-panel hero-drop-zone ${heroLegal ? "legal" : ""}`}
+            className={`player-panel hero-drop-zone ${opponentHeroDefinition ? "has-floating-hero-power" : ""} ${heroLegal ? "legal" : ""}`}
             onDragOver={(event) => { if (heroLegal) event.preventDefault(); }}
             onDrop={(event) => {
               event.preventDefault();
@@ -693,8 +752,12 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
             }}
             onClick={() => attackerId && heroLegal && dispatch({ type: "ATTACK", playerId: state.activePlayerId, attackerId, target: { type: "HERO", playerId: opponentId } })}
           >
-            <div className="player-identity"><small>對手玩家</small><strong>{opponentId}</strong><span> · {playerFactionLabel(opponent)}</span></div>
+            <div className="player-identity"><small>對手玩家</small><strong>{opponentId}</strong><span> · {playerFactionLabel(opponent)}{opponentHeroDefinition ? ` · 英雄 ${opponentHeroDefinition.name}` : ""}</span></div>
             <div className="hero-resource-row"><span className={`hero-health ${opponent.heroHp <= 10 ? "critical" : ""}`} data-testid={`player-health-${opponentId}`}><small>生命</small><b>{opponent.heroHp}</b><small>/{opponent.heroMaxHp}</small></span><span className="mana-display"><small>水晶</small><b>{opponent.mana}<i>/</i>{opponent.maxMana}</b><em>上限 {state.rulesConfig.normalMaxMana}</em></span></div>
+            {opponent.hero && opponentHeroDefinition && <div className="hero-power-control opponent-power" tabIndex={0} aria-label={`${opponentHeroDefinition.skillName}：${opponentHeroDefinition.description}`}>
+              <span className="hero-power-button read-only" data-cost={opponentHeroDefinition.cost} aria-hidden="true"><span className="hero-power-glyph">✦</span><small className="hero-power-uses">{opponentHeroDefinition.maxUses - opponent.hero.skillUses}</small></span>
+              <span className="hero-power-tooltip" role="tooltip"><strong>{opponentHeroDefinition.skillName}</strong><span>{opponentHeroDefinition.description}</span><small>{opponentHeroDefinition.cost}費 · 第{opponentHeroDefinition.unlockTurn}回合起 · 剩餘 {opponentHeroDefinition.maxUses - opponent.hero.skillUses}/{opponentHeroDefinition.maxUses} 次</small></span>
+            </div>}
             <div className="player-stats"><span><small>手牌</small><b>{opponent.hand.length}</b></span><span><small>牌庫</small><b>{opponent.deck.length}</b></span><button className="zone-count" onClick={() => setViewedGraveyardPlayerId(opponentId)}><small>棄堆</small><b>{opponent.graveyard.length}</b></button><span className="special-record-list">{specialRecords(opponent).map((record) => <span className="special-record" key={record.label}><small>{record.label}</small><b>{record.value}</b></span>)}</span></div>
           </section>
           <Zone compact kind="FIELD" slotCount={opponentFieldSlots} title={`對手立場區 · ${opponentFieldSlots} 格`} cards={opponent.fields} onInspect={setInspectedCard} />
@@ -702,16 +765,24 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
             compact
             title="對手手下區 · 7 格"
             cards={opponent.minions}
-            legal={isLegalMinion}
-            dropTarget={isLegalMinion}
+            legal={(id) => heroSkillTargeting ? isHeroSkillTarget(id) : attackerId ? isLegalMinion(id) : true}
+            dropTarget={(id) => heroSkillTargeting ? isHeroSkillTarget(id) : isLegalMinion(id)}
             onInspect={setInspectedCard}
-            onCard={(id) => attackerId && isLegalMinion(id) && dispatch({ type: "ATTACK", playerId: state.activePlayerId, attackerId, target: { type: "MINION", instanceId: id } })}
-            onDropCard={(id) => attackerId && isLegalMinion(id) && dispatch({ type: "ATTACK", playerId: state.activePlayerId, attackerId, target: { type: "MINION", instanceId: id } })}
+            onCard={(id) => isHeroSkillTarget(id)
+              ? dispatch({ type: "ACTIVATE_HERO_SKILL", playerId: active.id, targetInstanceId: id })
+              : attackerId && isLegalMinion(id) && dispatch({ type: "ATTACK", playerId: state.activePlayerId, attackerId, target: { type: "MINION", instanceId: id } })}
+            onDropCard={(id) => isHeroSkillTarget(id)
+              ? dispatch({ type: "ACTIVATE_HERO_SKILL", playerId: active.id, targetInstanceId: id })
+              : attackerId && isLegalMinion(id) && dispatch({ type: "ATTACK", playerId: state.activePlayerId, attackerId, target: { type: "MINION", instanceId: id } })}
           />
         </div>
         <div className="board-divider"><span>拖曳可行動手下至敵方手下或玩家區域以攻擊</span></div>
         <div
-          className={`board-side active-side ${draggedHandCardId ? "hand-play-drop-zone" : ""}`}
+          className={`board-side active-side ${draggedHandCardId ? "hand-play-drop-zone" : ""} ${touchSelectedHandCardId ? "touch-play-ready" : ""}`}
+          onClick={(event) => {
+            if (!touchSelectedHandCardId || (event.target as Element).closest("button, .card")) return;
+            playHandCard(touchSelectedHandCardId);
+          }}
           onDragOver={(event) => {
             if (!draggedHandCardId) return;
             event.preventDefault();
@@ -727,17 +798,26 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
             compact
             title="我方手下區 · 7 格"
             cards={active.minions}
+            legal={(id) => !heroSkillTargeting || isHeroSkillTarget(id)}
+            dropTarget={isHeroSkillTarget}
             selected={(id) => id === attackerId}
             actionable={(id) => canAttack(active.minions.find((card) => card.instanceId === id)!)}
-            draggable={(id) => canAttack(active.minions.find((card) => card.instanceId === id)!)}
+            draggable={(id) => !heroSkillTargeting && canAttack(active.minions.find((card) => card.instanceId === id)!)}
             onInspect={setInspectedCard}
             onDragStart={setAttackerId}
             onDragEnd={() => setAttackerId(undefined)}
-            onCard={(id) => { if (!aiActing && state.activePlayerId === active.id && canAttack(active.minions.find((card) => card.instanceId === id)!)) setAttackerId(id === attackerId ? undefined : id); }}
+            onDropCard={(id) => isHeroSkillTarget(id) && dispatch({ type: "ACTIVATE_HERO_SKILL", playerId: active.id, targetInstanceId: id })}
+            onCard={(id) => {
+              if (isHeroSkillTarget(id)) {
+                dispatch({ type: "ACTIVATE_HERO_SKILL", playerId: active.id, targetInstanceId: id });
+                return;
+              }
+              if (!aiActing && state.activePlayerId === active.id && canAttack(active.minions.find((card) => card.instanceId === id)!)) setAttackerId(id === attackerId ? undefined : id);
+            }}
           />
           <Zone compact kind="FIELD" slotCount={activeFieldSlots} title={`我方立場區 · ${activeFieldSlots} 格`} cards={active.fields} onInspect={setInspectedCard} />
           <section className="player-panel">
-            <div className="player-identity"><small>目前玩家</small><strong>{active.id}</strong><span> · {playerFactionLabel(active)}</span></div>
+            <div className="player-identity"><small>目前玩家</small><strong>{active.id}</strong><span> · {playerFactionLabel(active)}{activeHeroDefinition ? ` · 英雄 ${activeHeroDefinition.name}` : ""}</span></div>
             <div className="hero-resource-row"><span className={`hero-health ${active.heroHp <= 10 ? "critical" : ""}`} data-testid={`player-health-${active.id}`}><small>生命</small><b>{active.heroHp}</b><small>/{active.heroMaxHp}</small></span><span className="mana-display"><small>水晶</small><b>{active.mana}<i>/</i>{active.maxMana}</b><em>上限 {state.rulesConfig.normalMaxMana}</em></span></div>
             <div className="player-stats"><span><small>手牌</small><b>{active.hand.length}</b></span><span><small>牌庫</small><b>{active.deck.length}</b></span><button className="zone-count" onClick={() => setViewedGraveyardPlayerId(active.id)}><small>棄堆</small><b>{active.graveyard.length}</b></button><span className="special-record-list">{specialRecords(active).map((record) => <span className="special-record" key={record.label}><small>{record.label}</small><b>{record.value}</b></span>)}</span></div>
           </section>
@@ -745,12 +825,53 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
       </section>
 
       <section className="hand-panel">
-        <h2>我方手牌 <small>{active.hand.length} 張</small><span>拖曳發光手牌到我方場地即可出牌；點擊卡牌只會查看詳細</span></h2>
+        <h2>我方手牌 <small>{active.hand.length} 張</small><span>拖曳發光手牌到我方場地，或按卡牌左下角「打出」</span></h2>
+        <div className="hand-row">
+          {active.hero && activeHeroDefinition && <div className={`hero-power-control hand-hero-power ${heroSkillInfoOpen ? "info-open" : ""}`}>
+              <button
+                className={`hero-power-button ${heroSkillTargeting ? "selected" : ""}`}
+                data-cost={activeHeroDefinition.cost}
+                aria-label={`英雄技能：${activeHeroDefinition.skillName}`}
+                aria-disabled={Boolean(activeHeroSkillReason) || aiActing}
+                draggable={activeHeroDefinition.target !== "NONE" && !activeHeroSkillReason && !aiActing}
+                onPointerDown={startHeroSkillLongPress}
+                onPointerUp={clearHeroSkillLongPress}
+                onPointerCancel={clearHeroSkillLongPress}
+                onPointerLeave={clearHeroSkillLongPress}
+                onDragStart={(event) => {
+                  clearHeroSkillLongPress();
+                  if (activeHeroDefinition.target === "NONE" || activeHeroSkillReason || aiActing) {
+                    event.preventDefault();
+                    return;
+                  }
+                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.setData("text/plain", "hero-skill");
+                  setAttackerId(undefined);
+                  setHeroSkillTargeting(true);
+                }}
+                onDragEnd={() => setHeroSkillTargeting(false)}
+                onClick={() => {
+                  if (heroSkillLongPressTriggered.current) {
+                    heroSkillLongPressTriggered.current = false;
+                    return;
+                  }
+                  if (activeHeroSkillReason || aiActing) {
+                    showHeroSkillInfo();
+                    if (activeHeroSkillReason) setMessage(activeHeroSkillReason);
+                  } else if (activeHeroDefinition.target === "NONE") dispatch({ type: "ACTIVATE_HERO_SKILL", playerId: active.id });
+                  else {
+                    setAttackerId(undefined);
+                    setHeroSkillTargeting((targeting) => !targeting);
+                  }
+                }}
+              ><span className="hero-power-glyph" aria-hidden="true">✦</span><small className="hero-power-uses" aria-label={`剩餘${activeHeroDefinition.maxUses - active.hero.skillUses}次`}>{activeHeroDefinition.maxUses - active.hero.skillUses}</small></button>
+              <span className="hero-power-tooltip" role="tooltip"><strong>{activeHeroDefinition.skillName}</strong><span>{activeHeroDefinition.description}</span><small>{activeHeroDefinition.cost}費 · 第{activeHeroDefinition.unlockTurn}回合起 · 剩餘 {activeHeroDefinition.maxUses - active.hero.skillUses}/{activeHeroDefinition.maxUses} 次</small>{activeHeroSkillReason && <em>{activeHeroSkillReason}</em>}</span>
+            </div>}
         <section className="hand">{active.hand.map((card) => <CardView
           key={card.instanceId}
           card={card}
           handSummary
-          selected={selected.includes(card.instanceId)}
+          selected={selected.includes(card.instanceId) || draggedHandCardId === card.instanceId || touchSelectedHandCardId === card.instanceId}
           playable={canPlay(card) || canUseAlternate(card)}
           draggable={!handLimit && (canPlay(card) || canUseAlternate(card))}
           onInspect={() => {
@@ -758,8 +879,12 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
           }}
           onDragStart={() => setDraggedHandCardId(card.instanceId)}
           onDragEnd={() => setDraggedHandCardId(undefined)}
+          onTouchDragStart={canPlay(card) || canUseAlternate(card) ? () => setDraggedHandCardId(card.instanceId) : undefined}
+          onTouchDrop={canPlay(card) || canUseAlternate(card) ? (clientX, clientY) => finishTouchHandDrag(card.instanceId, clientX, clientY) : undefined}
+          onTouchTap={canPlay(card) || canUseAlternate(card) ? () => setTouchSelectedHandCardId((selectedId) => selectedId === card.instanceId ? undefined : card.instanceId) : undefined}
+          onPlay={!handLimit && (canPlay(card) || canUseAlternate(card)) ? () => playHandCard(card.instanceId) : undefined}
           onClick={() => handLimit ? setSelected((items) => items.includes(card.instanceId) ? items.filter((id) => id !== card.instanceId) : [...items, card.instanceId]) : setInspectedCard(card)}
-        />)}</section>
+        />)}</section></div>
       </section>
       {!state.pendingChoice && state.phase === "MAIN" && active.hand.some(canUseAlternate) && <section className="actions">
         {active.hand.filter(canUseAlternate).map((card) => {

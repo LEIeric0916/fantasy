@@ -1,0 +1,54 @@
+{
+  "heroes": [
+    {
+      "id": "PALADIN",
+      "name": "聖騎士",
+      "skillName": "守護號令",
+      "cost": 0,
+      "unlockTurn": 3,
+      "maxUses": 3,
+      "target": "FRIENDLY_MINION",
+      "description": "給予我方1名手下嘲諷。"
+    },
+    {
+      "id": "BRAVE",
+      "name": "勇者",
+      "skillName": "勇氣鼓舞",
+      "cost": 0,
+      "unlockTurn": 4,
+      "maxUses": 4,
+      "target": "FRIENDLY_MINION",
+      "description": "給予我方1名手下+1/+1並賦予其衝刺。"
+    },
+    {
+      "id": "MAGICIAN",
+      "name": "魔術師",
+      "skillName": "奧術知識",
+      "cost": 0,
+      "unlockTurn": 2,
+      "maxUses": 4,
+      "target": "NONE",
+      "description": "抽1張牌。"
+    },
+    {
+      "id": "KNIGHT",
+      "name": "騎士",
+      "skillName": "護衛召集",
+      "cost": 1,
+      "unlockTurn": 2,
+      "maxUses": 4,
+      "target": "NONE",
+      "description": "召喚1名「騎士護衛」。"
+    },
+    {
+      "id": "COMMANDER",
+      "name": "指揮官",
+      "skillName": "精準砲擊",
+      "cost": 1,
+      "unlockTurn": 4,
+      "maxUses": 3,
+      "target": "ENEMY_MINION",
+      "description": "給予對手場上1名手下4點傷害。"
+    }
+  ]
+}

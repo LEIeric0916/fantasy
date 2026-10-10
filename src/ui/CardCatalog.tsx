@@ -5,7 +5,7 @@ import { getKeywordText } from "../game/cards/keywordText";
 import { GlossaryText, KeywordGlossaryButton } from "./GlossaryTerm";
 import { cardTypeLabels, factionLabels, formatSubtypeLabels } from "../game/cards/displayLabels";
 
-const deckFactions: Faction[] = ["DRAGON", "UNDEAD", "MACHINE", "ALLIANCE"];
+const deckFactions: Faction[] = ["DRAGON", "UNDEAD", "MACHINE", "ALLIANCE", "NEUTRAL"];
 type CatalogSectionKind = "DECK" | "RESERVE" | "GENERATED";
 
 type RelationKind = "GENERATED" | "SEARCH" | "TRANSFORM" | "REFERENCE";
@@ -105,9 +105,9 @@ export function CardCatalog({ onBack }: Props) {
       return costDifference || left.name.localeCompare(right.name, "zh-Hant");
     });
   const deckCards = useMemo(() => filterVisibleCards(cardDefinitions
-    .filter((card) => Boolean(faction) && !card.generatedOnly && card.faction === faction && card.deckCount > 0)), [cardType, faction, normalizedQuery]);
+    .filter((card) => Boolean(faction) && !card.generatedOnly && card.faction === faction && (faction === "NEUTRAL" || card.deckCount > 0))), [cardType, faction, normalizedQuery]);
   const reserveCards = useMemo(() => filterVisibleCards(cardDefinitions
-    .filter((card) => Boolean(faction) && !card.generatedOnly && card.faction === faction && card.deckCount === 0)), [cardType, faction, normalizedQuery]);
+    .filter((card) => Boolean(faction) && faction !== "NEUTRAL" && !card.generatedOnly && card.faction === faction && card.deckCount === 0)), [cardType, faction, normalizedQuery]);
   const generatedCards = useMemo(() => filterVisibleCards(cardDefinitions
     .filter((card) => Boolean(faction) && card.generatedOnly && card.faction === faction)), [cardType, faction, normalizedQuery]);
 
@@ -119,16 +119,16 @@ export function CardCatalog({ onBack }: Props) {
 
     <section className="deck-menu" aria-label="選擇牌組">
       {deckFactions.map((item) => {
-        const definitions = cardDefinitions.filter((card) => card.faction === item && !card.generatedOnly && card.deckCount > 0);
+        const definitions = cardDefinitions.filter((card) => card.faction === item && !card.generatedOnly && (item === "NEUTRAL" || card.deckCount > 0));
         const deckSize = definitions.reduce((total, card) => total + card.deckCount, 0);
         return <button className={`deck-menu-item deck-${item.toLowerCase()} ${faction === item ? "selected" : ""}`} aria-label={`查看${factionLabels[item]}牌組`} aria-pressed={faction === item} onClick={() => {
           setFaction(item);
           setCardType("ALL");
           setQuery("");
         }} key={item}>
-          <small>牌組選單</small>
+          <small>{item === "NEUTRAL" ? "共用卡池" : "牌組選單"}</small>
           <strong>{factionLabels[item]}</strong>
-          <span>{deckSize} 張 · {definitions.length} 種卡牌</span>
+          <span>{item === "NEUTRAL" ? `${definitions.length} 種卡牌` : `${deckSize} 張 · ${definitions.length} 種卡牌`}</span>
         </button>;
       })}
     </section>
@@ -136,7 +136,7 @@ export function CardCatalog({ onBack }: Props) {
     {!faction ? <section className="catalog-welcome">
       <p className="eyebrow">SELECT A DECK</p>
       <h2>選擇一副牌查看卡表</h2>
-      <p>上方四個選單分別對應目前遊戲中的四副牌。</p>
+      <p>上方選單包含目前四副牌與教學使用的中立卡池。</p>
     </section> : <>
       <section className="catalog-controls" aria-label="卡表篩選">
         <label>搜尋卡牌<input aria-label="搜尋卡牌" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="名稱、效果或關鍵字" /></label>
@@ -145,9 +145,11 @@ export function CardCatalog({ onBack }: Props) {
           {(Object.keys(cardTypeLabels) as CardType[]).map((item) => <option value={item} key={item}>{cardTypeLabels[item]}</option>)}
         </select></label>
       </section>
-      <p className="catalog-summary"><strong>{factionLabels[faction]}</strong>牌組 · {deckCards.length} 種牌組卡 · {reserveCards.length} 種預備卡 · {generatedCards.length} 種衍生卡</p>
-      <CatalogSection title="牌組卡" description="目前編入這副牌的卡牌" cards={deckCards} onInspect={setInspectedCard} kind="DECK" />
-      <CatalogSection title="預備卡表" description="暫時從主牌組下放的卡牌；不計入正式牌組張數" cards={reserveCards} onInspect={setInspectedCard} kind="RESERVE" />
+      <p className="catalog-summary"><strong>{factionLabels[faction]}</strong>{faction === "NEUTRAL"
+        ? `卡池 · ${deckCards.length} 種中立卡 · ${generatedCards.length} 種衍生卡`
+        : `牌組 · ${deckCards.length} 種牌組卡 · ${reserveCards.length} 種預備卡 · ${generatedCards.length} 種衍生卡`}</p>
+      <CatalogSection title={faction === "NEUTRAL" ? "中立卡" : "牌組卡"} description={faction === "NEUTRAL" ? "目前已建立、可供教學與其他模式使用的共用卡牌" : "目前編入這副牌的卡牌"} cards={deckCards} onInspect={setInspectedCard} kind="DECK" />
+      {faction !== "NEUTRAL" && <CatalogSection title="預備卡表" description="暫時從主牌組下放的卡牌；不計入正式牌組張數" cards={reserveCards} onInspect={setInspectedCard} kind="RESERVE" />}
       <CatalogSection title="衍生卡" description="由這副牌的效果產生、召喚或轉變而來的卡牌" cards={generatedCards} onInspect={setInspectedCard} kind="GENERATED" />
     </>}
     {inspectedCard && <CatalogCardModal card={inspectedCard} onInspect={setInspectedCard} onClose={() => setInspectedCard(undefined)} />}
@@ -173,7 +175,7 @@ function CatalogCardButton({ card, kind, onInspect }: { card: CardDefinition; ki
     {card.cardType === "MINION" && <span className="catalog-stats"><b>⚔ {card.attack ?? "?"}</b><b>♥ {card.health ?? "?"}</b></span>}
     <span className="catalog-keywords">{card.keywords.map((keyword) => getKeywordText(keyword).label).join(" · ") || "無關鍵字"}</span>
     <span className="catalog-effect">{card.effectsText || "無卡牌效果"}</span>
-    <small className="catalog-count">{kind === "GENERATED" ? "衍生卡" : kind === "RESERVE" ? "預備卡" : `牌組放入 ${card.deckCount} 張`}</small>
+    <small className="catalog-count">{kind === "GENERATED" ? "衍生卡" : kind === "RESERVE" ? "預備卡" : card.faction === "NEUTRAL" ? "中立卡" : `牌組放入 ${card.deckCount} 張`}</small>
   </button>;
 }
 

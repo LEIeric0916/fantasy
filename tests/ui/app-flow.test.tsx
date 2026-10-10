@@ -132,6 +132,29 @@ describe("瀏覽器入口流程", () => {
     random.mockRestore();
   });
 
+  it("英雄模式可分別選擇英雄與牌組並顯示技能資訊", () => {
+    changeSelect("遊玩類型", "HERO");
+    const p1Hero = changeSelect("P1 英雄", "MAGICIAN");
+    const p2Hero = changeSelect("P2 英雄", "COMMANDER");
+    changeSelect("P1 玩家陣營", "MACHINE");
+    changeSelect("P2 玩家陣營", "ALLIANCE");
+    changeSelect("先攻設定", "P1");
+    expect([...p1Hero.options].map((option) => option.value)).toEqual(["PALADIN", "BRAVE", "MAGICIAN", "KNIGHT", "COMMANDER"]);
+    expect([...p2Hero.options].map((option) => option.value)).toEqual(["PALADIN", "BRAVE", "MAGICIAN", "KNIGHT", "COMMANDER"]);
+    click(button("建立英雄對局"));
+    click(button("確認換牌（0）"));
+    click(button("已交接，顯示畫面"));
+    click(button("確認換牌（0）"));
+    click(button("已交接，顯示畫面"));
+
+    expect(container.textContent).toContain("英雄模式");
+    expect(container.textContent).toContain("英雄 魔術師");
+    expect(container.textContent).toContain("英雄 指揮官");
+    expect(container.textContent).toContain("奧術知識");
+    expect(container.textContent).toContain("精準砲擊");
+    expect(container.querySelector<HTMLButtonElement>('.hero-power-button[aria-label="英雄技能：奧術知識"]')?.getAttribute("aria-disabled")).toBe("true");
+  });
+
   it("可選擇隨機 AI 模式，由 P2 自動完成換牌並維持 P1 視角", () => {
     vi.useFakeTimers();
     changeSelect("對戰模式", "RANDOM_AI");
@@ -369,6 +392,12 @@ describe("瀏覽器入口流程", () => {
     expect(container.textContent).toContain("CARD LIBRARY");
     expect(container.textContent).toContain("卡表");
     expect(container.textContent).toContain("選擇一副牌查看卡表");
+
+    click(container.querySelector<HTMLButtonElement>('button[aria-label="查看中立牌組"]')!);
+    expect(container.textContent).toContain("中立卡池");
+    expect(container.textContent).toContain("魔法知識");
+    expect(container.textContent).toContain("戰士學徒");
+    expect(container.textContent).toContain("殺意學徒");
 
     click(container.querySelector<HTMLButtonElement>('button[aria-label="查看龍族牌組"]')!);
     expect(container.textContent).toContain("赤焰的龍皇兵");

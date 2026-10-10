@@ -15,10 +15,14 @@ interface Props {
   handSummary?: boolean;
   entering?: boolean;
   onClick?: () => void;
+  onPlay?: () => void;
   onInspect?: () => void;
   onDragStart?: () => void;
   onDragEnd?: () => void;
   onDrop?: () => void;
+  onTouchDragStart?: () => void;
+  onTouchDrop?: (clientX: number, clientY: number) => void;
+  onTouchTap?: () => void;
 }
 
 export function CardView({
@@ -32,15 +36,22 @@ export function CardView({
   handSummary,
   entering,
   onClick,
+  onPlay,
   onInspect,
   onDragStart,
   onDragEnd,
   onDrop,
+  onTouchDragStart,
+  onTouchDrop,
+  onTouchTap,
 }: Props) {
   const definition = getCardDefinition(card.definitionId);
   const keywordText = getCardKeywordText(card);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const longPressTriggered = useRef(false);
+  const touchStart = useRef<{ x: number; y: number; pointerId: number } | undefined>(undefined);
+  const touchDragging = useRef(false);
+  const touchTapPending = useRef(false);
   const previousStats = useRef({ attack: card.currentAttack, health: card.currentHealth });
   const [statChange, setStatChange] = useState<{ attack?: number; health?: number; key: number }>();
   const [entranceActive, setEntranceActive] = useState(Boolean(entering));
@@ -104,6 +115,7 @@ export function CardView({
     clearLongPress();
     longPressTriggered.current = false;
     longPressTimer.current = setTimeout(() => {
+      touchTapPending.current = false;
       longPressTriggered.current = true;
       onInspect();
     }, 550);
@@ -131,9 +143,45 @@ export function CardView({
         onDrop?.();
       }}
       data-instance-id={card.instanceId}
-      onPointerDown={startLongPress}
-      onPointerUp={clearLongPress}
-      onPointerCancel={clearLongPress}
+      onPointerDown={(event) => {
+        startLongPress();
+        if (event.pointerType !== "touch" || !onTouchDrop) return;
+        touchTapPending.current = false;
+        touchStart.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
+        touchDragging.current = false;
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+      }}
+      onPointerMove={(event) => {
+        const start = touchStart.current;
+        if (!start || event.pointerType !== "touch") return;
+        if (!touchDragging.current && Math.hypot(event.clientX - start.x, event.clientY - start.y) >= 12) {
+          clearLongPress();
+          touchDragging.current = true;
+          onTouchDragStart?.();
+        }
+        if (touchDragging.current) event.preventDefault();
+      }}
+      onPointerUp={(event) => {
+        clearLongPress();
+        if (event.pointerType !== "touch" || !touchStart.current) return;
+        const wasDragging = touchDragging.current;
+        touchStart.current = undefined;
+        touchDragging.current = false;
+        if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture?.(event.pointerId);
+        if (!wasDragging) {
+          touchTapPending.current = !longPressTriggered.current;
+          return;
+        }
+        longPressTriggered.current = true;
+        onTouchDrop?.(event.clientX, event.clientY);
+      }}
+      onPointerCancel={(event) => {
+        clearLongPress();
+        touchStart.current = undefined;
+        touchDragging.current = false;
+        if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture?.(event.pointerId);
+        onDragEnd?.();
+      }}
       onPointerLeave={clearLongPress}
       onContextMenu={(event) => event.preventDefault()}
     >
@@ -145,6 +193,11 @@ export function CardView({
       {plagueMarks !== undefined && <span className="counter-badge plague-counter" aria-label={`瘟疫標記 ${plagueMarks}`}><small>瘟疫</small><strong>{plagueMarks}</strong><small>/ {plagueThreshold}</small></span>}
       {card.counters.countdown !== undefined && <span className="counter-badge countdown-badge" aria-label={`目前倒數 ${card.counters.countdown}`}><small>倒數</small><strong>{card.counters.countdown}</strong></span>}
       <button className="card-surface" disabled={disabled} onClick={() => {
+        if (touchTapPending.current) {
+          touchTapPending.current = false;
+          onTouchTap?.();
+          return;
+        }
         if (longPressTriggered.current) {
           longPressTriggered.current = false;
           return;
@@ -162,6 +215,7 @@ export function CardView({
         <span className="attack-stat"><i aria-hidden="true">⚔</i><b className={attackTone}>{card.currentAttack ?? "?"}</b>{statChange?.attack && <em key={`a-${statChange.key}`} className={statChange.attack > 0 ? "positive" : "negative"}>{statChange.attack > 0 ? "+" : ""}{statChange.attack}</em>}</span>
         <span className="health-stat"><i aria-hidden="true">♥</i><b className={healthTone}>{card.currentHealth ?? "?"}</b>{statChange?.health && <em key={`h-${statChange.key}`} className={statChange.health > 0 ? "positive" : "negative"}>{statChange.health > 0 ? "+" : ""}{statChange.health}</em>}</span>
       </span>}
+      {onPlay && <button className="play-card" onClick={onPlay} aria-label={`打出 ${definition.name}`}>打出</button>}
       {onInspect && <button className="inspect-card" onClick={onInspect} aria-label={`檢視 ${definition.name} 卡牌資訊`}>詳細</button>}
     </article>
   );

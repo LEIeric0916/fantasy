@@ -1,5 +1,6 @@
 import { getCardDefinition, getMainDeckDefinitions } from "../cards/cardRegistry";
 import type { CardInstance, Faction, PlayerId } from "../cards/cardTypes";
+import { getHeroDefinition, type HeroId } from "../heroes/heroDefinitions";
 import { shuffleSeeded } from "../utils/rng";
 import { addLog } from "../utils/gameLog";
 import { createCardInstance } from "./CardInstance";
@@ -17,6 +18,7 @@ export interface CreateGameOptions {
   seed?: number;
   rulesConfig?: Partial<RulesConfig>;
   shuffle?: boolean;
+  heroes?: Partial<Record<PlayerId, HeroId>>;
 }
 
 function createRandomSeed(): number {
@@ -32,7 +34,7 @@ function buildDeck(factions: readonly Faction[], ownerId: PlayerId): CardInstanc
   );
 }
 
-function createPlayer(id: PlayerId, deckFactions: readonly Faction[], deck: CardInstance[]): PlayerState {
+function createPlayer(id: PlayerId, deckFactions: readonly Faction[], deck: CardInstance[], heroId?: HeroId): PlayerState {
   const faction = deckFactions[0];
   if (!faction) throw new Error(`${id} 至少需要一個牌組陣營`);
   return {
@@ -68,6 +70,7 @@ function createPlayer(id: PlayerId, deckFactions: readonly Faction[], deck: Card
     nextHighCostDragonReductionMinCost: null,
     nextHighCostDragonReduction: 0,
     heroDivineShield: false,
+    hero: heroId ? { id: getHeroDefinition(heroId).id, skillUses: 0, skillUsedThisTurn: false } : undefined,
   };
 }
 
@@ -96,8 +99,8 @@ export function createInitialGame(options: CreateGameOptions = {}): GameState {
     startingPlayerId,
     phase: "MULLIGAN",
     players: {
-      P1: createPlayer("P1", deckFactions.P1, decks.P1),
-      P2: createPlayer("P2", deckFactions.P2, decks.P2),
+      P1: createPlayer("P1", deckFactions.P1, decks.P1, options.heroes?.P1),
+      P2: createPlayer("P2", deckFactions.P2, decks.P2, options.heroes?.P2),
     },
     pendingEffects: [],
     log: [],

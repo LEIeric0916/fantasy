@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getCardDefinition } from "../../src/game/cards/cardRegistry";
+import { getLegalAttackTargets } from "../../src/game/engine/combatEngine";
 import { applyAction } from "../../src/game/engine/gameEngine";
 import { mainState, putCard } from "../helpers";
 
@@ -42,6 +43,22 @@ describe("殘光渡扉者 亞恩", () => {
       "TOKEN_UNDEAD_BOOK_PLAGUE",
       "TOKEN_UNDEAD_BOOK_REVENGE",
     ]);
+  });
+
+  it("召喚回合完成戰吼選擇後，衝刺可以攻擊敵方手下", () => {
+    let state = mainState();
+    state.players.P1.hand = [];
+    const yaan = putCard(state, "P1", "UNDEAD_008", "HAND", "rush-after-battlecry");
+    const discard = putCard(state, "P1", "DRAGON_001", "HAND", "rush-discard");
+    const enemy = putCard(state, "P2", "DRAGON_001", "MINION", "rush-target");
+
+    state = applyAction(state, { type: "PLAY_CARD", playerId: "P1", instanceId: yaan.instanceId }).state;
+    state = applyAction(state, { type: "SELECT_EFFECT_CARDS", playerId: "P1", instanceIds: [discard.instanceId] }).state;
+    state = applyAction(state, { type: "SELECT_EFFECT_OPTION", playerId: "P1", optionId: "TOKEN_UNDEAD_BOOK_PLAGUE" }).state;
+    state = applyAction(state, { type: "SELECT_EFFECT_OPTION", playerId: "P1", optionId: "TOKEN_UNDEAD_BOOK_REVENGE" }).state;
+
+    expect(state.pendingChoice).toBeUndefined();
+    expect(getLegalAttackTargets(state, yaan.instanceId)).toContainEqual({ type: "MINION", instanceId: enemy.instanceId });
   });
 
   it("捨棄闇黑帝王當下死靈數不足時，復仇典錄後來增加的5點不會倒回觸發復活", () => {

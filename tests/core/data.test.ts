@@ -4,8 +4,8 @@ import { createCardInstance } from "../../src/game/state/CardInstance";
 
 describe("卡牌資料", () => {
   it("完整載入六個 JSON 且 ID 唯一", () => {
-    expect(cardDefinitions).toHaveLength(110);
-    expect(new Set(cardDefinitions.map((card) => card.id)).size).toBe(110);
+    expect(cardDefinitions).toHaveLength(111);
+    expect(new Set(cardDefinitions.map((card) => card.id)).size).toBe(111);
     expect(validateCardData().filter((issue) => issue.code === "DUPLICATE_ID")).toEqual([]);
   });
 
@@ -98,7 +98,7 @@ describe("卡牌資料", () => {
     const card = cardDefinitions.find((item) => item.id === "TOKEN_MACHINE_PRIEST")!;
     expect(card.originalCost).toBe(2);
     expect(getRuleUndefinedInventory().some((issue) => issue.ruleId === "CARD_DATA_NULL")).toBe(false);
-    expect(getRuleUndefinedInventory().filter((issue) => issue.ruleId === "CARD_DATA_NOTE")).toHaveLength(78);
+    expect(getRuleUndefinedInventory().filter((issue) => issue.ruleId === "CARD_DATA_NOTE")).toHaveLength(79);
   });
 
   it("卡牌文字中的主要關鍵效果都有可執行資料", () => {
