@@ -16,6 +16,7 @@ interface Props {
   entering?: boolean;
   onClick?: () => void;
   onPlay?: () => void;
+  onAttack?: () => void;
   onInspect?: () => void;
   onDragStart?: () => void;
   onDragEnd?: () => void;
@@ -37,6 +38,7 @@ export function CardView({
   entering,
   onClick,
   onPlay,
+  onAttack,
   onInspect,
   onDragStart,
   onDragEnd,
@@ -144,15 +146,15 @@ export function CardView({
       }}
       data-instance-id={card.instanceId}
       onPointerDown={(event) => {
+        // Action buttons must retain their own click target.
+        if ((event.target as Element).closest(".inspect-card, .play-card, .attack-card")) return;
         startLongPress();
-        // Hand cards use one pointer-based path for both mouse and touch. Native
-        // HTML drag-and-drop is inconsistent when a draggable card contains
-        // interactive buttons, so it remains reserved for board-card attacks.
+        // Cards with pointer-drop handlers share one mouse/touch drag path.
+        // Capture starts only after movement, preserving normal button clicks.
         if ((event.pointerType !== "touch" && event.pointerType !== "mouse") || !onTouchDrop) return;
         touchTapPending.current = false;
         touchStart.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId, pointerType: event.pointerType };
         touchDragging.current = false;
-        event.currentTarget.setPointerCapture?.(event.pointerId);
       }}
       onPointerMove={(event) => {
         const start = touchStart.current;
@@ -160,6 +162,7 @@ export function CardView({
         if (!touchDragging.current && Math.hypot(event.clientX - start.x, event.clientY - start.y) >= 12) {
           clearLongPress();
           touchDragging.current = true;
+          event.currentTarget.setPointerCapture?.(event.pointerId);
           onTouchDragStart?.();
         }
         if (touchDragging.current) event.preventDefault();
@@ -220,6 +223,7 @@ export function CardView({
         <span className="health-stat"><i aria-hidden="true">♥</i><b className={healthTone}>{card.currentHealth ?? "?"}</b>{statChange?.health && <em key={`h-${statChange.key}`} className={statChange.health > 0 ? "positive" : "negative"}>{statChange.health > 0 ? "+" : ""}{statChange.health}</em>}</span>
       </span>}
       {onPlay && <button className="play-card" onClick={onPlay} aria-label={`打出 ${definition.name}`}>打出</button>}
+      {onAttack && <button className="attack-card" onClick={onAttack} aria-label={`攻擊：${definition.name}`}>{selected ? "取消攻擊" : "攻擊"}</button>}
       {onInspect && <button className="inspect-card" onClick={onInspect} aria-label={`檢視 ${definition.name} 卡牌資訊`}>詳細</button>}
     </article>
   );

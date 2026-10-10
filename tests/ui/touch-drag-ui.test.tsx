@@ -18,6 +18,58 @@ function pointerEvent(type: string, x: number, y: number, pointerType = "touch")
 }
 
 describe("手機觸控拖曳", () => {
+  it("詳細按鈕不被卡牌指標擷取攔截，手牌能開啟資訊", () => {
+    (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+    const state = mainState();
+    const card = putCard(state, "P1", "NEUTRAL_002", "HAND", "inspect-pointer");
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
+    const cardElement = container.querySelector<HTMLElement>(`[data-instance-id="${card.instanceId}"]`)!;
+    let captures = 0;
+    cardElement.setPointerCapture = () => { captures += 1; };
+    const inspect = cardElement.querySelector<HTMLButtonElement>(".inspect-card")!;
+    act(() => inspect.dispatchEvent(pointerEvent("pointerdown", 50, 600, "mouse")));
+    act(() => inspect.dispatchEvent(pointerEvent("pointerup", 50, 600, "mouse")));
+    expect(captures).toBe(0);
+    act(() => inspect.click());
+    expect(container.querySelector(".card-modal-backdrop")).not.toBeNull();
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  for (const pointerType of ["mouse", "touch"]) {
+    for (const destination of ["minion", "hero", "invalid"]) {
+      it(`${pointerType}拖曳攻擊${destination}能正確判定目標`, () => {
+        (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+        const state = mainState();
+        const attacker = putCard(state, "P1", "NEUTRAL_002", "MINION", "drag-attacker");
+        const defender = putCard(state, "P2", "NEUTRAL_002", "MINION", "drag-defender");
+        const container = document.createElement("div");
+        document.body.append(container);
+        const root = createRoot(container);
+        act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
+        const surface = container.querySelector<HTMLElement>(`[data-instance-id="${attacker.instanceId}"] .card-surface`)!;
+        const target = destination === "minion"
+          ? container.querySelector(`[data-instance-id="${defender.instanceId}"] .card-surface`)!
+          : container.querySelector(destination === "hero" ? ".opponent-side .player-panel" : ".active-side .player-panel")!;
+        const originalElementFromPoint = document.elementFromPoint;
+        Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => target });
+        act(() => surface.dispatchEvent(pointerEvent("pointerdown", 50, 420, pointerType)));
+        act(() => surface.dispatchEvent(pointerEvent("pointermove", 50, 350, pointerType)));
+        act(() => surface.dispatchEvent(pointerEvent("pointerup", 50, 220, pointerType)));
+        const hp = container.querySelector(`[data-instance-id="${defender.instanceId}"] .health-stat b`)!;
+        expect(hp.textContent).toBe(destination === "minion" ? "1" : "3");
+        expect(container.querySelector('[data-testid="player-health-P2"] b')?.textContent).toBe(destination === "hero" ? "28" : "30");
+        expect(container.querySelector(`[data-instance-id="${attacker.instanceId}"] .attack-card`) !== null).toBe(destination === "invalid");
+        Object.defineProperty(document, "elementFromPoint", { configurable: true, value: originalElementFromPoint });
+        act(() => root.unmount());
+        container.remove();
+      });
+    }
+  }
+
   it("電腦從卡面按鈕開始拖曳時也能正常出牌", () => {
     (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
     const state = mainState();

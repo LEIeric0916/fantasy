@@ -388,12 +388,14 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
   CULT_008: [{ type: "REDUCE_CURRENT_HAND_COST", value: 3 }],
   CULT_010: [{ type: "ADD_DECK_EMPTY_WIN_CONDITION" }],
   CULT_011: [{ type: "DISCARD_HAND", count: 2 }, { type: "DRAW", value: 2 }],
-  CULT_012: [{ type: "DRAW", value: 1 }, { type: "DISCARD_HAND", count: 1 }],
+  CULT_012: [{ type: "LOSE_HERO_HEALTH", value: 1 }, { type: "DRAW", value: 1 }],
   CULT_013: [{ type: "RESTORE_MANA" }],
   CULT_014: [{ type: "DESTROY_ALL_BOARD_CARDS" }],
-  CULT_016: [{ type: "CHOOSE_ONE", prompt: "選擇使對手哪一側的卡片消失", options: [
-    { id: "LEFT", label: "最左邊", effects: [{ type: "VANISH_ENEMY_BOARD_EDGE", edge: "LEFT" }] },
-    { id: "RIGHT", label: "最右邊", effects: [{ type: "VANISH_ENEMY_BOARD_EDGE", edge: "RIGHT" }] },
+  CULT_016: [{ type: "CHOOSE_ONE", prompt: "選擇對手手下區或立場區的邊緣卡牌消失", options: [
+    { id: "MINION_LEFT", label: "手下區最左邊", effects: [{ type: "VANISH_ENEMY_BOARD_EDGE", zone: "MINION", edge: "LEFT" }] },
+    { id: "MINION_RIGHT", label: "手下區最右邊", effects: [{ type: "VANISH_ENEMY_BOARD_EDGE", zone: "MINION", edge: "RIGHT" }] },
+    { id: "FIELD_LEFT", label: "立場區最左邊", effects: [{ type: "VANISH_ENEMY_BOARD_EDGE", zone: "FIELD", edge: "LEFT" }] },
+    { id: "FIELD_RIGHT", label: "立場區最右邊", effects: [{ type: "VANISH_ENEMY_BOARD_EDGE", zone: "FIELD", edge: "RIGHT" }] },
   ] }],
   CULT_017: [{ type: "RETURN_GRAVE_CARD_TO_HAND", count: 2, cardType: "SPELL" }],
   TOKEN_CULT_GOD: [
@@ -652,7 +654,7 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
       { type: "GRANT_TARGET_FRIENDLY_MINION_KEYWORD", keyword: "DIVINE_SHIELD" },
     ],
   },
-  CULT_009: { GROWTH: [{ type: "MILL_DECK", count: 1 }] },
+  CULT_009: { GROWTH: [{ type: "DRAW", value: 1 }] },
   CULT_015: { LAST_WORDS: [{ type: "SUMMON", definitionId: "TOKEN_CULT_GOD", count: 1 }] },
   TOKEN_CULT_HEART: { GROWTH: [{ type: "DESTROY_TARGET_ENEMY_MINION" }] },
   TOKEN_CULT_BRAIN: { GROWTH: [{ type: "HEAL_HERO", value: 2 }] },
@@ -669,7 +671,7 @@ const initialCounters: Record<string, Record<string, number>> = {
   TOKEN_MACHINE_ATTACK_SHIP: { countdown: 3 },
   TOKEN_MACHINE_SOLDIER_BAY: { countdown: 2 },
   TOKEN_MACHINE_GEAR: { countdown: 3 },
-  CULT_015: { countdown: 40 },
+  CULT_015: { countdown: 20 },
 };
 
 const dynamicCosts: Record<string, CardDefinition["dynamicCost"]> = {
@@ -714,7 +716,7 @@ const alternatePlays: Record<string, CardDefinition["alternatePlay"]> = {
       { type: "RETURN_SELF_TO_DECK_SHUFFLE" },
     ],
   },
-  CULT_012: { cost: 1, effects: [{ type: "MILL_DECK", count: 3 }] },
+  CULT_012: { cost: 2, effects: [{ type: "MILL_DECK", count: 2 }, { type: "DRAW", value: 1 }] },
 };
 
 const effectSummons: Record<string, CardDefinition["effectSummon"]> = {

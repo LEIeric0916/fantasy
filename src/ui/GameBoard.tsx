@@ -462,6 +462,19 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
     else setDraggedHandCardId(undefined);
   }
 
+  function finishAttackDrag(instanceId: string, clientX: number, clientY: number) {
+    const target = document.elementFromPoint(clientX, clientY);
+    const enemyCard = target?.closest(".opponent-side .minion-zone [data-instance-id]");
+    const targetId = enemyCard?.getAttribute("data-instance-id");
+    const legal = getLegalAttackTargets(state, instanceId);
+    if (targetId && legal.some((candidate) => candidate.type === "MINION" && candidate.instanceId === targetId)) {
+      dispatch({ type: "ATTACK", playerId: active.id, attackerId: instanceId, target: { type: "MINION", instanceId: targetId } });
+    } else if (target?.closest(".opponent-side .player-panel") && legal.some((candidate) => candidate.type === "HERO" && candidate.playerId === opponentId)) {
+      dispatch({ type: "ATTACK", playerId: active.id, attackerId: instanceId, target: { type: "HERO", playerId: opponentId } });
+    }
+    setAttackerId(undefined);
+  }
+
   function dispatch(action: GameAction, gateAfter = false) {
     const result = applyAction(state, action);
     let nextState = result.state;
@@ -741,7 +754,7 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
       </section>}
 
       <section className="battlefield" aria-label="完整對戰區域">
-        {(attackerId || heroSkillTargeting) && <div className="attack-drag-indicator" role="status" aria-live="polite"><span aria-hidden="true">➤</span><b>{heroSkillTargeting ? "請點選英雄技能的目標" : "拖曳至攻擊目標"}</b></div>}
+        {(attackerId || heroSkillTargeting) && <div className="attack-drag-indicator" role="status" aria-live="polite"><span aria-hidden="true">➤</span><b>{heroSkillTargeting ? "請點選英雄技能的目標" : "點選或拖曳至敵方手下／玩家以攻擊"}</b></div>}
         <div className="board-side opponent-side">
           <section
             className={`player-panel hero-drop-zone ${opponentHeroDefinition ? "has-floating-hero-power" : ""} ${heroLegal ? "legal" : ""}`}
@@ -776,7 +789,7 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
               : attackerId && isLegalMinion(id) && dispatch({ type: "ATTACK", playerId: state.activePlayerId, attackerId, target: { type: "MINION", instanceId: id } })}
           />
         </div>
-        <div className="board-divider"><span>拖曳可行動手下至敵方手下或玩家區域以攻擊</span></div>
+        <div className="board-divider"><span>拖曳可行動手下至敵方目標，或按「攻擊」後點選敵方手下／玩家</span></div>
         <div
           className={`board-side active-side ${draggedHandCardId ? "hand-play-drop-zone" : ""} ${touchSelectedHandCardId ? "touch-play-ready" : ""}`}
           onClick={(event) => {
@@ -806,6 +819,8 @@ export function GameBoard({ initialState, onRestart, tutorialLevel, aiPlayerId, 
             onInspect={setInspectedCard}
             onDragStart={setAttackerId}
             onDragEnd={() => setAttackerId(undefined)}
+            onAttack={!heroSkillTargeting ? (id) => setAttackerId(id === attackerId ? undefined : id) : undefined}
+            onPointerDrop={finishAttackDrag}
             onDropCard={(id) => isHeroSkillTarget(id) && dispatch({ type: "ACTIVATE_HERO_SKILL", playerId: active.id, targetInstanceId: id })}
             onCard={(id) => {
               if (isHeroSkillTarget(id)) {
@@ -1383,9 +1398,11 @@ interface ZoneProps {
   onDragStart?: (id: string) => void;
   onDragEnd?: () => void;
   onDropCard?: (id: string) => void;
+  onAttack?: (id: string) => void;
+  onPointerDrop?: (id: string, clientX: number, clientY: number) => void;
 }
 
-function Zone({ title, cards, compact, kind = "MINION", slotCount = 7, legal, selected, actionable, draggable, dropTarget, onCard, onInspect, onDragStart, onDragEnd, onDropCard }: ZoneProps) {
+function Zone({ title, cards, compact, kind = "MINION", slotCount = 7, legal, selected, actionable, draggable, dropTarget, onCard, onInspect, onDragStart, onDragEnd, onDropCard, onAttack, onPointerDrop }: ZoneProps) {
   const columns = `repeat(${slotCount}, minmax(0, 1fr))`;
   const leadingSlots = Math.floor(Math.max(0, slotCount - cards.length) / 2);
   const trailingSlots = Math.max(0, slotCount - cards.length - leadingSlots);
@@ -1403,6 +1420,9 @@ function Zone({ title, cards, compact, kind = "MINION", slotCount = 7, legal, se
     onDragStart={() => onDragStart?.(card.instanceId)}
     onDragEnd={onDragEnd}
     onDrop={() => onDropCard?.(card.instanceId)}
+    onAttack={actionable?.(card.instanceId) && onAttack ? () => onAttack(card.instanceId) : undefined}
+    onTouchDragStart={draggable?.(card.instanceId) && onPointerDrop ? () => onDragStart?.(card.instanceId) : undefined}
+    onTouchDrop={draggable?.(card.instanceId) && onPointerDrop ? (x, y) => onPointerDrop(card.instanceId, x, y) : undefined}
   />)}{Array.from({ length: trailingSlots }, (_, index) => <span className="slot" data-position="trailing" key={`trailing-${index}`} />)}</div></section>;
 }
 

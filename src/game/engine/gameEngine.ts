@@ -186,7 +186,14 @@ function playAlternate(state: GameState, playerId: PlayerId, instanceId: string)
     cardId: definition.id,
     alternateCost: definition.alternatePlay.cost,
   });
-  resolveEffects(state, playerId, card, definition.alternatePlay.effects);
+  if (definition.cardType === "SPELL") {
+    if (definition.originalCost !== null) enqueueSpellPlayedEffectSummons(state, playerId, definition.originalCost);
+    resolveEffects(state, playerId, card, definition.alternatePlay.effects, false);
+    moveCard(state, card, definition.generatedOnly ? "EXTRA_DECK" : "GRAVEYARD", "PLAY_ALTERNATE_SPELL");
+    if (!state.pendingChoice) resolvePendingEffects(state);
+  } else {
+    resolveEffects(state, playerId, card, definition.alternatePlay.effects);
+  }
 }
 
 function activateField(state: GameState, playerId: PlayerId, instanceId: string): void {

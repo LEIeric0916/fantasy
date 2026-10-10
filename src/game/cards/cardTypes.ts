@@ -61,6 +61,7 @@ export type EffectDefinition =
   | { type: "GAIN_MANA"; value: number }
   | { type: "DRAW"; value: number }
   | { type: "HEAL_HERO"; value: number }
+  | { type: "LOSE_HERO_HEALTH"; value: number }
   | { type: "HEAL_ALL_FRIENDLY_MINIONS"; value: number }
   | { type: "MODIFY_SELF_HEALTH"; value: number }
   | { type: "MODIFY_SELF_ATTACK"; value: number }
@@ -115,7 +116,7 @@ export type EffectDefinition =
   | { type: "MILL_DECK"; count: number }
   | { type: "RETURN_GRAVE_CARD_TO_HAND"; count: number; cardType?: CardType }
   | { type: "TAKE_CONTROL_ENEMY_MINION" }
-  | { type: "VANISH_ENEMY_BOARD_EDGE"; edge: "LEFT" | "RIGHT" }
+  | { type: "VANISH_ENEMY_BOARD_EDGE"; edge: "LEFT" | "RIGHT"; zone: "MINION" | "FIELD" }
   | { type: "REDUCE_CURRENT_HAND_COST"; value: number }
   | { type: "ADD_DECK_EMPTY_WIN_CONDITION" }
   | { type: "RESTORE_MANA" }

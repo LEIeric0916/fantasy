@@ -892,6 +892,18 @@ function resolveEffectList(
       case "DAMAGE_ENEMY_HERO":
         dealDamageToHero(state, opponentOf(playerId), effect.value, source.instanceId);
         break;
+      case "LOSE_HERO_HEALTH": {
+        const player = state.players[playerId];
+        player.heroHp = Math.max(0, player.heroHp - effect.value);
+        addLog(state, "RESOURCE", `${playerId} 玩家扣除 ${effect.value} 點生命值`, { source: source.instanceId, heroHp: player.heroHp });
+        if (player.heroHp <= 0) {
+          state.phase = "GAME_OVER";
+          state.winner = opponentOf(playerId);
+          state.loseReason = "HP_ZERO";
+          addLog(state, "RESULT", `${state.winner} 獲勝`, { reason: "HP_ZERO" });
+        }
+        break;
+      }
       case "DISCARD_HAND": {
         const candidates = state.players[playerId].hand.map((card) => card.instanceId);
         if (candidates.length < effect.count) {
@@ -1065,9 +1077,9 @@ function resolveEffectList(
       }
       case "VANISH_ENEMY_BOARD_EDGE": {
         const opponent = state.players[opponentOf(playerId)];
-        const ordered = [...opponent.minions, ...opponent.fields];
+        const ordered = effect.zone === "MINION" ? opponent.minions : opponent.fields;
         const target = effect.edge === "LEFT" ? ordered[0] : ordered[ordered.length - 1];
-        if (!target) { notifyEffectSkipped(state, playerId, source, "對手場上沒有卡牌"); break; }
+        if (!target) { notifyEffectSkipped(state, playerId, source, `對手${effect.zone === "MINION" ? "手下" : "立場"}區沒有卡牌`); break; }
         if (hasActiveKeyword(target, "DISCIPLINE") || hasActiveKeyword(target, "INVINCIBLE")) {
           addLog(state, "PROTECTION", `${target.definitionId} 阻擋消失`, { source: source.instanceId }); break;
         }
