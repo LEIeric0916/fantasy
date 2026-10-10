@@ -53,6 +53,24 @@ export function moveCard(
   state.players[destinationPlayerId][zoneKey[destination]].push(card);
   if (destination === "HAND") markHandEntryForEffectSummon(state, destinationPlayerId, card, reason);
   addLog(state, "ZONE", `${card.definitionId}: ${from} → ${destination}`, { instanceId: card.instanceId, reason });
+  if ((from === "MINION" || from === "FIELD") && destination !== "MINION" && destination !== "FIELD"
+    && !card.sealed && getCardDefinition(card.definitionId).onLeaveFieldEffects?.length) {
+    enqueueTriggeredEffects(state, card, getCardDefinition(card.definitionId).onLeaveFieldEffects!, `${reason}:LEAVE_FIELD`, undefined, false, true);
+  }
+  if (destination === "GRAVEYARD" && from !== "MINION" && from !== "FIELD") {
+    const graveEffects = !card.sealed ? getCardDefinition(card.definitionId).onSentToGraveFromOutsideField : undefined;
+    if (graveEffects?.length) enqueueTriggeredEffects(state, card, graveEffects, `${reason}:OUTSIDE_FIELD_TO_GRAVE`, undefined, false, true);
+  }
+  if (destination === "GRAVEYARD") {
+    for (const field of [...state.players[destinationPlayerId].fields]) {
+      if (field.sealed || !getCardDefinition(field.definitionId).countdownOnFriendlyGraveEntry) continue;
+      const current = field.counters.countdown;
+      if (current === undefined) throw new RuleUndefinedError("COUNTDOWN_INITIAL_VALUE", "棄堆倒數光環缺少倒數初值", field.definitionId);
+      field.counters.countdown = current - 1;
+      addLog(state, "RESOURCE", `${field.definitionId} 因卡牌進入我方棄堆，倒數 ${current} → ${field.counters.countdown}`, { cardInstanceId: card.instanceId });
+      if (field.counters.countdown <= 0 && field.zone === "FIELD") destroyCardOnField(state, field, "GRAVE_COUNTDOWN_FINISHED");
+    }
+  }
 }
 
 export function destroyMinion(state: GameState, card: CardInstance, reason = "DESTROY", timingContext?: TimingContext): void {

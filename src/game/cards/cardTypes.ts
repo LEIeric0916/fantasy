@@ -1,5 +1,5 @@
 export type PlayerId = "P1" | "P2";
-export type Faction = "DRAGON" | "UNDEAD" | "MACHINE" | "ALLIANCE" | "NEUTRAL";
+export type Faction = "DRAGON" | "UNDEAD" | "MACHINE" | "ALLIANCE" | "CULT" | "NEUTRAL";
 export type CardType = "MINION" | "SPELL" | "FIELD";
 export type Zone = "DECK" | "HAND" | "MINION" | "FIELD" | "GRAVEYARD" | "REMOVED" | "EXTRA_DECK";
 
@@ -53,6 +53,8 @@ export type ConditionDefinition =
   | { type: "SUMMONED_THIS_GAME_BELOW"; value: number }
   | { type: "FRIENDLY_MINION_COUNT_LESS_THAN_OPPONENT" }
   | { type: "FRIENDLY_MINION_COUNT_AT_LEAST"; value: number }
+  | { type: "FRIENDLY_GRAVE_COUNT_AT_LEAST"; value: number }
+  | { type: "FRIENDLY_FIELD_DEFINITION_ABSENT"; definitionId: string }
   | { type: "ALL"; conditions: ConditionDefinition[] };
 
 export type EffectDefinition =
@@ -74,6 +76,7 @@ export type EffectDefinition =
   | { type: "SUMMON_WITH_KEYWORD_IF_FIELD"; definitionId: string; count: number; fieldDefinitionId: string; keyword: Keyword; additionalKeywords?: Keyword[] }
   | { type: "DAMAGE_ALL_ENEMY_MINIONS"; value: number }
   | { type: "DAMAGE_ALL_OTHER_MINIONS"; value: number }
+  | { type: "DAMAGE_ENEMY_HERO_AND_MINIONS"; value: number }
   | { type: "DAMAGE_TARGET_ENEMY_MINION"; value: number }
   | { type: "DAMAGE_TARGET_ENEMY_MINION_OR_HERO"; value: number; heroValue?: number }
   | { type: "DAMAGE_ALL_ENEMY_MINIONS_BY_FRIENDLY_FIELD_SUBTYPE"; subtype: string }
@@ -86,7 +89,11 @@ export type EffectDefinition =
   | { type: "DESTROY_UP_TO_ENEMY_MINIONS"; maxCount: number }
   | { type: "DESTROY_DISTINCT_ENEMY_MINIONS"; count: number; minCount?: number }
   | { type: "DESTROY_ALL_ENEMY_MINIONS" }
+  | { type: "DESTROY_ALL_MINIONS" }
+  | { type: "DESTROY_ALL_BOARD_CARDS" }
   | { type: "VANISH_ENEMY_MINIONS"; count: number }
+  | { type: "VANISH_ENEMY_BOARD_CARDS"; count: number }
+  | { type: "VANISH_ENEMY_HAND"; count: number }
   | { type: "TRANSFORM_ENEMY_MINIONS"; count: number; definitionId: string; maxHealth?: number }
   | { type: "TRANSFORM_UP_TO_ENEMY_MINIONS"; maxCount: number; definitionId: string; maxHealth?: number }
   | { type: "REVIVE_FRIENDLY_GRAVE_MINION"; maxOriginalCost?: number; minOriginalCost?: number }
@@ -105,11 +112,18 @@ export type EffectDefinition =
   | { type: "SEARCH_DECK"; cardType?: CardType; definitionId?: string }
   | { type: "DISCOVER_TOP"; bonusReveal?: number; count: number; cardType?: CardType; subtype?: string; temporaryCostReduction?: number; discardFromSelected?: number; fallbackEffects?: EffectDefinition[] }
   | { type: "ADD_GENERATED_TO_HAND"; definitionId: string; count: number }
+  | { type: "MILL_DECK"; count: number }
+  | { type: "RETURN_GRAVE_CARD_TO_HAND"; count: number; cardType?: CardType }
+  | { type: "TAKE_CONTROL_ENEMY_MINION" }
+  | { type: "VANISH_ENEMY_BOARD_EDGE"; edge: "LEFT" | "RIGHT" }
+  | { type: "REDUCE_CURRENT_HAND_COST"; value: number }
+  | { type: "ADD_DECK_EMPTY_WIN_CONDITION" }
   | { type: "RESTORE_MANA" }
   | { type: "RESTORE_MANA_VALUE"; value: number }
   | { type: "RETURN_SELF_TO_HAND" }
   | { type: "RETURN_SELF_TO_DECK_SHUFFLE" }
   | { type: "SUMMON_SELF_FROM_HAND" }
+  | { type: "SUMMON_SELF_FROM_GRAVE" }
   | { type: "CHOOSE_EFFECT_SUMMON_COPY"; definitionId: string; candidateInstanceIds: string[] }
   | { type: "COPY_HAND_SPELL_EFFECT" }
   | { type: "SCALED_END_TURN_CHOICE"; maxManaThreshold: number; bonus: number }
@@ -165,6 +179,8 @@ export interface CardDefinition {
     | { type: "SUMMONED_THIS_TURN_MULTIPLIER"; multiplier: number; turnAtLeast: number }
     | { type: "SUMMONED_THIS_GAME_AT_LEAST_FIXED"; value: number; cost: number }
     | { type: "FRIENDLY_MINION_COUNT" }
+    | { type: "FRIENDLY_GRAVE_COUNT" }
+    | { type: "FRIENDLY_GRAVE_MINION_COUNT" }
     | { type: "TURN_SUMMONED_DRAGON_COST_AT_LEAST"; threshold: number; reduction: number };
   alternatePlay?: { cost: number; effects: EffectDefinition[] };
   effectSummon?:
@@ -191,6 +207,10 @@ export interface CardDefinition {
   friendlySummonAura?: { effects: EffectDefinition[]; maxPerTurn: number };
   friendlyMinionDestroyedCountdownAura?: { amount: number; maxPerTurn: number };
   maxCopiesOnField?: number;
+  countdownOnFriendlyGraveEntry?: boolean;
+  lethalDamageReplacement?: { millCount: number; maxUses: number };
+  onSentToGraveFromOutsideField?: EffectDefinition[];
+  onLeaveFieldEffects?: EffectDefinition[];
   friendlyEffectDamageImmunityAura?: { excludeSelf: boolean };
   selfKeywordWhileOtherFriendlySubtypes?: { subtypes: string[]; keyword: Keyword };
   fieldWinCondition?: { count: number; loseReason: "DOOMSDAY_BOOK" };

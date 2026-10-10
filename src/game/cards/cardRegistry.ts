@@ -4,6 +4,7 @@ import machineData from "../../../data/machine-cards.json";
 import allianceData from "../../../data/alliance-cards.json";
 import neutralData from "../../../data/neutral-cards.json";
 import tokenData from "../../../data/token-cards.json";
+import cultData from "../../../data/cult-cards.json";
 import type { CardDefinition, EffectDefinition, Faction, Keyword } from "./cardTypes";
 import type { RuleUndefined } from "../state/GameState";
 
@@ -362,6 +363,47 @@ const implementedEffects: Record<string, EffectDefinition[]> = {
     bonusSummonCount: 2,
     maxValue: 5,
   }],
+  CULT_001: [
+    { type: "CONDITIONAL", condition: { type: "FRIENDLY_GRAVE_COUNT_AT_LEAST", value: 5 }, effects: [{ type: "RETURN_GRAVE_CARD_TO_HAND", count: 1 }] },
+    { type: "CONDITIONAL", condition: { type: "FRIENDLY_GRAVE_COUNT_AT_LEAST", value: 10 }, effects: [{ type: "DESTROY_ALL_MINIONS" }] },
+  ],
+  CULT_002: [
+    { type: "CONDITIONAL", condition: { type: "FRIENDLY_GRAVE_COUNT_AT_LEAST", value: 5 }, effects: [{ type: "MODIFY_SELF_HEALTH", value: 5 }] },
+    { type: "CONDITIONAL", condition: { type: "FRIENDLY_GRAVE_COUNT_AT_LEAST", value: 10 }, effects: [{ type: "GAIN_SELF_KEYWORD", keyword: "SANCTUARY" }] },
+    { type: "CONDITIONAL", condition: { type: "FRIENDLY_GRAVE_COUNT_AT_LEAST", value: 15 }, effects: [{ type: "GAIN_SELF_KEYWORD", keyword: "DISCIPLINE" }] },
+  ],
+  CULT_003: [
+    { type: "CONDITIONAL", condition: { type: "FRIENDLY_GRAVE_COUNT_AT_LEAST", value: 5 }, effects: [{ type: "DRAW", value: 2 }, { type: "DISCARD_HAND", count: 1 }] },
+    { type: "CONDITIONAL", condition: { type: "FRIENDLY_GRAVE_COUNT_AT_LEAST", value: 10 }, effects: [{ type: "HEAL_HERO", value: 5 }] },
+    { type: "CONDITIONAL", condition: { type: "FRIENDLY_GRAVE_COUNT_AT_LEAST", value: 15 }, effects: [{ type: "DESTROY_ALL_ENEMY_MINIONS" }] },
+  ],
+  CULT_004: [{ type: "HEAL_HERO", value: 4 }],
+  CULT_005: [
+    { type: "CONDITIONAL", condition: { type: "FRIENDLY_GRAVE_COUNT_AT_LEAST", value: 1 }, effects: [{ type: "MILL_DECK", count: 1 }] },
+    { type: "CONDITIONAL", condition: { type: "FRIENDLY_GRAVE_COUNT_AT_LEAST", value: 5 }, effects: [{ type: "RETURN_GRAVE_CARD_TO_HAND", count: 1 }] },
+    { type: "CONDITIONAL", condition: { type: "FRIENDLY_GRAVE_COUNT_AT_LEAST", value: 10 }, effects: [{ type: "TAKE_CONTROL_ENEMY_MINION" }] },
+  ],
+  CULT_006: [{ type: "DAMAGE_ENEMY_HERO_AND_MINIONS", value: 6 }],
+  CULT_007: [{ type: "MILL_DECK", count: 3 }, { type: "RETURN_GRAVE_CARD_TO_HAND", count: 1 }],
+  CULT_008: [{ type: "REDUCE_CURRENT_HAND_COST", value: 3 }],
+  CULT_010: [{ type: "ADD_DECK_EMPTY_WIN_CONDITION" }],
+  CULT_011: [{ type: "DISCARD_HAND", count: 2 }, { type: "DRAW", value: 2 }],
+  CULT_012: [{ type: "DRAW", value: 1 }, { type: "DISCARD_HAND", count: 1 }],
+  CULT_013: [{ type: "RESTORE_MANA" }],
+  CULT_014: [{ type: "DESTROY_ALL_BOARD_CARDS" }],
+  CULT_016: [{ type: "CHOOSE_ONE", prompt: "選擇使對手哪一側的卡片消失", options: [
+    { id: "LEFT", label: "最左邊", effects: [{ type: "VANISH_ENEMY_BOARD_EDGE", edge: "LEFT" }] },
+    { id: "RIGHT", label: "最右邊", effects: [{ type: "VANISH_ENEMY_BOARD_EDGE", edge: "RIGHT" }] },
+  ] }],
+  CULT_017: [{ type: "RETURN_GRAVE_CARD_TO_HAND", count: 2, cardType: "SPELL" }],
+  TOKEN_CULT_GOD: [
+    { type: "CONDITIONAL", condition: { type: "FRIENDLY_GRAVE_COUNT_AT_LEAST", value: 1 }, effects: [{ type: "DAMAGE_ALL_OTHER_MINIONS", value: 6 }] },
+    { type: "CONDITIONAL", condition: { type: "FRIENDLY_GRAVE_COUNT_AT_LEAST", value: 5 }, effects: [{ type: "VANISH_ENEMY_BOARD_CARDS", count: 2 }] },
+    { type: "CONDITIONAL", condition: { type: "FRIENDLY_GRAVE_COUNT_AT_LEAST", value: 10 }, effects: [{ type: "VANISH_ENEMY_HAND", count: 2 }] },
+    { type: "CONDITIONAL", condition: { type: "FRIENDLY_GRAVE_COUNT_AT_LEAST", value: 20 }, effects: [
+      { type: "DAMAGE_ALL_OTHER_MINIONS", value: 6 }, { type: "VANISH_ENEMY_BOARD_CARDS", count: 2 }, { type: "VANISH_ENEMY_HAND", count: 2 },
+    ] },
+  ],
 };
 
 const enterFieldEffects: Record<string, EffectDefinition[]> = {
@@ -610,6 +652,10 @@ const implementedTriggeredEffects: Record<string, CardDefinition["triggeredEffec
       { type: "GRANT_TARGET_FRIENDLY_MINION_KEYWORD", keyword: "DIVINE_SHIELD" },
     ],
   },
+  CULT_009: { GROWTH: [{ type: "MILL_DECK", count: 1 }] },
+  CULT_015: { LAST_WORDS: [{ type: "SUMMON", definitionId: "TOKEN_CULT_GOD", count: 1 }] },
+  TOKEN_CULT_HEART: { GROWTH: [{ type: "DESTROY_TARGET_ENEMY_MINION" }] },
+  TOKEN_CULT_BRAIN: { GROWTH: [{ type: "HEAL_HERO", value: 2 }] },
 };
 
 const initialCounters: Record<string, Record<string, number>> = {
@@ -623,6 +669,7 @@ const initialCounters: Record<string, Record<string, number>> = {
   TOKEN_MACHINE_ATTACK_SHIP: { countdown: 3 },
   TOKEN_MACHINE_SOLDIER_BAY: { countdown: 2 },
   TOKEN_MACHINE_GEAR: { countdown: 3 },
+  CULT_015: { countdown: 40 },
 };
 
 const dynamicCosts: Record<string, CardDefinition["dynamicCost"]> = {
@@ -638,6 +685,9 @@ const dynamicCosts: Record<string, CardDefinition["dynamicCost"]> = {
   ALLIANCE_011: { type: "ENEMY_MINION_COUNT" },
   TOKEN_ALLIANCE_HERO_AUGUSTIN: { type: "ENEMY_MINION_COUNT" },
   TOKEN_ALLIANCE_HERO_VALENTINE: { type: "FRIENDLY_MINION_COUNT" },
+  CULT_006: { type: "FRIENDLY_GRAVE_COUNT" },
+  CULT_008: { type: "FRIENDLY_GRAVE_MINION_COUNT" },
+  CULT_013: { type: "FRIENDLY_GRAVE_COUNT" },
 };
 
 const alternatePlays: Record<string, CardDefinition["alternatePlay"]> = {
@@ -664,6 +714,7 @@ const alternatePlays: Record<string, CardDefinition["alternatePlay"]> = {
       { type: "RETURN_SELF_TO_DECK_SHUFFLE" },
     ],
   },
+  CULT_012: { cost: 1, effects: [{ type: "MILL_DECK", count: 3 }] },
 };
 
 const effectSummons: Record<string, CardDefinition["effectSummon"]> = {
@@ -704,6 +755,23 @@ const friendlyMinionDestroyedCountdownAuras: Record<string, CardDefinition["frie
 
 const maxCopiesOnField: Record<string, number> = {
   TOKEN_UNDEAD_BOOK_FINAL_ARRIVAL: 1,
+  TOKEN_CULT_HEART: 1,
+  TOKEN_CULT_BRAIN: 1,
+};
+
+const countdownOnFriendlyGraveEntry = new Set(["CULT_015"]);
+const lethalDamageReplacements: Record<string, NonNullable<CardDefinition["lethalDamageReplacement"]>> = {
+  CULT_018: { millCount: 5, maxUses: 3 },
+};
+const onSentToGraveFromOutsideField: Record<string, EffectDefinition[]> = {
+  CULT_004: [{ type: "SUMMON_SELF_FROM_GRAVE" }],
+  CULT_005: [{ type: "CONDITIONAL", condition: { type: "FRIENDLY_GRAVE_COUNT_AT_LEAST", value: 20 }, effects: implementedEffects.CULT_005 }],
+  CULT_016: implementedEffects.CULT_016,
+};
+const onLeaveFieldEffects: Record<string, EffectDefinition[]> = {
+  CULT_006: [{ type: "SUMMON", definitionId: "TOKEN_CULT_HEART", count: 1 }, { type: "SUMMON", definitionId: "TOKEN_CULT_BRAIN", count: 1 }],
+  TOKEN_CULT_HEART: [{ type: "CONDITIONAL", condition: { type: "FRIENDLY_FIELD_DEFINITION_ABSENT", definitionId: "TOKEN_CULT_HEART" }, effects: [{ type: "ADD_GENERATED_TO_HAND", definitionId: "CULT_006", count: 1 }] }],
+  TOKEN_CULT_BRAIN: [{ type: "CONDITIONAL", condition: { type: "FRIENDLY_FIELD_DEFINITION_ABSENT", definitionId: "TOKEN_CULT_HEART" }, effects: [{ type: "ADD_GENERATED_TO_HAND", definitionId: "CULT_006", count: 1 }] }],
 };
 
 const friendlyEffectDamageImmunityAuras: Record<string, CardDefinition["friendlyEffectDamageImmunityAura"]> = {
@@ -722,7 +790,7 @@ const maxFriendlyCombatKillTriggersPerTurn: Record<string, number> = {
   UNDEAD_010: 2,
 };
 
-const rawFiles = [dragonData, undeadData, machineData, allianceData, neutralData, tokenData] as unknown as CardFile[];
+const rawFiles = [dragonData, undeadData, machineData, allianceData, cultData, neutralData, tokenData] as unknown as CardFile[];
 
 export const cardDefinitions: CardDefinition[] = rawFiles.flatMap((file) =>
   file.cards.map((card) => ({
@@ -740,6 +808,10 @@ export const cardDefinitions: CardDefinition[] = rawFiles.flatMap((file) =>
     friendlySummonAura: friendlySummonAuras[card.id],
     friendlyMinionDestroyedCountdownAura: friendlyMinionDestroyedCountdownAuras[card.id],
     maxCopiesOnField: maxCopiesOnField[card.id],
+    countdownOnFriendlyGraveEntry: countdownOnFriendlyGraveEntry.has(card.id),
+    lethalDamageReplacement: lethalDamageReplacements[card.id],
+    onSentToGraveFromOutsideField: onSentToGraveFromOutsideField[card.id],
+    onLeaveFieldEffects: onLeaveFieldEffects[card.id],
     friendlyEffectDamageImmunityAura: friendlyEffectDamageImmunityAuras[card.id],
     selfKeywordWhileOtherFriendlySubtypes: selfKeywordWhileOtherFriendlySubtypes[card.id],
     fieldWinCondition: fieldWinConditions[card.id],
@@ -811,6 +883,8 @@ export function validateCardData(): CardDataIssue[] {
       || card.friendlyMinionDestroyedCountdownAura
       || card.friendlyEffectDamageImmunityAura
       || card.selfKeywordWhileOtherFriendlySubtypes
+      || card.maxCopiesOnField !== undefined
+      || card.onLeaveFieldEffects?.length
       || card.triggeredEffects?.ON_FRIENDLY_COMBAT_KILL?.length
       || card.triggeredEffects?.ON_SELF_COMBAT_START?.length
       || card.triggeredEffects?.END_TURN?.length,
@@ -819,7 +893,7 @@ export function validateCardData(): CardDataIssue[] {
       issues.push({ code: "MISSING_EFFECT_IMPLEMENTATION", cardId: card.id, message: "光環只有文字，尚未連接持續或觸發效果" });
     }
   }
-  const expected: Partial<Record<Faction, number>> = { DRAGON: 40, UNDEAD: 40, MACHINE: 40, ALLIANCE: 40 };
+  const expected: Partial<Record<Faction, number>> = { DRAGON: 40, UNDEAD: 40, MACHINE: 40, ALLIANCE: 40, CULT: 40 };
   for (const [faction, count] of Object.entries(expected) as [Faction, number][]) {
     const actual = getMainDeckDefinitions(faction).reduce((sum, card) => sum + card.deckCount, 0);
     if (actual !== count) issues.push({ code: "DECK_SIZE_MISMATCH", message: `${faction}: expected ${count}, got ${actual}` });
@@ -856,6 +930,8 @@ export function isCardImplemented(definition: CardDefinition): boolean {
       || Boolean(definition.damageCapAura)
       || Boolean(definition.friendlySummonAura)
       || Boolean(definition.friendlyEffectDamageImmunityAura)
+      || Boolean(definition.onSentToGraveFromOutsideField?.length)
+      || Boolean(definition.onLeaveFieldEffects?.length)
       || definition.effectsText.trim() === ""
       || structuralOnly;
   }
@@ -867,5 +943,9 @@ export function isCardImplemented(definition: CardDefinition): boolean {
     || Boolean(definition.damageCapAura)
     || Boolean(definition.friendlySummonAura)
     || Boolean(definition.friendlyEffectDamageImmunityAura)
+    || Boolean(definition.countdownOnFriendlyGraveEntry)
+    || Boolean(definition.lethalDamageReplacement)
+    || Boolean(definition.onSentToGraveFromOutsideField?.length)
+    || Boolean(definition.onLeaveFieldEffects?.length)
     || Boolean(definition.fieldWinCondition);
 }

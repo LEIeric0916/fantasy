@@ -5,7 +5,7 @@ import { getKeywordText } from "../game/cards/keywordText";
 import { GlossaryText, KeywordGlossaryButton } from "./GlossaryTerm";
 import { cardTypeLabels, factionLabels, formatSubtypeLabels } from "../game/cards/displayLabels";
 
-const deckFactions: Faction[] = ["DRAGON", "UNDEAD", "MACHINE", "ALLIANCE", "NEUTRAL"];
+const deckFactions: Faction[] = ["DRAGON", "UNDEAD", "MACHINE", "ALLIANCE", "CULT", "NEUTRAL"];
 type CatalogSectionKind = "DECK" | "RESERVE" | "GENERATED";
 
 type RelationKind = "GENERATED" | "SEARCH" | "TRANSFORM" | "REFERENCE";
@@ -136,7 +136,7 @@ export function CardCatalog({ onBack }: Props) {
     {!faction ? <section className="catalog-welcome">
       <p className="eyebrow">SELECT A DECK</p>
       <h2>選擇一副牌查看卡表</h2>
-      <p>上方選單包含目前四副牌與教學使用的中立卡池。</p>
+      <p>上方選單包含目前五副牌與教學使用的中立卡池。</p>
     </section> : <>
       <section className="catalog-controls" aria-label="卡表篩選">
         <label>搜尋卡牌<input aria-label="搜尋卡牌" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="名稱、效果或關鍵字" /></label>

@@ -66,6 +66,11 @@ export function summonGeneratedMinion(state: GameState, playerId: PlayerId, defi
   }
   const definition = getCardDefinition(definitionId);
   if (definition.cardType !== "MINION") throw new Error(`${definitionId} is not a minion`);
+  if (definition.maxCopiesOnField !== undefined
+    && player.minions.filter((minion) => minion.definitionId === definitionId).length >= definition.maxCopiesOnField) {
+    addLog(state, "ACTION", `${definition.name} 召喚失敗：同名卡在場上最多只能存在 ${definition.maxCopiesOnField} 張`, { reason: "SAME_NAME_MINION_LIMIT" });
+    return false;
+  }
   if (definition.attack === null || definition.health === null) {
     throw new RuleUndefinedError("NULL_MINION_STATS", "攻擊或生命為 null，不能召喚", definitionId);
   }

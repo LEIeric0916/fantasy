@@ -49,7 +49,7 @@ export function CardView({
   const keywordText = getCardKeywordText(card);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const longPressTriggered = useRef(false);
-  const touchStart = useRef<{ x: number; y: number; pointerId: number } | undefined>(undefined);
+  const touchStart = useRef<{ x: number; y: number; pointerId: number; pointerType: string } | undefined>(undefined);
   const touchDragging = useRef(false);
   const touchTapPending = useRef(false);
   const previousStats = useRef({ attack: card.currentAttack, health: card.currentHealth });
@@ -145,15 +145,15 @@ export function CardView({
       data-instance-id={card.instanceId}
       onPointerDown={(event) => {
         startLongPress();
-        if (event.pointerType !== "touch" || !onTouchDrop) return;
+        if ((event.pointerType !== "touch" && event.pointerType !== "mouse") || !onTouchDrop) return;
         touchTapPending.current = false;
-        touchStart.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
+        touchStart.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId, pointerType: event.pointerType };
         touchDragging.current = false;
         event.currentTarget.setPointerCapture?.(event.pointerId);
       }}
       onPointerMove={(event) => {
         const start = touchStart.current;
-        if (!start || event.pointerType !== "touch") return;
+        if (!start || event.pointerType !== start.pointerType) return;
         if (!touchDragging.current && Math.hypot(event.clientX - start.x, event.clientY - start.y) >= 12) {
           clearLongPress();
           touchDragging.current = true;
@@ -163,13 +163,14 @@ export function CardView({
       }}
       onPointerUp={(event) => {
         clearLongPress();
-        if (event.pointerType !== "touch" || !touchStart.current) return;
+        const start = touchStart.current;
+        if (!start || event.pointerType !== start.pointerType) return;
         const wasDragging = touchDragging.current;
         touchStart.current = undefined;
         touchDragging.current = false;
         if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture?.(event.pointerId);
         if (!wasDragging) {
-          touchTapPending.current = !longPressTriggered.current;
+          if (event.pointerType === "touch") touchTapPending.current = !longPressTriggered.current;
           return;
         }
         longPressTriggered.current = true;
@@ -192,7 +193,7 @@ export function CardView({
       {boardStatuses.length > 0 && <span className="status-strip" aria-label={`狀態：${boardStatuses.map((status) => status.label).join("、")}`}>{boardStatuses.map((status) => <small className={`status-badge ${status.key}`} title={status.description} key={status.key}>{status.label}</small>)}</span>}
       {plagueMarks !== undefined && <span className="counter-badge plague-counter" aria-label={`瘟疫標記 ${plagueMarks}`}><small>瘟疫</small><strong>{plagueMarks}</strong><small>/ {plagueThreshold}</small></span>}
       {card.counters.countdown !== undefined && <span className="counter-badge countdown-badge" aria-label={`目前倒數 ${card.counters.countdown}`}><small>倒數</small><strong>{card.counters.countdown}</strong></span>}
-      <button className="card-surface" disabled={disabled} onClick={() => {
+      <button className="card-surface" draggable={draggable} disabled={disabled} onClick={() => {
         if (touchTapPending.current) {
           touchTapPending.current = false;
           onTouchTap?.();

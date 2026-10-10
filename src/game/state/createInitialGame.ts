@@ -53,6 +53,7 @@ function createPlayer(id: PlayerId, deckFactions: readonly Faction[], deck: Card
     removed: [],
     extraDeck: [],
     resources: { necromancy: 0, recycleCharge: 0 },
+    deckEmptyWinCondition: false,
     choiceHistory: {},
     summonedThisTurn: 0,
     summonedThisGame: 0,

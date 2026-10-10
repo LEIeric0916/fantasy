@@ -18,6 +18,7 @@ export const FACTION_STRATEGY_PROFILES: Record<Faction, FactionStrategyProfile> 
   UNDEAD: { faction: "UNDEAD", name: "不朽雙軸", primaryPlan: "死靈復活與黑暗之書特殊勝利並行", expectedOpponentPlan: "棄堆復活、死靈資源與末日之書" },
   MACHINE: { faction: "MACHINE", name: "機械建設", primaryPlan: "累積回收充能、神器立場與軍隊協同", expectedOpponentPlan: "神器倒數、回收循環與機械軍隊鋪場" },
   ALLIANCE: { faction: "ALLIANCE", name: "聯盟協作", primaryPlan: "累積召喚數並在協作門檻取得額外效果", expectedOpponentPlan: "大量召喚、協作10／15／20門檻與英雄牌" },
+  CULT: { faction: "CULT", name: "邪神教棄堆", primaryPlan: "快速累積棄堆並啟動門檻效果與牌組清空勝利", expectedOpponentPlan: "大量堆墓、棄堆門檻、邪神與神降特殊勝利" },
   NEUTRAL: { faction: "NEUTRAL", name: "通用", primaryPlan: "維持生命與場面優勢", expectedOpponentPlan: "通用場面交換" },
 };
 
@@ -83,6 +84,14 @@ function allianceScore(player: PlayerState): number {
     + player.minions.length * 1.5;
 }
 
+function cultScore(player: PlayerState): number {
+  return player.graveyard.length * 1.2
+    + (player.graveyard.length >= 5 ? 6 : 0)
+    + (player.graveyard.length >= 10 ? 10 : 0)
+    + (player.graveyard.length >= 20 ? 18 : 0)
+    + (player.deckEmptyWinCondition ? Math.max(0, 20 - player.deck.length) * 2 : 0);
+}
+
 /** 評估一方如何接近其公開陣營的主要勝利計畫。 */
 export function evaluateFactionStrategy(state: GameState, playerId: PlayerId): number {
   const player = state.players[playerId];
@@ -94,6 +103,7 @@ export function evaluateFactionStrategy(state: GameState, playerId: PlayerId): n
       case "UNDEAD": return score + undeadScore(player, opponent);
       case "MACHINE": return score + machineScore(player);
       case "ALLIANCE": return score + allianceScore(player);
+      case "CULT": return score + cultScore(player);
       case "NEUTRAL": return score;
     }
   }, 0);

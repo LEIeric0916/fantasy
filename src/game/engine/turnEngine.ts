@@ -25,6 +25,13 @@ export function drawCard(state: GameState, playerId: PlayerId, reason = "NORMAL_
   const player = state.players[playerId];
   const card = player.deck.pop();
   if (!card) {
+    if (player.deckEmptyWinCondition) {
+      state.phase = "GAME_OVER";
+      state.winner = playerId;
+      state.loseReason = "DECK_EMPTY_WIN";
+      addLog(state, "RESULT", `${playerId} 達成神降：牌組清空，立即獲勝`, { reason: "DECK_EMPTY_WIN" });
+      return undefined;
+    }
     state.phase = "GAME_OVER";
     state.winner = opponentOf(playerId);
     state.loseReason = "DECK_OUT";
@@ -96,7 +103,7 @@ export function continueAfterCountdown(state: GameState): void {
   state.growthEffectsPending = true;
   const playerId = state.activePlayerId;
   const timing = createTimingContext(state, `GROWTH:${state.turnNumber}`);
-  for (const source of state.players[playerId].fields) {
+  for (const source of [...state.players[playerId].minions, ...state.players[playerId].fields]) {
     const effects = getCardDefinition(source.definitionId).triggeredEffects?.GROWTH;
     if (!source.sealed && effects?.length && shouldEnqueueTriggeredEffectList(state, playerId, source, effects)) {
       enqueueTriggeredEffects(state, source, effects, "GROWTH", timing);

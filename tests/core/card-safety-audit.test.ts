@@ -9,6 +9,8 @@ function rootEffects(card: CardDefinition): EffectDefinition[] {
     ...(card.alternatePlay?.effects ?? []),
     ...(card.activatedEffect?.effects ?? []),
     ...(card.friendlySummonAura?.effects ?? []),
+    ...(card.onSentToGraveFromOutsideField ?? []),
+    ...(card.onLeaveFieldEffects ?? []),
     ...Object.values(card.triggeredEffects ?? {}).flatMap((effects) => effects ?? []),
   ];
 }

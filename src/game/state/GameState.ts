@@ -36,6 +36,7 @@ export interface PlayerState {
   removed: CardInstance[];
   extraDeck: CardInstance[];
   resources: { necromancy: number; recycleCharge: number };
+  deckEmptyWinCondition: boolean;
   choiceHistory: Record<string, string[]>;
   summonedThisTurn: number;
   summonedThisGame: number;
@@ -106,6 +107,8 @@ export type PendingChoice =
         | { type: "DESTROY_MINION" }
         | { type: "DESTROY_MINIONS" }
         | { type: "VANISH_MINIONS" }
+        | { type: "VANISH_BOARD_CARDS" }
+        | { type: "VANISH_HAND_CARDS" }
         | { type: "TRANSFORM_MINIONS"; definitionId: string }
         | { type: "REVIVE_MINION" }
         | { type: "SEAL_MINION" }
@@ -117,7 +120,9 @@ export type PendingChoice =
         | { type: "SEARCH_DECK" }
         | { type: "DISCOVER_TO_HAND"; temporaryCostReduction?: number; discardFromSelected?: number }
         | { type: "SUMMON_EFFECT_COPY"; definitionId: string }
-        | { type: "COPY_SPELL_EFFECT" };
+        | { type: "COPY_SPELL_EFFECT" }
+        | { type: "RETURN_GRAVE_TO_HAND" }
+        | { type: "TAKE_CONTROL_MINION" };
       remainingEffects: EffectDefinition[];
     };
 
@@ -150,7 +155,7 @@ export interface GameState {
   log: GameLogEntry[];
   effectNotices: EffectNotice[];
   winner?: PlayerId;
-  loseReason?: "HP_ZERO" | "DECK_OUT" | "DOOMSDAY_BOOK";
+  loseReason?: "HP_ZERO" | "DECK_OUT" | "DOOMSDAY_BOOK" | "DECK_EMPTY_WIN";
   rngSeed: number;
   rulesConfig: RulesConfig;
   startTurnEffectsPending?: boolean;
@@ -168,7 +173,7 @@ export const DEFAULT_RULES_CONFIG: RulesConfig = {
   handLimitAtEnd: 10,
   normalMaxMana: 10,
   minCardCost: 0,
-  fieldLimits: { DRAGON: 7, UNDEAD: 7, MACHINE: 6, ALLIANCE: 7, NEUTRAL: 7 },
+  fieldLimits: { DRAGON: 7, UNDEAD: 7, MACHINE: 6, ALLIANCE: 7, CULT: 7, NEUTRAL: 7 },
   discoverRemainderPolicy: "RETURN_KEEP_ORDER",
 };
 

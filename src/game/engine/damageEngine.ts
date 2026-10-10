@@ -4,6 +4,7 @@ import { hasActiveKeyword } from "../keywords/keywordRules";
 import { addLog } from "../utils/gameLog";
 import { InvalidActionError } from "./errors";
 import { getCardDefinition } from "../cards/cardRegistry";
+import { moveCard } from "./zoneEngine";
 
 export type DamageKind = "COMBAT" | "EFFECT";
 
@@ -84,6 +85,28 @@ export function dealDamageToHero(state: GameState, targetId: PlayerId, amount: n
   if (player.heroDamageNullifiers > 0) {
     player.heroDamageNullifiers -= 1;
     addLog(state, "PROTECTION", `${targetId} 玩家下一次受到的${amount}點傷害變為0`, { source, kind });
+    return 0;
+  }
+  const protectionField = player.fields.find((field) => !field.sealed && getCardDefinition(field.definitionId).lethalDamageReplacement);
+  const protection = protectionField ? getCardDefinition(protectionField.definitionId).lethalDamageReplacement : undefined;
+  if (protectionField && protection && player.heroHp - amount <= 0) {
+    const millCount = Math.min(protection.millCount, player.deck.length);
+    for (let index = 0; index < millCount; index += 1) {
+      const card = player.deck[player.deck.length - 1];
+      if (card) moveCard(state, card, "GRAVEYARD", `LETHAL_REPLACEMENT:${protectionField.definitionId}`);
+    }
+    player.heroHp = 1;
+    protectionField.counters.lethalReplacementUses = (protectionField.counters.lethalReplacementUses ?? 0) + 1;
+    addLog(state, "PROTECTION", `${protectionField.definitionId} 將致命傷害替代：牌組上方${millCount}張送入棄堆，生命變為1`, { source, uses: protectionField.counters.lethalReplacementUses });
+    if (protectionField.counters.lethalReplacementUses >= protection.maxUses && protectionField.zone === "FIELD") {
+      moveCard(state, protectionField, "GRAVEYARD", "LETHAL_REPLACEMENT_EXHAUSTED");
+    }
+    if (player.deck.length === 0 && player.deckEmptyWinCondition) {
+      state.phase = "GAME_OVER";
+      state.winner = targetId;
+      state.loseReason = "DECK_EMPTY_WIN";
+      addLog(state, "RESULT", `${targetId} 達成神降：牌組清空，立即獲勝`, { reason: "DECK_EMPTY_WIN" });
+    }
     return 0;
   }
   player.heroHp -= amount;

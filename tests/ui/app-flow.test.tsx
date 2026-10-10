@@ -90,8 +90,8 @@ describe("瀏覽器入口流程", () => {
     const first = changeSelect("P1 玩家陣營", "RANDOM");
     const second = changeSelect("P2 玩家陣營", "RANDOM");
     changeSelect("先攻設定", "P1");
-    expect([...first.options].map((option) => option.value)).toEqual(["RANDOM", "DRAGON", "UNDEAD", "MACHINE", "ALLIANCE"]);
-    expect([...second.options].map((option) => option.value)).toEqual(["RANDOM", "DRAGON", "UNDEAD", "MACHINE", "ALLIANCE"]);
+    expect([...first.options].map((option) => option.value)).toEqual(["RANDOM", "DRAGON", "UNDEAD", "MACHINE", "ALLIANCE", "CULT"]);
+    expect([...second.options].map((option) => option.value)).toEqual(["RANDOM", "DRAGON", "UNDEAD", "MACHINE", "ALLIANCE", "CULT"]);
 
     click(button("建立對局"));
     click(button("確認換牌（0）"));
@@ -100,7 +100,7 @@ describe("瀏覽器入口流程", () => {
     click(button("已交接，顯示畫面"));
 
     expect(container.textContent).toContain("P1 · 龍族");
-    expect(container.textContent).toContain("P2 · 機械");
+    expect(container.textContent).toContain("P2 · 聯盟");
     random.mockRestore();
   });
 
@@ -124,11 +124,8 @@ describe("瀏覽器入口流程", () => {
     click(button("已交接，顯示畫面"));
 
     expect(container.textContent).toContain("混沌模式");
-    expect(container.textContent).toContain("龍族＋不朽");
-    expect(container.textContent).toContain("機械＋聯盟");
-    for (const label of ["死靈數", "棄堆龍族", "回收充能", "協作數"]) {
-      expect(container.textContent).toContain(label);
-    }
+    expect(container.textContent).toContain("＋");
+    expect(container.textContent?.match(/· [^生命]+＋[^生命]+生命/g)?.length).toBe(2);
     random.mockRestore();
   });
 

@@ -243,19 +243,29 @@ describe("效果未發動介面提示", () => {
     const root = createRoot(container);
     act(() => root.render(<GameBoard initialState={state} onRestart={() => undefined} />));
     const handCard = container.querySelector<HTMLElement>(`.hand-panel [data-instance-id="${playable.instanceId}"]`)!;
-    expect(handCard.classList.contains("playable")).toBe(true);
-    expect(handCard.getAttribute("draggable")).toBe("true");
-    const dataTransfer = { effectAllowed: "none", dropEffect: "none", setData: () => undefined };
-    const dragStart = new Event("dragstart", { bubbles: true });
-    Object.defineProperty(dragStart, "dataTransfer", { value: dataTransfer });
-    act(() => handCard.dispatchEvent(dragStart));
+    const cardSurface = handCard.querySelector<HTMLButtonElement>(".card-surface")!;
     const activeSide = container.querySelector<HTMLElement>(".active-side")!;
+    expect(handCard.classList.contains("playable")).toBe(true);
+    const mousePointerEvent = (type: string, x: number, y: number) => {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.defineProperties(event, {
+        pointerType: { value: "mouse" },
+        pointerId: { value: 1 },
+        clientX: { value: x },
+        clientY: { value: y },
+      });
+      return event;
+    };
+    const originalElementFromPoint = document.elementFromPoint;
+    Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => activeSide });
+
+    act(() => cardSurface.dispatchEvent(mousePointerEvent("pointerdown", 50, 600)));
+    act(() => cardSurface.dispatchEvent(mousePointerEvent("pointermove", 50, 520)));
     expect(activeSide.classList.contains("hand-play-drop-zone")).toBe(true);
-    const drop = new Event("drop", { bubbles: true });
-    Object.defineProperty(drop, "dataTransfer", { value: dataTransfer });
-    act(() => activeSide.dispatchEvent(drop));
+    act(() => cardSurface.dispatchEvent(mousePointerEvent("pointerup", 50, 420)));
     expect(container.querySelector(`.hand-panel [data-instance-id="${playable.instanceId}"]`)).toBeNull();
     expect(container.querySelector(`.active-side .minion-zone [data-instance-id="${playable.instanceId}"]`)).not.toBeNull();
+    Object.defineProperty(document, "elementFromPoint", { configurable: true, value: originalElementFromPoint });
     act(() => root.unmount());
     container.remove();
   });

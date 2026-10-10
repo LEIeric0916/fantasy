@@ -5,6 +5,7 @@ export const factionLabels: Record<Faction, string> = {
   UNDEAD: "不朽",
   MACHINE: "機械",
   ALLIANCE: "聯盟",
+  CULT: "邪神教",
   NEUTRAL: "中立",
 };
 
@@ -19,6 +20,7 @@ const subtypeLabels: Record<string, string> = {
   ARTIFACT: "神器",
   ARTIFACT_SPELL: "神器法術",
   COMMANDER: "指揮官",
+  CULT: "邪教",
   DARK_MAGIC: "黑魔法",
   DRAGON: "龍族",
   HUMAN: "人類",

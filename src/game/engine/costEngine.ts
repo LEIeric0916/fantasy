@@ -54,6 +54,10 @@ export function refreshCardCost(state: GameState, playerId: PlayerId, card: Card
     if (state.players[playerId].summonedThisGame >= definition.dynamicCost.value) value = definition.dynamicCost.cost;
   } else if (definition.dynamicCost?.type === "FRIENDLY_MINION_COUNT") {
     value -= state.players[playerId].minions.length;
+  } else if (definition.dynamicCost?.type === "FRIENDLY_GRAVE_COUNT") {
+    value -= state.players[playerId].graveyard.length;
+  } else if (definition.dynamicCost?.type === "FRIENDLY_GRAVE_MINION_COUNT") {
+    value -= state.players[playerId].graveyard.filter((candidate) => getCardDefinition(candidate.definitionId).cardType === "MINION").length;
   } else if (definition.dynamicCost?.type === "TURN_SUMMONED_DRAGON_COST_AT_LEAST"
     && state.players[playerId].summonedDragonOriginalCostThisTurn >= definition.dynamicCost.threshold) {
     value -= definition.dynamicCost.reduction;

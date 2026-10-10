@@ -3,9 +3,9 @@ import { cardDefinitions, getCardDefinition, getMainDeckDefinitions, getRuleUnde
 import { createCardInstance } from "../../src/game/state/CardInstance";
 
 describe("卡牌資料", () => {
-  it("完整載入六個 JSON 且 ID 唯一", () => {
-    expect(cardDefinitions).toHaveLength(111);
-    expect(new Set(cardDefinitions.map((card) => card.id)).size).toBe(111);
+  it("完整載入七個 JSON 且 ID 唯一", () => {
+    expect(cardDefinitions).toHaveLength(132);
+    expect(new Set(cardDefinitions.map((card) => card.id)).size).toBe(132);
     expect(validateCardData().filter((issue) => issue.code === "DUPLICATE_ID")).toEqual([]);
   });
 
@@ -35,7 +35,7 @@ describe("卡牌資料", () => {
     ]);
   });
 
-  it.each([["DRAGON", 40], ["UNDEAD", 40], ["MACHINE", 40], ["ALLIANCE", 40]] as const)(
+  it.each([["DRAGON", 40], ["UNDEAD", 40], ["MACHINE", 40], ["ALLIANCE", 40], ["CULT", 40]] as const)(
     "%s 主牌張數嚴格使用資料值 %i",
     (faction, expected) => {
       expect(getMainDeckDefinitions(faction).reduce((sum, card) => sum + card.deckCount, 0)).toBe(expected);
@@ -98,7 +98,7 @@ describe("卡牌資料", () => {
     const card = cardDefinitions.find((item) => item.id === "TOKEN_MACHINE_PRIEST")!;
     expect(card.originalCost).toBe(2);
     expect(getRuleUndefinedInventory().some((issue) => issue.ruleId === "CARD_DATA_NULL")).toBe(false);
-    expect(getRuleUndefinedInventory().filter((issue) => issue.ruleId === "CARD_DATA_NOTE")).toHaveLength(79);
+    expect(getRuleUndefinedInventory().filter((issue) => issue.ruleId === "CARD_DATA_NOTE")).toHaveLength(95);
   });
 
   it("卡牌文字中的主要關鍵效果都有可執行資料", () => {

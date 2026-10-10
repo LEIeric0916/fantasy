@@ -52,6 +52,8 @@ function conditionFailureReason(condition: ConditionDefinition): string {
     case "SUMMONED_THIS_GAME_BELOW": return `本場累積召喚手下未低於 ${condition.value} 名`;
     case "FRIENDLY_MINION_COUNT_LESS_THAN_OPPONENT": return "我方手下數量沒有少於對手";
     case "FRIENDLY_MINION_COUNT_AT_LEAST": return `我方場上手下未達 ${condition.value} 名`;
+    case "FRIENDLY_GRAVE_COUNT_AT_LEAST": return `我方棄堆未達 ${condition.value} 張`;
+    case "FRIENDLY_FIELD_DEFINITION_ABSENT": return `我方場上已有「${getCardDefinition(condition.definitionId).name}」`;
     case "ALL": return condition.conditions.map(conditionFailureReason).join("；");
   }
 }
@@ -93,6 +95,10 @@ function conditionMatches(
       return state.players[playerId].minions.length < state.players[opponentOf(playerId)].minions.length;
     case "FRIENDLY_MINION_COUNT_AT_LEAST":
       return state.players[playerId].minions.length >= condition.value;
+    case "FRIENDLY_GRAVE_COUNT_AT_LEAST":
+      return state.players[playerId].graveyard.length >= condition.value;
+    case "FRIENDLY_FIELD_DEFINITION_ABSENT":
+      return ![...state.players[playerId].minions, ...state.players[playerId].fields].some((card) => card.definitionId === condition.definitionId);
     case "ALL":
       return condition.conditions.every((item) => conditionMatches(state, playerId, source, item));
   }
@@ -345,6 +351,24 @@ function resolveEffectList(
         };
         addLog(state, "ACTION", `${getCardDefinition(source.definitionId).name} 的效果召喚等待玩家確認`, { sourceInstanceId: source.instanceId });
         return false;
+      case "SUMMON_SELF_FROM_GRAVE": {
+        if (source.zone !== "GRAVEYARD") break;
+        if (state.players[playerId].minions.length >= state.rulesConfig.minionLimit) {
+          notifyEffectSkipped(state, playerId, source, "手下區已滿，無法從棄堆召喚");
+          break;
+        }
+        const definition = getCardDefinition(source.definitionId);
+        moveCard(state, source, "MINION", "SUMMON_SELF_FROM_GRAVE");
+        source.summonedOnTurn = state.turnNumber;
+        source.attacksUsedThisTurn = 0;
+        source.currentAttack = definition.attack;
+        source.currentHealth = definition.health;
+        source.maxHealth = definition.health;
+        source.damageTaken = 0;
+        if (definition.effects?.length) enqueueTriggeredEffects(state, source, definition.effects, "GRAVE_SUMMON:BATTLECRY", createTimingContext(state, `GRAVE_SUMMON:${source.instanceId}`));
+        addLog(state, "ZONE", `${definition.name} 從棄堆召喚並發動戰吼`, { instanceId: source.instanceId });
+        break;
+      }
       case "CHOOSE_EFFECT_SUMMON_COPY": {
         const candidates = effect.candidateInstanceIds.filter((instanceId) =>
           state.players[playerId].hand.some((card) => card.instanceId === instanceId),
@@ -621,6 +645,49 @@ function resolveEffectList(
           addLog(state, "ZONE", `${playerId} 獲得 ${definition.name}`, { instanceId: card.instanceId, reason: "CREATE_TO_HAND" });
         }
         break;
+      case "MILL_DECK": {
+        const player = state.players[playerId];
+        const amount = Math.min(effect.count, player.deck.length);
+        for (let index = 0; index < amount; index += 1) {
+          const card = player.deck[player.deck.length - 1];
+          if (!card) break;
+          moveCard(state, card, "GRAVEYARD", `MILL:${source.definitionId}`);
+        }
+        addLog(state, "ZONE", `${playerId} 將牌組上方 ${amount} 張牌送入棄堆`, { source: source.instanceId, requested: effect.count });
+        if (player.deck.length === 0 && player.deckEmptyWinCondition) {
+          state.phase = "GAME_OVER";
+          state.winner = playerId;
+          state.loseReason = "DECK_EMPTY_WIN";
+          addLog(state, "RESULT", `${playerId} 達成神降：牌組清空，立即獲勝`, { reason: "DECK_EMPTY_WIN" });
+        }
+        break;
+      }
+      case "RETURN_GRAVE_CARD_TO_HAND": {
+        const candidates = state.players[playerId].graveyard.filter((card) => !effect.cardType || getCardDefinition(card.definitionId).cardType === effect.cardType);
+        const count = Math.min(effect.count, candidates.length);
+        if (count === 0) {
+          notifyEffectSkipped(state, playerId, source, effect.cardType === "SPELL" ? "棄堆沒有法術" : "棄堆沒有可返回的卡牌");
+          break;
+        }
+        state.pendingChoice = {
+          type: "EFFECT_CARDS", playerId, sourceInstanceId: source.instanceId,
+          prompt: `從我方棄堆選擇最多 ${count} 張${effect.cardType === "SPELL" ? "法術" : "卡牌"}加入手牌`,
+          count, minCount: 1, candidateInstanceIds: candidates.map((card) => card.instanceId),
+          resolution: { type: "RETURN_GRAVE_TO_HAND" }, remainingEffects,
+        };
+        return false;
+      }
+      case "REDUCE_CURRENT_HAND_COST":
+        for (const card of state.players[playerId].hand) grantTemporaryCostReduction(state, playerId, card, effect.value);
+        addLog(state, "RESOURCE", `${playerId} 展示目前手牌；所有展示卡費用-${effect.value}`, { source: source.instanceId });
+        break;
+      case "ADD_DECK_EMPTY_WIN_CONDITION":
+        state.players[playerId].deckEmptyWinCondition = true;
+        addLog(state, "RULE", `${playerId} 獲得神降勝利條件：牌組清空時獲勝`, { source: source.instanceId });
+        if (state.players[playerId].deck.length === 0) {
+          state.phase = "GAME_OVER"; state.winner = playerId; state.loseReason = "DECK_EMPTY_WIN";
+        }
+        break;
       case "DAMAGE_ALL_ENEMY_MINIONS": {
         const enemies = [...state.players[opponentOf(playerId)].minions];
         const timingContext = createTimingContext(state, `AOE:${source.instanceId}`);
@@ -675,6 +742,15 @@ function resolveEffectList(
         }
         break;
       }
+      case "DAMAGE_ENEMY_HERO_AND_MINIONS": {
+        const enemies = [...state.players[opponentOf(playerId)].minions];
+        const timingContext = createTimingContext(state, `AOE_HERO:${source.instanceId}`);
+        dealDamageToHero(state, opponentOf(playerId), effect.value, source.instanceId);
+        if (state.winner) break;
+        for (const enemy of enemies) dealDamageToMinion(state, enemy, effect.value, source.instanceId, "EFFECT");
+        for (const enemy of enemies.filter((card) => (card.currentHealth ?? 1) <= 0)) destroyMinion(state, enemy, "EFFECT_DAMAGE_DEATH", timingContext);
+        break;
+      }
       case "DESTROY_ALL_ENEMY_MINIONS": {
         const targets = [...state.players[opponentOf(playerId)].minions];
         const timingContext = createTimingContext(state, `DESTROY_ALL:${source.instanceId}`);
@@ -684,6 +760,24 @@ function resolveEffectList(
             continue;
           }
           destroyMinion(state, target, "EFFECT_DESTROY_ALL", timingContext);
+        }
+        break;
+      }
+      case "DESTROY_ALL_MINIONS": {
+        const targets = [...state.players.P1.minions, ...state.players.P2.minions];
+        const timingContext = createTimingContext(state, `DESTROY_ALL_MINIONS:${source.instanceId}`);
+        for (const target of targets) {
+          if (hasActiveKeyword(target, "SANCTUARY") || hasActiveKeyword(target, "INVINCIBLE")) continue;
+          if (target.zone === "MINION") destroyMinion(state, target, "EFFECT_DESTROY_ALL", timingContext);
+        }
+        break;
+      }
+      case "DESTROY_ALL_BOARD_CARDS": {
+        const targets = [...state.players.P1.minions, ...state.players.P1.fields, ...state.players.P2.minions, ...state.players.P2.fields];
+        const timingContext = createTimingContext(state, `DESTROY_ALL_BOARD:${source.instanceId}`);
+        for (const target of targets) {
+          if (hasActiveKeyword(target, "SANCTUARY") || hasActiveKeyword(target, "INVINCIBLE")) continue;
+          if (target.zone === "MINION" || target.zone === "FIELD") destroyCardOnField(state, target, "EFFECT_DESTROY_ALL_BOARD", timingContext);
         }
         break;
       }
@@ -946,6 +1040,39 @@ function resolveEffectList(
           remainingEffects,
         };
         return false;
+      }
+      case "VANISH_ENEMY_BOARD_CARDS": {
+        const opponent = state.players[opponentOf(playerId)];
+        const candidates = [...opponent.minions, ...opponent.fields].filter((card) => !hasActiveKeyword(card, "DISCIPLINE") && !hasActiveKeyword(card, "INVINCIBLE"));
+        const count = Math.min(effect.count, candidates.length);
+        if (count === 0) { notifyEffectSkipped(state, playerId, source, "對手場上沒有可消失的卡牌"); break; }
+        state.pendingChoice = { type: "EFFECT_CARDS", playerId, sourceInstanceId: source.instanceId, prompt: `選擇對手場上最多${count}張卡牌消失`, count, minCount: 1, candidateInstanceIds: candidates.map((card) => card.instanceId), resolution: { type: "VANISH_BOARD_CARDS" }, remainingEffects };
+        return false;
+      }
+      case "VANISH_ENEMY_HAND": {
+        const candidates = state.players[opponentOf(playerId)].hand;
+        const count = Math.min(effect.count, candidates.length);
+        if (count === 0) { notifyEffectSkipped(state, playerId, source, "對手沒有手牌"); break; }
+        state.pendingChoice = { type: "EFFECT_CARDS", playerId, sourceInstanceId: source.instanceId, prompt: `選擇對手${count}張手牌消失`, count, candidateInstanceIds: candidates.map((card) => card.instanceId), resolution: { type: "VANISH_HAND_CARDS" }, remainingEffects };
+        return false;
+      }
+      case "TAKE_CONTROL_ENEMY_MINION": {
+        const candidates = getLegalEnemyEffectTargets(state, playerId, true);
+        if (state.players[playerId].minions.length >= state.rulesConfig.minionLimit) { notifyEffectSkipped(state, playerId, source, "我方手下區已滿"); break; }
+        if (candidates.length === 0) { notifyEffectSkipped(state, playerId, source, "對手沒有可取得控制權的手下"); break; }
+        state.pendingChoice = { type: "EFFECT_CARDS", playerId, sourceInstanceId: source.instanceId, prompt: "選擇對手1名手下獲得控制權", count: 1, candidateInstanceIds: candidates.map((card) => card.instanceId), resolution: { type: "TAKE_CONTROL_MINION" }, remainingEffects };
+        return false;
+      }
+      case "VANISH_ENEMY_BOARD_EDGE": {
+        const opponent = state.players[opponentOf(playerId)];
+        const ordered = [...opponent.minions, ...opponent.fields];
+        const target = effect.edge === "LEFT" ? ordered[0] : ordered[ordered.length - 1];
+        if (!target) { notifyEffectSkipped(state, playerId, source, "對手場上沒有卡牌"); break; }
+        if (hasActiveKeyword(target, "DISCIPLINE") || hasActiveKeyword(target, "INVINCIBLE")) {
+          addLog(state, "PROTECTION", `${target.definitionId} 阻擋消失`, { source: source.instanceId }); break;
+        }
+        moveCard(state, target, getCardDefinition(target.definitionId).generatedOnly ? "EXTRA_DECK" : "REMOVED", "VANISH_EDGE");
+        break;
       }
       case "TRANSFORM_ENEMY_MINIONS": {
         const candidates = getLegalEnemyEffectTargets(state, playerId, true)
@@ -1496,6 +1623,27 @@ export function selectEffectCards(state: GameState, playerId: PlayerId, instance
       if (!definition.generatedOnly && card.keywords.includes("NECRO_REVIVE_5")) graveEntryEffects.push({ type: "NECRO_REVIVE_SELF", value: 5 });
       if (!definition.generatedOnly && card.keywords.includes("NECRO_REVIVE_6")) graveEntryEffects.push({ type: "NECRO_REVIVE_SELF", value: 6 });
       if (graveEntryEffects.length > 0) enqueueTriggeredEffects(state, card, graveEntryEffects, "EFFECT_DISCARD:GRAVE_ENTRY", timingContext);
+    }
+  } else if (choice.resolution.type === "RETURN_GRAVE_TO_HAND") {
+    for (const instanceId of instanceIds) {
+      const card = state.players[playerId].graveyard.find((candidate) => candidate.instanceId === instanceId);
+      if (!card) throw new InvalidActionError("返回目標已經不在我方棄堆");
+      moveCard(state, card, "HAND", "RETURN_GRAVE_TO_HAND");
+      refreshHandCosts(state);
+    }
+  } else if (choice.resolution.type === "TAKE_CONTROL_MINION") {
+    const target = findCard(state, instanceIds[0]);
+    if (!target || target.zone !== "MINION" || target.controllerId === playerId) throw new InvalidActionError("控制權目標已失效");
+    if (hasActiveKeyword(target, "DISCIPLINE") || hasActiveKeyword(target, "INVINCIBLE")) throw new InvalidActionError("紀律或無敵使控制權無法被奪取");
+    moveCard(state, target, "MINION", "TAKE_CONTROL", playerId);
+    addLog(state, "ACTION", `${playerId} 獲得 ${target.definitionId} 的控制權`, { source: source.instanceId, target: target.instanceId });
+  } else if (choice.resolution.type === "VANISH_BOARD_CARDS" || choice.resolution.type === "VANISH_HAND_CARDS") {
+    for (const instanceId of instanceIds) {
+      const target = findCard(state, instanceId);
+      if (!target) throw new InvalidActionError("消失目標已失效");
+      if (choice.resolution.type === "VANISH_BOARD_CARDS" && target.zone !== "MINION" && target.zone !== "FIELD") throw new InvalidActionError("目標已不在場上");
+      if (choice.resolution.type === "VANISH_HAND_CARDS" && target.zone !== "HAND") throw new InvalidActionError("目標已不在手牌");
+      moveCard(state, target, getCardDefinition(target.definitionId).generatedOnly ? "EXTRA_DECK" : "REMOVED", "VANISH");
     }
   } else if (choice.resolution.type === "SET_CARD_COST_ZERO") {
     for (const instanceId of instanceIds) {
