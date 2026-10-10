@@ -33,6 +33,8 @@ describe("手機觸控拖曳", () => {
     const originalElementFromPoint = document.elementFromPoint;
     Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => activeSide });
 
+    expect(cardElement.draggable).toBe(false);
+    expect(cardSurface.draggable).toBe(false);
     act(() => cardSurface.dispatchEvent(pointerEvent("pointerdown", 50, 600, "mouse")));
     act(() => cardSurface.dispatchEvent(pointerEvent("pointermove", 50, 520, "mouse")));
     expect(activeSide.classList.contains("hand-play-drop-zone")).toBe(true);

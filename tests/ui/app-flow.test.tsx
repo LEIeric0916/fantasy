@@ -43,6 +43,25 @@ describe("瀏覽器入口流程", () => {
   }
 
   function drag(source: HTMLElement, target: HTMLElement) {
+    if (!source.draggable) {
+      const originalElementFromPoint = document.elementFromPoint;
+      Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => target });
+      const pointer = (type: string, x: number, y: number) => {
+        const event = new Event(type, { bubbles: true, cancelable: true });
+        Object.defineProperties(event, {
+          pointerType: { value: "mouse" },
+          pointerId: { value: 1 },
+          clientX: { value: x },
+          clientY: { value: y },
+        });
+        return event;
+      };
+      act(() => source.dispatchEvent(pointer("pointerdown", 50, 600)));
+      act(() => source.dispatchEvent(pointer("pointermove", 50, 520)));
+      act(() => source.dispatchEvent(pointer("pointerup", 50, 420)));
+      Object.defineProperty(document, "elementFromPoint", { configurable: true, value: originalElementFromPoint });
+      return;
+    }
     const dataTransfer = { effectAllowed: "none", dropEffect: "none", setData: () => undefined };
     const dragStart = new Event("dragstart", { bubbles: true });
     Object.defineProperty(dragStart, "dataTransfer", { value: dataTransfer });
@@ -203,15 +222,9 @@ describe("瀏覽器入口流程", () => {
     expect(container.textContent).toContain("請親自打出皇家衛兵");
 
     const handCard = container.querySelector<HTMLElement>('[data-instance-id="tutorial-royal-guard"]')!;
-    expect(handCard.getAttribute("draggable")).toBe("true");
-    const dataTransfer = { effectAllowed: "none", dropEffect: "none", setData: () => undefined };
-    const dragStart = new Event("dragstart", { bubbles: true });
-    Object.defineProperty(dragStart, "dataTransfer", { value: dataTransfer });
-    act(() => handCard.dispatchEvent(dragStart));
     const activeSide = container.querySelector<HTMLElement>(".active-side")!;
-    const drop = new Event("drop", { bubbles: true });
-    Object.defineProperty(drop, "dataTransfer", { value: dataTransfer });
-    act(() => activeSide.dispatchEvent(drop));
+    expect(handCard.getAttribute("draggable")).toBe("false");
+    drag(handCard, activeSide);
 
     expect(container.textContent).toContain("皇家衛兵已經進場");
     expect(container.querySelector('.minion-zone [data-instance-id="tutorial-royal-guard"]')).not.toBeNull();
@@ -308,15 +321,9 @@ describe("瀏覽器入口流程", () => {
     expect(container.textContent).toContain("請打出魔法知識");
 
     const magicKnowledge = container.querySelector<HTMLElement>('[data-instance-id="tutorial-magic-knowledge"]')!;
-    expect(magicKnowledge.getAttribute("draggable")).toBe("true");
-    const spellTransfer = { effectAllowed: "none", dropEffect: "none", setData: () => undefined };
-    const spellDragStart = new Event("dragstart", { bubbles: true });
-    Object.defineProperty(spellDragStart, "dataTransfer", { value: spellTransfer });
-    act(() => magicKnowledge.dispatchEvent(spellDragStart));
     const activeSide = container.querySelector<HTMLElement>(".active-side")!;
-    const spellDrop = new Event("drop", { bubbles: true });
-    Object.defineProperty(spellDrop, "dataTransfer", { value: spellTransfer });
-    act(() => activeSide.dispatchEvent(spellDrop));
+    expect(magicKnowledge.getAttribute("draggable")).toBe("false");
+    drag(magicKnowledge, activeSide);
 
     expect(container.textContent).toContain("法術效果已經結算");
     expect(container.textContent).toContain("機械帝國兵工廠");
@@ -331,14 +338,8 @@ describe("瀏覽器入口流程", () => {
     expect(container.textContent).toContain("請打出機械帝國兵工廠");
 
     const arsenal = container.querySelector<HTMLElement>('.hand [data-instance-id]')!;
-    expect(arsenal.getAttribute("draggable")).toBe("true");
-    const fieldTransfer = { effectAllowed: "none", dropEffect: "none", setData: () => undefined };
-    const fieldDragStart = new Event("dragstart", { bubbles: true });
-    Object.defineProperty(fieldDragStart, "dataTransfer", { value: fieldTransfer });
-    act(() => arsenal.dispatchEvent(fieldDragStart));
-    const fieldDrop = new Event("drop", { bubbles: true });
-    Object.defineProperty(fieldDrop, "dataTransfer", { value: fieldTransfer });
-    act(() => activeSide.dispatchEvent(fieldDrop));
+    expect(arsenal.getAttribute("draggable")).toBe("false");
+    drag(arsenal, activeSide);
 
     expect(container.textContent).toContain("入場曲召喚了手下");
     expect(container.textContent).toContain("機械帝國士兵");

@@ -124,7 +124,7 @@ export function CardView({
   return (
     <article
       className={`card ${statusClasses} ${protectionEmblems.length ? "has-protection-emblems" : ""} ${handSummary ? "hand-card" : ""} ${entranceActive ? "minion-entering" : ""} ${selected ? "selected" : ""} ${playable ? "playable" : ""} ${actionable ? "actionable" : ""} ${dropTarget ? "drop-target" : ""}`}
-      draggable={draggable}
+      draggable={draggable && !onTouchDrop}
       onDragStart={(event) => {
         clearLongPress();
         event.dataTransfer.effectAllowed = "move";
@@ -145,6 +145,9 @@ export function CardView({
       data-instance-id={card.instanceId}
       onPointerDown={(event) => {
         startLongPress();
+        // Hand cards use one pointer-based path for both mouse and touch. Native
+        // HTML drag-and-drop is inconsistent when a draggable card contains
+        // interactive buttons, so it remains reserved for board-card attacks.
         if ((event.pointerType !== "touch" && event.pointerType !== "mouse") || !onTouchDrop) return;
         touchTapPending.current = false;
         touchStart.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId, pointerType: event.pointerType };
@@ -193,7 +196,7 @@ export function CardView({
       {boardStatuses.length > 0 && <span className="status-strip" aria-label={`狀態：${boardStatuses.map((status) => status.label).join("、")}`}>{boardStatuses.map((status) => <small className={`status-badge ${status.key}`} title={status.description} key={status.key}>{status.label}</small>)}</span>}
       {plagueMarks !== undefined && <span className="counter-badge plague-counter" aria-label={`瘟疫標記 ${plagueMarks}`}><small>瘟疫</small><strong>{plagueMarks}</strong><small>/ {plagueThreshold}</small></span>}
       {card.counters.countdown !== undefined && <span className="counter-badge countdown-badge" aria-label={`目前倒數 ${card.counters.countdown}`}><small>倒數</small><strong>{card.counters.countdown}</strong></span>}
-      <button className="card-surface" draggable={draggable} disabled={disabled} onClick={() => {
+      <button className="card-surface" draggable={false} disabled={disabled} onClick={() => {
         if (touchTapPending.current) {
           touchTapPending.current = false;
           onTouchTap?.();
